@@ -74,15 +74,18 @@ export function VisionSection() {
                 </h3>
                 <ul className="space-y-3 text-muted-foreground">
                   <li className="flex items-start">
-                    <span className="text-destructive mr-3 text-xl">×</span>
+                    <span className="text-destructive mr-3 text-xl" aria-hidden="true">×</span>
+                    <span className="sr-only">Not supported:</span>
                     <span>Grades answers mechanically</span>
                   </li>
                   <li className="flex items-start">
-                    <span className="text-destructive mr-3 text-xl">×</span>
+                    <span className="text-destructive mr-3 text-xl" aria-hidden="true">×</span>
+                    <span className="sr-only">Not supported:</span>
                     <span>One-size-fits-all assessments</span>
                   </li>
                   <li className="flex items-start">
-                    <span className="text-destructive mr-3 text-xl">×</span>
+                    <span className="text-destructive mr-3 text-xl" aria-hidden="true">×</span>
+                    <span className="sr-only">Not supported:</span>
                     <span>No context or understanding</span>
                   </li>
                 </ul>
@@ -94,20 +97,22 @@ export function VisionSection() {
                 </h3>
                 <ul className="space-y-3 text-muted-foreground">
                   <li className="flex items-start">
-                    <span className="text-green-500 mr-3 text-xl">✓</span>
+                    <span className="text-green-500 mr-3 text-xl" aria-hidden="true">✓</span>
+                    <span className="sr-only">Supported:</span>
                     <span>Understands conversational context</span>
                   </li>
                   <li className="flex items-start">
-                    <span className="text-green-500 mr-3 text-xl">✓</span>
+                    <span className="text-green-500 mr-3 text-xl" aria-hidden="true">✓</span>
+                    <span className="sr-only">Supported:</span>
                     <span>Asks adaptive follow-up questions</span>
                   </li>
                   <li className="flex items-start">
-                    <span className="text-green-500 mr-3 text-xl">✓</span>
+                    <span className="text-green-500 mr-3 text-xl" aria-hidden="true">✓</span>
+                    <span className="sr-only">Supported:</span>
                     <span>Measures insight, not just memory</span>
                   </li>
                 </ul>
-              </div>
-            </motion.div>
+              </div>            </motion.div>
           </div>
         </motion.div>
       </div>

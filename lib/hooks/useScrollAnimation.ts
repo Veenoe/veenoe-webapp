@@ -37,7 +37,7 @@ export function useScrollAnimation(options?: AnimationOptions) {
     return () => {
       observer.unobserve(element);
     };
-  }, [ref, threshold, triggerOnce]);
+  }, [threshold, triggerOnce]);
 
   return { ref, isInView };
 }

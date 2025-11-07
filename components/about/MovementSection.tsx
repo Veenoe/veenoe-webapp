@@ -106,7 +106,7 @@ export function MovementSection() {
             className="mt-16"
           >
             <p className="text-4xl md:text-5xl font-light text-foreground mb-4">
-               Veenoe
+            Veenoe
             </p>
           </motion.div>
         </motion.div>
