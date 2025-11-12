@@ -1,13 +1,16 @@
-// We can import our new component.
-// Adjust the path if your components folder is elsewhere.
 import { HeroSection } from "@/components/about/HeroSection";
+import { StartVivaForm } from "@/components/viva/StartVivaForm";
 
 export default function Home() {
   return (
-    // The <main> tag is semantic. The HeroSection component
-    // handles its own full-screen layout, so this is all we need.
     <main>
+      {/* Keep the existing Hero Section */}
       <HeroSection />
+
+      {/* Add the new StartVivaForm component, centered */}
+      <section className="pb-32 px-4 flex justify-center">
+        <StartVivaForm />
+      </section>
     </main>
   );
 }
