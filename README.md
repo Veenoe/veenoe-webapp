@@ -1,36 +1,154 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Viva Examination System - Frontend
 
-## Getting Started
+Modern, production-ready frontend for the AI-powered viva examination system built with Next.js 15, React 19, Tailwind CSS v4, and shadcn/ui.
 
-First, run the development server:
+## 🚀 Features
+
+- ✅ **Real-time Voice Interaction** - Natural conversations with AI examiner via Gemini Live API
+- ✅ **Advanced AI Reasoning** - Thinking capabilities for better question evaluation
+- ✅ **10-Minute Sessions** - Time-bound examinations with visual countdown
+- ✅ **Voice Selection** - Choose from multiple AI voices (Kore, Puck, Charon, Aoede, Fenrir)
+- ✅ **Adaptive Questioning** - AI adjusts difficulty based on performance
+- ✅ **Real-time Transcription** - See the conversation as it happens
+
+## 🛠️ Tech Stack
+
+- **Next.js 16.0.1** - React framework with App Router
+- **React 19.2.0** - Latest with Server Components
+- **TypeScript 5** - Type safety
+- **Tailwind CSS v4** - Utility-first styling
+- **shadcn/ui** - High-quality component library
+- **Zustand** - State management
+- **Gemini Live API** - Real-time audio streaming
+
+## 📦 Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🔧 Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Create a `.env.local` file:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+# Backend API URL
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
 
-## Learn More
+## 🏃 Running the App
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# Development mode
+npm run dev
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Build for production
+npm run build
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Start production server
+npm start
+```
 
-## Deploy on Vercel
+The app will be available at `http://localhost:3000`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📁 Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+vee-app/
+├── app/                      # Next.js App Router pages
+│   ├── page.tsx             # Home page with CTA
+│   ├── viva/                # Viva examination room
+│   └── start/               # Configuration page (optional)
+├── components/
+│   ├── ui/                  # shadcn/ui components
+│   └── viva/                # Custom viva components
+│       ├── VoiceSelector.tsx
+│       ├── ThinkingConfig.tsx
+│       └── SessionTimer.tsx
+├── lib/
+│   ├── api/                 # Backend API client
+│   ├── gemini/              # Gemini Live API integration
+│   ├── hooks/               # Custom React hooks
+│   └── store/               # Zustand state management
+└── types/                   # TypeScript type definitions
+```
+
+## 🎨 Key Components
+
+### VoiceSelector
+Dropdown for selecting AI voice personality.
+
+### ThinkingConfig
+Toggle and slider for configuring AI thinking capabilities.
+
+### SessionTimer
+10-minute countdown with visual warnings at 2 min and 1 min.
+
+### useVivaSession Hook
+Manages complete session lifecycle:
+- Gemini Live API connection
+- Audio streaming
+- Tool call handling
+- Session cleanup
+
+## 🔌 Backend Integration
+
+The frontend connects to the FastAPI backend running on `http://localhost:8000`.
+
+**Required Backend Endpoints:**
+- `POST /api/v1/viva/start` - Start new session
+- `POST /api/v1/viva/get-next-question` - Get next question
+- `POST /api/v1/viva/evaluate-response` - Evaluate answer
+- `POST /api/v1/viva/conclude-viva` - End session
+
+## 🎯 User Flow
+
+1. **Home Page** → Click "Try Beta Version"
+2. **Viva Room** → Fill in basic info (name, topic, class level)
+3. **Configure** → Select voice and thinking settings
+4. **Start Session** → AI connects and begins examination
+5. **Conversation** → Speak naturally with AI examiner
+6. **Auto-conclude** → Session ends after 10 minutes or manually
+
+## 🧪 Testing
+
+```bash
+# Run linter
+npm run lint
+
+# Type check
+npx tsc --noEmit
+```
+
+## 📝 Code Quality
+
+- ✅ **TypeScript** - Full type safety
+- ✅ **JSDoc Comments** - Comprehensive documentation
+- ✅ **Modular Architecture** - Clean separation of concerns
+- ✅ **Error Handling** - Graceful error recovery
+- ✅ **Accessibility** - ARIA labels and keyboard navigation
+
+## 🎨 Theme
+
+Uses custom color palette from `globals.css`:
+- **Pumpkin** - Primary accent color
+- **Jasper** - Secondary accent
+- **White Smoke** - Neutral backgrounds
+
+## 🔐 Security
+
+- Ephemeral tokens for Gemini Live API
+- No API keys exposed in frontend
+- Server-to-server authentication
+
+## 📄 License
+
+MIT
+
+## 🤝 Contributing
+
+This is a beta version. Feedback welcome!
