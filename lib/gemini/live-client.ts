@@ -52,7 +52,7 @@ export class GeminiLiveClient {
     private reconnectDelay = 1000;
 
     // Hardcoded model name to match backend
-    private readonly modelName = "models/gemini-2.5-flash-native-audio-preview-09-2025";
+    private readonly modelName = "gemini-2.5-flash-native-audio-preview-09-2025";
 
     constructor(
         private ephemeralToken: string,
@@ -91,10 +91,10 @@ export class GeminiLiveClient {
         console.log("Connected to Gemini Live API");
         this.connectionState = ConnectionState.CONNECTED;
         this.reconnectAttempts = 0;
-        
+
         // CRITICAL: Send setup message immediately
         this.sendSetupMessage();
-        
+
         this.eventHandlers.onConnected?.();
     }
 
@@ -175,8 +175,8 @@ export class GeminiLiveClient {
     sendAudio(audioData: ArrayBuffer): void {
         // STRICT CHECK: Do not send if not fully ready
         if (
-            this.connectionState !== ConnectionState.CONNECTED || 
-            !this.ws || 
+            this.connectionState !== ConnectionState.CONNECTED ||
+            !this.ws ||
             this.ws.readyState !== WebSocket.OPEN
         ) {
             return;
