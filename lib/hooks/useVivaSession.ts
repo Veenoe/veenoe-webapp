@@ -14,14 +14,14 @@ import {
 
 export function useVivaSession() {
   const store = useVivaStore();
-  
-  const { 
-    sessionId, 
-    setSessionState, 
-    setError, 
-    addTranscript, 
-    setCurrentQuestion, 
-    setAudioState 
+
+  const {
+    sessionId,
+    setSessionState,
+    setError,
+    addTranscript,
+    setCurrentQuestion,
+    setAudioState
   } = store;
 
   const geminiClientRef = useRef<GeminiLiveClientSDK | null>(null);
@@ -53,6 +53,7 @@ export function useVivaSession() {
             await evaluateResponse({
               viva_session_id: currentSessionId,
               question_text: args.question_text as string,
+              question_id: args.question_id as string,
               difficulty: args.difficulty as number,
               student_answer: args.student_answer as string,
               evaluation: args.evaluation as string,
@@ -86,7 +87,7 @@ export function useVivaSession() {
 
     try {
       setAudioState(AudioState.RECORDING);
-      
+
       await audioHandlerRef.current.startRecording((audioData) => {
         const isMuted = useVivaStore.getState().isMuted;
         if (geminiClientRef.current && !isMuted) {
@@ -107,16 +108,16 @@ export function useVivaSession() {
     // Priority order:
     // 1. Local env API key (for development)
     // 2. Ephemeral token from backend (for production)
-    
+
     const localApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     const ephemeralToken = useVivaStore.getState().ephemeralToken;
-    
+
     // Validate ephemeral token format
     const isValidEphemeralToken = ephemeralToken && (
-      ephemeralToken.startsWith('AIza') || 
+      ephemeralToken.startsWith('AIza') ||
       ephemeralToken.startsWith('auth_tokens/')
     );
-    
+
     // Use local key first (dev), then ephemeral (prod)
     const credentials = localApiKey || (isValidEphemeralToken ? ephemeralToken : null);
 
@@ -124,14 +125,14 @@ export function useVivaSession() {
       setError("No API key or ephemeral token available. Please set NEXT_PUBLIC_GEMINI_API_KEY or start a viva session.");
       return;
     }
-    
+
     try {
       setSessionState(SessionState.STARTING);
 
       // 1. Initialize Audio Handler and Player
       audioHandlerRef.current = new AudioHandler();
       await audioHandlerRef.current.initialize();
-      
+
       audioPlayerRef.current = new AudioPlayer();
       await audioPlayerRef.current.initialize();
 
@@ -140,7 +141,7 @@ export function useVivaSession() {
         onConnected: () => {
           console.log("Connected to Gemini Live API");
           setSessionState(SessionState.ACTIVE);
-          
+
           // 3. CRITICAL FIX: START RECORDING ONLY WHEN CONNECTED
           _startAudioPipeline();
         },
@@ -171,7 +172,7 @@ export function useVivaSession() {
 
       // 4. Initiate Connection
       await geminiClientRef.current.connect();
-      
+
     } catch (error) {
       console.error("Failed to initialize session:", error);
       setError(
@@ -215,9 +216,9 @@ export function useVivaSession() {
    * Manual Start Recording
    */
   const startRecording = useCallback(async () => {
-     if (geminiClientRef.current?.getConnectionState() === "connected") {
-         await _startAudioPipeline();
-     }
+    if (geminiClientRef.current?.getConnectionState() === "connected") {
+      await _startAudioPipeline();
+    }
   }, [_startAudioPipeline]);
 
   /**

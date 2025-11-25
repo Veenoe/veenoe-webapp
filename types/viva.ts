@@ -71,6 +71,8 @@ export interface EvaluateResponseRequest {
     viva_session_id: string;
     /** The question that was asked */
     question_text: string;
+    /** ID of the question that was asked */
+    question_id?: string;
     /** Question difficulty level */
     difficulty: number;
     /** Student's transcribed answer */
