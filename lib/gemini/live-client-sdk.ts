@@ -11,6 +11,10 @@ export interface GeminiLiveEventHandlers {
     onTurnComplete?: () => void;
 }
 
+/**
+ * SDK Wrapper for Gemini Live API
+ * Handles connection, message processing, and state management.
+ */
 export class GeminiLiveClientSDK {
     private session: any = null;
     private eventHandlers: GeminiLiveEventHandlers = {};
@@ -24,13 +28,18 @@ export class GeminiLiveClientSDK {
         this.eventHandlers = handlers;
     }
 
+    /**
+     * Establishes a WebSocket connection to the Gemini Live API.
+     */
     async connect(): Promise<void> {
+        console.log("[GeminiLiveClientSDK] Initiating connection...");
+
         // Check if this is an API key or ephemeral token
         const isApiKey = this.apiKey.startsWith('AIza');
         const isEphemeralToken = this.apiKey.startsWith('auth_tokens/');
 
         if (!isApiKey && !isEphemeralToken) {
-            console.error('Invalid credentials. Expected API key (AIza...) or ephemeral token (auth_tokens/...), got:', this.apiKey.substring(0, 15));
+            console.error('[GeminiLiveClientSDK] Invalid credentials format. Expected API key or ephemeral token.');
             this.eventHandlers.onError?.(new Error('Invalid credentials format'));
             return;
         }
@@ -57,37 +66,43 @@ export class GeminiLiveClientSDK {
         };
 
         try {
+            console.log("[GeminiLiveClientSDK] Connecting to model:", model);
             this.session = await ai.live.connect({
                 model,
                 callbacks: {
                     onopen: () => {
-                        console.log('Connected to Gemini Live API');
+                        console.log('[GeminiLiveClientSDK] Connection established (onopen)');
                         this.eventHandlers.onConnected?.();
                     },
                     onmessage: (message: unknown) => {
+                        // console.log('[GeminiLiveClientSDK] Message received from server'); // Verbose
                         this.responseQueue.push(message);
                         if (!this.isProcessing) {
                             this.processMessages();
                         }
                     },
                     onerror: (e: unknown) => {
-                        console.error('Gemini Live API error:', e);
+                        console.error('[GeminiLiveClientSDK] Connection error:', e);
                         this.eventHandlers.onError?.(new Error(String(e)));
                     },
                     onclose: (e: unknown) => {
-                        console.log('Disconnected from Gemini Live API');
+                        console.log('[GeminiLiveClientSDK] Connection closed (onclose)');
                         this.eventHandlers.onDisconnected?.();
                     },
                 },
                 config,
             });
         } catch (error) {
+            console.error("[GeminiLiveClientSDK] Connection failed:", error);
             this.eventHandlers.onError?.(
                 error instanceof Error ? error : new Error('Connection failed')
             );
         }
     }
 
+    /**
+     * Processes messages from the response queue sequentially.
+     */
     private async processMessages(): Promise<void> {
         this.isProcessing = true;
 
@@ -95,6 +110,7 @@ export class GeminiLiveClientSDK {
             const message = this.responseQueue.shift();
 
             if (message.setupComplete) {
+                console.log("[GeminiLiveClientSDK] Setup complete signal received");
                 this.eventHandlers.onSetupComplete?.();
             }
 
@@ -104,10 +120,12 @@ export class GeminiLiveClientSDK {
                     for (const part of message.serverContent.modelTurn.parts) {
                         if (part.text) {
                             const isFinal = message.serverContent.turnComplete || false;
+                            console.log(`[GeminiLiveClientSDK] Transcript received (Final: ${isFinal}): ${part.text.substring(0, 50)}...`);
                             this.eventHandlers.onTranscript?.(part.text, isFinal);
                         }
 
                         if (part.inlineData?.data) {
+                            // console.log("[GeminiLiveClientSDK] Audio data received"); // Verbose
                             this.eventHandlers.onAudioData?.(
                                 part.inlineData.data,
                                 part.inlineData.mimeType || 'audio/pcm;rate=24000'
@@ -117,6 +135,7 @@ export class GeminiLiveClientSDK {
                 }
 
                 if (message.serverContent.turnComplete) {
+                    console.log("[GeminiLiveClientSDK] Turn complete signal received");
                     this.eventHandlers.onTurnComplete?.();
                 }
             }
@@ -126,6 +145,7 @@ export class GeminiLiveClientSDK {
                 const toolCalls = message.toolCall.functionCalls;
                 if (toolCalls && toolCalls.length > 0) {
                     for (const call of toolCalls) {
+                        console.log(`[GeminiLiveClientSDK] Tool call received: ${call.name}`);
                         this.eventHandlers.onToolCall?.(call.name, call.args);
                     }
                 }
@@ -135,8 +155,15 @@ export class GeminiLiveClientSDK {
         this.isProcessing = false;
     }
 
+    /**
+     * Sends audio data to the Gemini Live API.
+     * @param audioData PCM audio data
+     */
     sendAudio(audioData: ArrayBuffer): void {
-        if (!this.session) return;
+        if (!this.session) {
+            console.warn("[GeminiLiveClientSDK] Cannot send audio: Session not active");
+            return;
+        }
 
         // Convert ArrayBuffer to base64
         const bytes = new Uint8Array(audioData);
@@ -146,6 +173,8 @@ export class GeminiLiveClientSDK {
         }
         const base64Audio = btoa(binary);
 
+        // console.log(`[GeminiLiveClientSDK] Sending audio chunk (${bytes.byteLength} bytes)`); // Verbose
+
         this.session.sendRealtimeInput({
             audio: {
                 data: base64Audio,
@@ -154,15 +183,27 @@ export class GeminiLiveClientSDK {
         });
     }
 
+    /**
+     * Sends text input to the Gemini Live API.
+     * @param text Text to send
+     */
     sendText(text: string): void {
-        if (!this.session) return;
+        if (!this.session) {
+            console.warn("[GeminiLiveClientSDK] Cannot send text: Session not active");
+            return;
+        }
 
+        console.log(`[GeminiLiveClientSDK] Sending text: ${text}`);
         this.session.sendClientContent({
             turns: [text],
         });
     }
 
+    /**
+     * Disconnects the session.
+     */
     disconnect(): void {
+        console.log("[GeminiLiveClientSDK] Disconnecting...");
         if (this.session) {
             // Attempt graceful close if method exists, otherwise nullify
             try {
@@ -170,7 +211,7 @@ export class GeminiLiveClientSDK {
                 // @ts-ignore
                 if (typeof this.session.close === 'function') this.session.close();
             } catch (e) {
-                console.warn("Error closing session", e);
+                console.warn("[GeminiLiveClientSDK] Error closing session", e);
             }
             this.session = null;
         }
