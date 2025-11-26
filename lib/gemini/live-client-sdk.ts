@@ -8,6 +8,7 @@ export interface GeminiLiveEventHandlers {
     onTranscript?: (text: string, isFinal: boolean) => void;
     onSetupComplete?: () => void;
     onToolCall?: (toolName: string, args: Record<string, unknown>) => void;
+    onTurnComplete?: () => void;
 }
 
 export class GeminiLiveClientSDK {
@@ -27,7 +28,7 @@ export class GeminiLiveClientSDK {
         // Check if this is an API key or ephemeral token
         const isApiKey = this.apiKey.startsWith('AIza');
         const isEphemeralToken = this.apiKey.startsWith('auth_tokens/');
-        
+
         if (!isApiKey && !isEphemeralToken) {
             console.error('Invalid credentials. Expected API key (AIza...) or ephemeral token (auth_tokens/...), got:', this.apiKey.substring(0, 15));
             this.eventHandlers.onError?.(new Error('Invalid credentials format'));
@@ -92,25 +93,31 @@ export class GeminiLiveClientSDK {
 
         while (this.responseQueue.length > 0) {
             const message = this.responseQueue.shift();
-            
+
             if (message.setupComplete) {
                 this.eventHandlers.onSetupComplete?.();
             }
 
             // Handle Server Content (Audio/Text)
-            if (message.serverContent?.modelTurn?.parts) {
-                for (const part of message.serverContent.modelTurn.parts) {
-                    if (part.text) {
-                        const isFinal = message.serverContent.turnComplete || false;
-                        this.eventHandlers.onTranscript?.(part.text, isFinal);
-                    }
+            if (message.serverContent) {
+                if (message.serverContent.modelTurn?.parts) {
+                    for (const part of message.serverContent.modelTurn.parts) {
+                        if (part.text) {
+                            const isFinal = message.serverContent.turnComplete || false;
+                            this.eventHandlers.onTranscript?.(part.text, isFinal);
+                        }
 
-                    if (part.inlineData?.data) {
-                        this.eventHandlers.onAudioData?.(
-                            part.inlineData.data,
-                            part.inlineData.mimeType || 'audio/pcm;rate=24000'
-                        );
+                        if (part.inlineData?.data) {
+                            this.eventHandlers.onAudioData?.(
+                                part.inlineData.data,
+                                part.inlineData.mimeType || 'audio/pcm;rate=24000'
+                            );
+                        }
                     }
+                }
+
+                if (message.serverContent.turnComplete) {
+                    this.eventHandlers.onTurnComplete?.();
                 }
             }
 
@@ -159,9 +166,9 @@ export class GeminiLiveClientSDK {
         if (this.session) {
             // Attempt graceful close if method exists, otherwise nullify
             try {
-               // Some SDK versions might not expose close directly or it might be async
-               // @ts-ignore
-               if(typeof this.session.close === 'function') this.session.close();
+                // Some SDK versions might not expose close directly or it might be async
+                // @ts-ignore
+                if (typeof this.session.close === 'function') this.session.close();
             } catch (e) {
                 console.warn("Error closing session", e);
             }

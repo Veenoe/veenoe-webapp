@@ -14,67 +14,25 @@ import { cn } from "@/lib/utils";
  * Session timer component with countdown and progress bar
  */
 export function SessionTimer() {
-    const { formattedTime, progress, timerStatus, isWarning, isUrgent } =
-        useSessionTimer();
+    const { formattedTime, isWarning, isUrgent } = useSessionTimer();
 
     return (
-        <div className="space-y-2">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Clock
-                        className={cn(
-                            "h-4 w-4",
-                            isUrgent && "text-destructive animate-pulse",
-                            isWarning && !isUrgent && "text-pumpkin",
-                            !isWarning && "text-muted-foreground"
-                        )}
-                    />
-                    <span className="text-sm font-medium text-muted-foreground">
-                        Time Remaining
-                    </span>
-                </div>
-                <div className="flex items-center gap-2">
-                    {isWarning && (
-                        <AlertTriangle
-                            className={cn(
-                                "h-4 w-4",
-                                isUrgent ? "text-destructive" : "text-pumpkin"
-                            )}
-                        />
-                    )}
-                    <span
-                        className={cn(
-                            "text-lg font-mono font-bold",
-                            isUrgent && "text-destructive animate-pulse",
-                            isWarning && !isUrgent && "text-pumpkin",
-                            !isWarning && "text-foreground"
-                        )}
-                    >
-                        {formattedTime}
-                    </span>
-                </div>
-            </div>
-
-            <Progress
-                value={progress}
+        <div className="flex flex-col items-center justify-center p-4">
+            <div
                 className={cn(
-                    "h-2",
-                    isUrgent && "[&>div]:bg-destructive",
-                    isWarning && !isUrgent && "[&>div]:bg-pumpkin",
-                    !isWarning && "[&>div]:bg-primary"
+                    "text-4xl font-mono font-bold tracking-wider transition-colors duration-300",
+                    isUrgent ? "text-destructive animate-pulse" :
+                        isWarning ? "text-pumpkin" : "text-foreground"
                 )}
-            />
-
+            >
+                {formattedTime}
+            </div>
             {isWarning && (
-                <p
-                    className={cn(
-                        "text-xs text-center",
-                        isUrgent ? "text-destructive font-medium" : "text-pumpkin"
-                    )}
-                >
-                    {isUrgent
-                        ? "⚠️ Less than 1 minute remaining!"
-                        : "⏰ Less than 2 minutes remaining"}
+                <p className={cn(
+                    "text-xs mt-2 font-medium",
+                    isUrgent ? "text-destructive" : "text-pumpkin"
+                )}>
+                    {isUrgent ? "Ending soon!" : "Time running out"}
                 </p>
             )}
         </div>

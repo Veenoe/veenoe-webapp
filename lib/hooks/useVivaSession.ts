@@ -7,8 +7,6 @@ import { AudioHandler } from "@/lib/gemini/audio-handler";
 import { AudioPlayer } from "@/lib/gemini/audio-player";
 import { SessionState, AudioState } from "@/types/viva";
 import {
-  getNextQuestion,
-  evaluateResponse,
   concludeViva,
 } from "@/lib/api/client";
 
@@ -20,13 +18,16 @@ export function useVivaSession() {
     setSessionState,
     setError,
     addTranscript,
-    setCurrentQuestion,
     setAudioState
   } = store;
 
   const geminiClientRef = useRef<GeminiLiveClientSDK | null>(null);
   const audioHandlerRef = useRef<AudioHandler | null>(null);
   const audioPlayerRef = useRef<AudioPlayer | null>(null);
+
+  // Refs to track state for VAD control
+  const isAudioPlayingRef = useRef(false);
+  const isTurnCompleteRef = useRef(true);
 
   /**
    * Handle tool calls from Gemini Live API
@@ -38,34 +39,15 @@ export function useVivaSession() {
         if (!currentSessionId) return;
 
         switch (toolName) {
-          case "get_next_question": {
-            const response = await getNextQuestion({
-              viva_session_id: currentSessionId,
-              topic: args.topic as string,
-              class_level: args.class_level as number,
-              current_difficulty: args.current_difficulty as number,
-            });
-            setCurrentQuestion(response);
-            break;
-          }
-
-          case "evaluate_and_save_response": {
-            await evaluateResponse({
-              viva_session_id: currentSessionId,
-              question_text: args.question_text as string,
-              question_id: args.question_id as string,
-              difficulty: args.difficulty as number,
-              student_answer: args.student_answer as string,
-              evaluation: args.evaluation as string,
-              is_correct: args.is_correct as boolean,
-            });
-            break;
-          }
-
           case "conclude_viva": {
-            await concludeViva({
+            const result = await concludeViva({
               viva_session_id: currentSessionId,
               final_feedback: args.final_feedback as string,
+            });
+            useVivaStore.getState().setConclusionData({
+              score: (args.score as number) || result.correct_answers,
+              total: 10,
+              feedback: result.final_feedback
             });
             setSessionState(SessionState.COMPLETED);
             break;
@@ -75,7 +57,7 @@ export function useVivaSession() {
         console.error(`Tool call ${toolName} failed:`, error);
       }
     },
-    [setCurrentQuestion, setSessionState]
+    [setSessionState]
   );
 
   /**
@@ -89,8 +71,9 @@ export function useVivaSession() {
       setAudioState(AudioState.RECORDING);
 
       await audioHandlerRef.current.startRecording((audioData) => {
-        const isMuted = useVivaStore.getState().isMuted;
-        if (geminiClientRef.current && !isMuted) {
+        const { isMuted, audioState } = useVivaStore.getState();
+        // Only send audio if not muted AND not currently playing (AI speaking)
+        if (geminiClientRef.current && !isMuted && audioState === AudioState.RECORDING) {
           geminiClientRef.current.sendAudio(audioData);
         }
       });
@@ -133,7 +116,19 @@ export function useVivaSession() {
       audioHandlerRef.current = new AudioHandler();
       await audioHandlerRef.current.initialize();
 
-      audioPlayerRef.current = new AudioPlayer();
+      audioPlayerRef.current = new AudioPlayer({
+        onPlayStart: () => {
+          isAudioPlayingRef.current = true;
+          setAudioState(AudioState.PLAYING);
+        },
+        onPlayEnd: () => {
+          isAudioPlayingRef.current = false;
+          // Only switch to recording if the turn is ALSO complete
+          if (isTurnCompleteRef.current) {
+            setAudioState(AudioState.RECORDING);
+          }
+        },
+      });
       await audioPlayerRef.current.initialize();
 
       // 2. Initialize Gemini Client with SDK
@@ -142,7 +137,7 @@ export function useVivaSession() {
           console.log("Connected to Gemini Live API");
           setSessionState(SessionState.ACTIVE);
 
-          // 3. CRITICAL FIX: START RECORDING ONLY WHEN CONNECTED
+          // 3. Start Audio Pipeline
           _startAudioPipeline();
         },
         onDisconnected: () => {
@@ -154,8 +149,23 @@ export function useVivaSession() {
           setSessionState(SessionState.ERROR);
         },
         onAudioData: async (base64Audio, mimeType) => {
+          // If we receive audio, the turn is definitely not complete (or a new one started)
+          isTurnCompleteRef.current = false;
+
+          // IMMEDIATE STATE UPDATE: Mark as playing synchronously to prevent race condition
+          // where onTurnComplete might fire before playAudio starts processing
+          isAudioPlayingRef.current = true;
+          setAudioState(AudioState.PLAYING);
+
           if (audioPlayerRef.current) {
             await audioPlayerRef.current.playAudio(base64Audio);
+          }
+        },
+        onTurnComplete: () => {
+          isTurnCompleteRef.current = true;
+          // If audio has already finished playing, we can start recording now
+          if (!isAudioPlayingRef.current) {
+            setAudioState(AudioState.RECORDING);
           }
         },
         onTranscript: (text, isFinal) => {
@@ -170,7 +180,7 @@ export function useVivaSession() {
         },
       });
 
-      // 4. Initiate Connection
+      // 5. Initiate Connection
       await geminiClientRef.current.connect();
 
     } catch (error) {

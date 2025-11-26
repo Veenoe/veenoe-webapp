@@ -46,6 +46,14 @@ interface VivaSessionStore {
     // Error handling
     error: string | null;
 
+    // Conclusion Data
+    conclusionData: {
+        score: number;
+        total: number;
+        feedback: string;
+    } | null;
+    setConclusionData: (data: { score: number; total: number; feedback: string }) => void;
+
     // Actions
     setSessionData: (data: VivaStartResponse) => void;
     setSessionState: (state: SessionState) => void;
@@ -76,6 +84,7 @@ const initialState = {
     timeRemaining: 600, // 10 minutes in seconds
     timerWarningShown: false,
     error: null,
+    conclusionData: null,
 };
 
 /**
@@ -125,6 +134,8 @@ export const useVivaStore = create<VivaSessionStore>((set) => ({
     setTimerWarning: (shown) => set({ timerWarningShown: shown }),
 
     setError: (error) => set({ error }),
+
+    setConclusionData: (data) => set({ conclusionData: data }),
 
     resetSession: () => set(initialState),
 }));
