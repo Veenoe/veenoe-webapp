@@ -18,7 +18,7 @@ import type {
  * Base URL for the backend API
  * Can be configured via environment variable
  */
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.veenoe.com";
 
 /**
  * Custom error class for API errors
