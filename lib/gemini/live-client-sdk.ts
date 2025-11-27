@@ -9,6 +9,7 @@ export interface GeminiLiveEventHandlers {
     onSetupComplete?: () => void;
     onToolCall?: (toolName: string, args: Record<string, unknown>) => void;
     onTurnComplete?: () => void;
+    onInterrupted?: () => void;
 }
 
 /**
@@ -116,6 +117,12 @@ export class GeminiLiveClientSDK {
 
             // Handle Server Content (Audio/Text)
             if (message.serverContent) {
+                // Check for interruption signal
+                if (message.serverContent.interrupted) {
+                    console.log("[GeminiLiveClientSDK] Interruption signal received");
+                    this.eventHandlers.onInterrupted?.();
+                }
+
                 if (message.serverContent.modelTurn?.parts) {
                     for (const part of message.serverContent.modelTurn.parts) {
                         if (part.text) {

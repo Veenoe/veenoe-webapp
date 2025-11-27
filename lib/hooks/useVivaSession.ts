@@ -29,6 +29,37 @@ export function useVivaSession() {
   const isAudioPlayingRef = useRef(false);
   const isTurnCompleteRef = useRef(true);
 
+  // Ref for debounce timeout
+  const recordingSwitchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  /**
+   * Helper to schedule switching to recording state with a debounce
+   * This prevents "flip-flopping" if there's a small gap in audio or turn signals
+   */
+  const scheduleSwitchToRecording = useCallback(() => {
+    if (recordingSwitchTimeoutRef.current) {
+      clearTimeout(recordingSwitchTimeoutRef.current);
+    }
+
+    console.log("[useVivaSession] Scheduling switch to RECORDING (500ms debounce)...");
+    recordingSwitchTimeoutRef.current = setTimeout(() => {
+      console.log("[useVivaSession] Executing switch to RECORDING");
+      setAudioState(AudioState.RECORDING);
+      recordingSwitchTimeoutRef.current = null;
+    }, 500);
+  }, [setAudioState]);
+
+  /**
+   * Helper to cancel any pending switch to recording
+   */
+  const cancelSwitchToRecording = useCallback(() => {
+    if (recordingSwitchTimeoutRef.current) {
+      console.log("[useVivaSession] Cancelling pending switch to RECORDING");
+      clearTimeout(recordingSwitchTimeoutRef.current);
+      recordingSwitchTimeoutRef.current = null;
+    }
+  }, []);
+
   /**
    * Handle tool calls from Gemini Live API
    */
@@ -142,16 +173,16 @@ export function useVivaSession() {
           console.log("[useVivaSession] Audio playback started (AI speaking)");
           isAudioPlayingRef.current = true;
           setAudioState(AudioState.PLAYING);
+          cancelSwitchToRecording(); // Ensure we don't switch back to recording while playing
         },
         onPlayEnd: () => {
           console.log("[useVivaSession] Audio playback ended");
           isAudioPlayingRef.current = false;
 
           // Only switch to recording if the turn is ALSO complete
-          // This prevents interruptions if there's a small gap in audio chunks
           if (isTurnCompleteRef.current) {
-            console.log("[useVivaSession] Turn complete + Audio ended -> Switching to RECORDING");
-            setAudioState(AudioState.RECORDING);
+            console.log("[useVivaSession] Turn complete + Audio ended -> Scheduling switch to RECORDING");
+            scheduleSwitchToRecording();
           } else {
             console.log("[useVivaSession] Audio ended but turn NOT complete -> Waiting...");
           }
@@ -181,8 +212,10 @@ export function useVivaSession() {
           // If we receive audio, the turn is definitely not complete (or a new one started)
           isTurnCompleteRef.current = false;
 
-          // IMMEDIATE STATE UPDATE: Mark as playing synchronously to prevent race condition
-          // where onTurnComplete might fire before playAudio starts processing
+          // Cancel any pending switch to recording since we are receiving audio
+          cancelSwitchToRecording();
+
+          // IMMEDIATE STATE UPDATE: Mark as playing synchronously
           if (!isAudioPlayingRef.current) {
             console.log("[useVivaSession] Received audio data -> Setting state to PLAYING (Sync)");
             isAudioPlayingRef.current = true;
@@ -199,11 +232,29 @@ export function useVivaSession() {
 
           // If audio has already finished playing, we can start recording now
           if (!isAudioPlayingRef.current) {
-            console.log("[useVivaSession] Turn complete + No audio playing -> Switching to RECORDING");
-            setAudioState(AudioState.RECORDING);
+            console.log("[useVivaSession] Turn complete + No audio playing -> Scheduling switch to RECORDING");
+            scheduleSwitchToRecording();
           } else {
             console.log("[useVivaSession] Turn complete but audio still playing -> Waiting for playback end");
           }
+        },
+        onInterrupted: () => {
+          console.log("[useVivaSession] Interruption detected! Stopping audio and switching to RECORDING");
+
+          // Stop audio immediately
+          if (audioPlayerRef.current) {
+            audioPlayerRef.current.stop();
+          }
+
+          // Cancel any pending debounce
+          cancelSwitchToRecording();
+
+          // Reset flags
+          isAudioPlayingRef.current = false;
+          isTurnCompleteRef.current = true;
+
+          // Switch to recording immediately
+          setAudioState(AudioState.RECORDING);
         },
         onTranscript: (text, isFinal) => {
           addTranscript({
@@ -227,13 +278,16 @@ export function useVivaSession() {
       );
       setSessionState(SessionState.ERROR);
     }
-  }, [setSessionState, setError, addTranscript, handleToolCall, _startAudioPipeline]);
+  }, [setSessionState, setError, addTranscript, handleToolCall, _startAudioPipeline, scheduleSwitchToRecording, cancelSwitchToRecording]);
 
   /**
    * End the viva session
    */
   const endSession = useCallback(() => {
     console.log("[useVivaSession] Ending session...");
+
+    cancelSwitchToRecording();
+
     if (geminiClientRef.current) {
       geminiClientRef.current.disconnect();
       geminiClientRef.current = null;
@@ -251,7 +305,7 @@ export function useVivaSession() {
 
     setSessionState(SessionState.IDLE);
     console.log("[useVivaSession] Session ended");
-  }, [setSessionState]);
+  }, [setSessionState, cancelSwitchToRecording]);
 
   /**
    * Toggle mute helper
