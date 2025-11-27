@@ -36,6 +36,7 @@ export default function VivaRoomPage() {
 
     // Pre-session configuration state
     const [showConfig, setShowConfig] = useState(true);
+    const [showInfoDialog, setShowInfoDialog] = useState(false);
     const [studentName, setStudentName] = useState("");
     const [topic, setTopic] = useState("");
     const [classLevel, setClassLevel] = useState("12");
@@ -46,7 +47,7 @@ export default function VivaRoomPage() {
     const [error, setError] = useState<string | null>(null);
 
     /**
-     * Start the viva session
+     * Start the viva session (Step 1: Backend Init)
      */
     const handleStartSession = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -80,8 +81,24 @@ export default function VivaRoomPage() {
             // Save session data
             vivaSession.setSessionData(response);
 
-            // Hide config form
+            // Hide config form and show info dialog
             setShowConfig(false);
+            setShowInfoDialog(true);
+
+        } catch (err) {
+            console.error("Failed to start session:", err);
+            setError(err instanceof Error ? err.message : "Failed to start session");
+        } finally {
+            setIsStarting(false);
+        }
+    };
+
+    /**
+     * Confirm Start (Step 2: Connect to Gemini)
+     */
+    const handleConfirmStart = async () => {
+        try {
+            setShowInfoDialog(false);
 
             // Initialize Gemini Live connection
             await vivaSession.initializeSession();
@@ -89,10 +106,9 @@ export default function VivaRoomPage() {
             // Start recording
             await vivaSession.startRecording();
         } catch (err) {
-            console.error("Failed to start session:", err);
-            setError(err instanceof Error ? err.message : "Failed to start session");
-        } finally {
-            setIsStarting(false);
+            console.error("Failed to connect to Gemini:", err);
+            // If connection fails, we might want to show error or go back
+            // For now, let's just log it. The session hook handles errors too.
         }
     };
 
@@ -183,10 +199,45 @@ export default function VivaRoomPage() {
                                         Starting...
                                     </>
                                 ) : (
-                                    "Start Viva"
+                                    "Next"
                                 )}
                             </Button>
                         </form>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    // Info Dialog Overlay
+    if (showInfoDialog) {
+        return (
+            <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+                <Card className="w-full max-w-md border-border shadow-xl animate-in fade-in zoom-in duration-300">
+                    <CardHeader>
+                        <CardTitle className="text-center text-2xl">Ready for Viva?</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="space-y-4 text-center">
+                            <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                                <p className="font-medium text-foreground">To start the viva:</p>
+                                <p className="text-muted-foreground italic">"Start Viva"</p>
+                                <p className="text-sm text-muted-foreground">(Say this in your preferred language)</p>
+                            </div>
+
+                            <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                                <p className="font-medium text-foreground">To end the session at any time:</p>
+                                <p className="text-muted-foreground italic">"End Viva"</p>
+                                <p className="text-sm text-muted-foreground">(Say this in your preferred language)</p>
+                            </div>
+                        </div>
+
+                        <Button
+                            className="w-full bg-pumpkin hover:bg-pumpkin-600 h-12 text-lg"
+                            onClick={handleConfirmStart}
+                        >
+                            Okay, Start Session
+                        </Button>
                     </CardContent>
                 </Card>
             </div>
