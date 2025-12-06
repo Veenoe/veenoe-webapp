@@ -9,10 +9,14 @@
 export interface VivaStartRequest {
     /** Student's full name */
     student_name: string;
+    /** The Clerk User ID */
+    user_id: string;
     /** Topic/subject for the viva examination */
     topic: string;
     /** Student's grade/class level (1-12) */
     class_level: number;
+    /** Optional: Session type (default: "viva") */
+    session_type?: string;
     /** Optional: AI voice selection (default: "Kore") */
     voice_name?: string;
     /** Optional: Enable thinking capabilities (default: true) */

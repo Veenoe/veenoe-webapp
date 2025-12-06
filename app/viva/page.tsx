@@ -20,6 +20,7 @@ import { startVivaSession } from "@/lib/api/client";
 import { SessionState, AudioState } from "@/types/viva";
 import { VivaActiveSession } from "@/components/viva/VivaActiveSession";
 import { VivaConclusion } from "@/components/viva/VivaConclusion";
+import { useUser } from "@clerk/nextjs";
 import {
     Loader2,
     Mic,
@@ -33,6 +34,7 @@ import {
 export default function VivaRoomPage() {
     const router = useRouter();
     const vivaSession = useVivaSession();
+    const { user } = useUser();
 
     // Pre-session configuration state
     const [showConfig, setShowConfig] = useState(true);
@@ -53,6 +55,11 @@ export default function VivaRoomPage() {
         e.preventDefault();
         setError(null);
 
+        if (!user) {
+            setError("You must be logged in to start a session.");
+            return;
+        }
+
         // Validation
         if (!studentName.trim() || !topic.trim()) {
             setError("Please fill in all required fields");
@@ -71,8 +78,10 @@ export default function VivaRoomPage() {
             // Start viva session via backend
             const response = await startVivaSession({
                 student_name: studentName.trim(),
+                user_id: user.id,
                 topic: topic.trim(),
                 class_level: classLevelNum,
+                session_type: "viva",
                 voice_name: voiceName,
                 enable_thinking: enableThinking,
                 thinking_budget: enableThinking ? thinkingBudget : 0,
