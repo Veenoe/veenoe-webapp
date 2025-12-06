@@ -158,3 +158,17 @@ export enum AudioState {
     PLAYING = "playing",
     PROCESSING = "processing",
 }
+
+export interface VivaSessionSummary {
+    viva_session_id: string;
+    title: string;
+    topic: string;
+    class_level: number;
+    started_at: string;
+    session_type: string;
+    status: string;
+}
+
+export interface HistoryResponse {
+    sessions: VivaSessionSummary[];
+}
