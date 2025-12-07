@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export function HeroSection() {
     return (
-        <section className="relative flex min-h-screen w-full flex-col items-center justify-center gap-6 overflow-hidden p-4 text-center">
+        <section className="relative flex h-full w-full flex-col items-center justify-center gap-6 overflow-hidden p-4 text-center">
             {/* This is a modern way to create the background glow.
         It's a blurred, colored div placed behind the content.
       */}
