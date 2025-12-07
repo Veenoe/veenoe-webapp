@@ -1,10 +1,17 @@
 import { GoogleGenAI, Modality, MediaResolution } from '@google/genai';
+import { arrayBufferToBase64 } from './audio-utils';
+import {
+    processGeminiMessage,
+    AudioPayload,
+    TranscriptPayload,
+    ToolCallPayload
+} from './message-processor';
 
 export interface GeminiLiveEventHandlers {
     onConnected?: () => void;
     onDisconnected?: () => void;
     onError?: (error: Error) => void;
-    onAudioData?: (audioData: string, mimeType: string) => void; // base64 audio data
+    onAudioData?: (audioData: string, mimeType: string) => void;
     onTranscript?: (text: string, isFinal: boolean) => void;
     onSetupComplete?: () => void;
     onToolCall?: (toolName: string, args: Record<string, unknown>) => void;
@@ -17,16 +24,23 @@ export interface GeminiLiveEventHandlers {
  * Handles connection, message processing, and state management.
  */
 export class GeminiLiveClientSDK {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private session: any = null;
     private eventHandlers: GeminiLiveEventHandlers = {};
-    private responseQueue: any[] = [];
+    private responseQueue: unknown[] = [];
     private isProcessing = false;
+    private modelName: string;
+
+    // Default model - can be overridden by backend
+    private static readonly DEFAULT_MODEL = 'models/gemini-2.5-flash-native-audio-preview-09-2025';
 
     constructor(
         private apiKey: string,
-        handlers: GeminiLiveEventHandlers = {}
+        handlers: GeminiLiveEventHandlers = {},
+        modelName?: string
     ) {
         this.eventHandlers = handlers;
+        this.modelName = modelName || GeminiLiveClientSDK.DEFAULT_MODEL;
     }
 
     /**
@@ -35,24 +49,21 @@ export class GeminiLiveClientSDK {
     async connect(): Promise<void> {
         console.log("[GeminiLiveClientSDK] Initiating connection...");
 
-        // Check if this is an API key or ephemeral token
         const isApiKey = this.apiKey.startsWith('AIza');
         const isEphemeralToken = this.apiKey.startsWith('auth_tokens/');
 
         if (!isApiKey && !isEphemeralToken) {
-            console.error('[GeminiLiveClientSDK] Invalid credentials format. Expected API key or ephemeral token.');
+            console.error('[GeminiLiveClientSDK] Invalid credentials format.');
             this.eventHandlers.onError?.(new Error('Invalid credentials format'));
             return;
         }
 
-        // For ephemeral tokens, pass them as apiKey with v1alpha
         const ai = new GoogleGenAI({
             apiKey: this.apiKey,
             httpOptions: { apiVersion: 'v1alpha' }
         });
 
-        // Using the native audio preview model optimized for latency
-        const model = 'models/gemini-2.5-flash-native-audio-preview-09-2025';
+        const model = this.modelName;
 
         const config = {
             responseModalities: [Modality.AUDIO],
@@ -60,7 +71,7 @@ export class GeminiLiveClientSDK {
             speechConfig: {
                 voiceConfig: {
                     prebuiltVoiceConfig: {
-                        voiceName: 'Puck', // Can be dynamic based on props
+                        voiceName: 'Puck',
                     },
                 },
             },
@@ -72,11 +83,10 @@ export class GeminiLiveClientSDK {
                 model,
                 callbacks: {
                     onopen: () => {
-                        console.log('[GeminiLiveClientSDK] Connection established (onopen)');
+                        console.log('[GeminiLiveClientSDK] Connection established');
                         this.eventHandlers.onConnected?.();
                     },
                     onmessage: (message: unknown) => {
-                        // console.log('[GeminiLiveClientSDK] Message received from server'); // Verbose
                         this.responseQueue.push(message);
                         if (!this.isProcessing) {
                             this.processMessages();
@@ -86,8 +96,8 @@ export class GeminiLiveClientSDK {
                         console.error('[GeminiLiveClientSDK] Connection error:', e);
                         this.eventHandlers.onError?.(new Error(String(e)));
                     },
-                    onclose: (e: unknown) => {
-                        console.log('[GeminiLiveClientSDK] Connection closed (onclose)');
+                    onclose: () => {
+                        console.log('[GeminiLiveClientSDK] Connection closed');
                         this.eventHandlers.onDisconnected?.();
                     },
                 },
@@ -102,60 +112,17 @@ export class GeminiLiveClientSDK {
     }
 
     /**
-     * Processes messages from the response queue sequentially.
+     * Processes messages from the response queue using the message processor.
      */
     private async processMessages(): Promise<void> {
         this.isProcessing = true;
 
         while (this.responseQueue.length > 0) {
             const message = this.responseQueue.shift();
+            const processedMessages = processGeminiMessage(message);
 
-            if (message.setupComplete) {
-                console.log("[GeminiLiveClientSDK] Setup complete signal received");
-                this.eventHandlers.onSetupComplete?.();
-            }
-
-            // Handle Server Content (Audio/Text)
-            if (message.serverContent) {
-                // Check for interruption signal
-                if (message.serverContent.interrupted) {
-                    console.log("[GeminiLiveClientSDK] Interruption signal received");
-                    this.eventHandlers.onInterrupted?.();
-                }
-
-                if (message.serverContent.modelTurn?.parts) {
-                    for (const part of message.serverContent.modelTurn.parts) {
-                        if (part.text) {
-                            const isFinal = message.serverContent.turnComplete || false;
-                            console.log(`[GeminiLiveClientSDK] Transcript received (Final: ${isFinal}): ${part.text.substring(0, 50)}...`);
-                            this.eventHandlers.onTranscript?.(part.text, isFinal);
-                        }
-
-                        if (part.inlineData?.data) {
-                            // console.log("[GeminiLiveClientSDK] Audio data received"); // Verbose
-                            this.eventHandlers.onAudioData?.(
-                                part.inlineData.data,
-                                part.inlineData.mimeType || 'audio/pcm;rate=24000'
-                            );
-                        }
-                    }
-                }
-
-                if (message.serverContent.turnComplete) {
-                    console.log("[GeminiLiveClientSDK] Turn complete signal received");
-                    this.eventHandlers.onTurnComplete?.();
-                }
-            }
-
-            // Handle Tool Calls
-            if (message.toolCall) {
-                const toolCalls = message.toolCall.functionCalls;
-                if (toolCalls && toolCalls.length > 0) {
-                    for (const call of toolCalls) {
-                        console.log(`[GeminiLiveClientSDK] Tool call received: ${call.name}`);
-                        this.eventHandlers.onToolCall?.(call.name, call.args);
-                    }
-                }
+            for (const processed of processedMessages) {
+                this.dispatchMessage(processed.type, processed.payload);
             }
         }
 
@@ -163,8 +130,46 @@ export class GeminiLiveClientSDK {
     }
 
     /**
+     * Dispatches processed messages to appropriate event handlers.
+     */
+    private dispatchMessage(type: string, payload: unknown): void {
+        switch (type) {
+            case 'setup_complete':
+                console.log("[GeminiLiveClientSDK] Setup complete");
+                this.eventHandlers.onSetupComplete?.();
+                break;
+
+            case 'interrupted':
+                console.log("[GeminiLiveClientSDK] Interruption signal received");
+                this.eventHandlers.onInterrupted?.();
+                break;
+
+            case 'transcript':
+                const transcript = payload as TranscriptPayload;
+                console.log(`[GeminiLiveClientSDK] Transcript (Final: ${transcript.isFinal})`);
+                this.eventHandlers.onTranscript?.(transcript.text, transcript.isFinal);
+                break;
+
+            case 'audio':
+                const audio = payload as AudioPayload;
+                this.eventHandlers.onAudioData?.(audio.data, audio.mimeType);
+                break;
+
+            case 'turn_complete':
+                console.log("[GeminiLiveClientSDK] Turn complete");
+                this.eventHandlers.onTurnComplete?.();
+                break;
+
+            case 'tool_call':
+                const toolCall = payload as ToolCallPayload;
+                console.log(`[GeminiLiveClientSDK] Tool call: ${toolCall.name}`);
+                this.eventHandlers.onToolCall?.(toolCall.name, toolCall.args);
+                break;
+        }
+    }
+
+    /**
      * Sends audio data to the Gemini Live API.
-     * @param audioData PCM audio data
      */
     sendAudio(audioData: ArrayBuffer): void {
         if (!this.session) {
@@ -172,15 +177,7 @@ export class GeminiLiveClientSDK {
             return;
         }
 
-        // Convert ArrayBuffer to base64
-        const bytes = new Uint8Array(audioData);
-        let binary = '';
-        for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        const base64Audio = btoa(binary);
-
-        // console.log(`[GeminiLiveClientSDK] Sending audio chunk (${bytes.byteLength} bytes)`); // Verbose
+        const base64Audio = arrayBufferToBase64(audioData);
 
         this.session.sendRealtimeInput({
             audio: {
@@ -192,7 +189,6 @@ export class GeminiLiveClientSDK {
 
     /**
      * Sends text input to the Gemini Live API.
-     * @param text Text to send
      */
     sendText(text: string): void {
         if (!this.session) {
@@ -212,9 +208,7 @@ export class GeminiLiveClientSDK {
     disconnect(): void {
         console.log("[GeminiLiveClientSDK] Disconnecting...");
         if (this.session) {
-            // Attempt graceful close if method exists, otherwise nullify
             try {
-                // Some SDK versions might not expose close directly or it might be async
                 // @ts-ignore
                 if (typeof this.session.close === 'function') this.session.close();
             } catch (e) {

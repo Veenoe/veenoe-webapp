@@ -1,6 +1,7 @@
 /**
- * Industry Standard Audio Handler
- * Uses AudioWorklet for jitter-free, off-main-thread audio processing.
+ * Audio Recorder
+ * Handles microphone input using AudioWorklet for jitter-free, off-main-thread audio processing.
+ * Note: For audio playback, use AudioPlayer instead.
  */
 
 export interface AudioConfig {
@@ -13,7 +14,7 @@ const DEFAULT_AUDIO_CONFIG: AudioConfig = {
     channels: 1,
 };
 
-export class AudioHandler {
+export class AudioRecorder {
     private audioContext: AudioContext | null = null;
     private mediaStream: MediaStream | null = null;
     private audioWorkletNode: AudioWorkletNode | null = null;
@@ -31,7 +32,9 @@ export class AudioHandler {
 
             // 2. Load the Worklet Module
             // This loads the file we created in /public
-            await this.audioContext.audioWorklet.addModule('/audio-worklet-processor.js');
+            // Use dynamic base path for deployment flexibility
+            const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+            await this.audioContext.audioWorklet.addModule(`${basePath}/audio-worklet-processor.js`);
 
             // 3. Request Mic Access
             this.mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -96,47 +99,18 @@ export class AudioHandler {
 
     stopRecording(): void {
         this.isRecording = false;
-        
+
         if (this.audioWorkletNode) {
             this.audioWorkletNode.disconnect();
             this.audioWorkletNode = null;
         }
-        
+
         if (this.sourceNode) {
             this.sourceNode.disconnect();
             this.sourceNode = null;
         }
 
         console.log("Recording stopped");
-    }
-
-    async playAudio(audioData: ArrayBuffer): Promise<void> {
-        if (!this.audioContext) return;
-
-        try {
-            // Convert PCM back to Float32 for playback
-            const pcmData = new Int16Array(audioData);
-            const floatData = new Float32Array(pcmData.length);
-
-            for (let i = 0; i < pcmData.length; i++) {
-                floatData[i] = pcmData[i] / 32768.0;
-            }
-
-            const audioBuffer = this.audioContext.createBuffer(
-                this.config.channels,
-                floatData.length,
-                this.config.sampleRate
-            );
-
-            audioBuffer.getChannelData(0).set(floatData);
-
-            const source = this.audioContext.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(this.audioContext.destination);
-            source.start();
-        } catch (error) {
-            console.error("Playback error:", error);
-        }
     }
 
     cleanup(): void {

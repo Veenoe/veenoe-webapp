@@ -1,15 +1,11 @@
 /**
  * Zustand Store for Viva Session State Management
- * Centralized state for the entire viva examination flow
  */
 
 import { create } from "zustand";
-import { SessionState, AudioState } from "@/types/viva";
-import type { VivaStartResponse, GetNextQuestionResponse } from "@/types/viva";
+import { SessionState, AudioState, VivaFeedback } from "@/types/viva";
+import type { VivaStartResponse } from "@/types/viva";
 
-/**
- * Transcript entry
- */
 export interface Transcript {
     id: string;
     role: "user" | "assistant";
@@ -18,19 +14,21 @@ export interface Transcript {
     isFinal: boolean;
 }
 
-/**
- * Viva session store state
- */
+// Helper type for the conclusion popup data
+export interface ConclusionData {
+    score: number;
+    total: number;
+    feedback: string;
+}
+
 interface VivaSessionStore {
     // Session data
     sessionId: string | null;
     ephemeralToken: string | null;
+    googleModel: string | null;
     voiceName: string;
     sessionDurationMinutes: number;
     sessionState: SessionState;
-
-    // Current question
-    currentQuestion: GetNextQuestionResponse | null;
 
     // Audio state
     audioState: AudioState;
@@ -40,24 +38,18 @@ interface VivaSessionStore {
     transcripts: Transcript[];
 
     // Timer
-    timeRemaining: number; // in seconds
+    timeRemaining: number;
     timerWarningShown: boolean;
 
     // Error handling
     error: string | null;
 
-    // Conclusion Data
-    conclusionData: {
-        score: number;
-        total: number;
-        feedback: string;
-    } | null;
-    setConclusionData: (data: { score: number; total: number; feedback: string }) => void;
+    // -- NEW: Conclusion Data for Popup --
+    conclusionData: ConclusionData | null;
 
     // Actions
     setSessionData: (data: VivaStartResponse) => void;
     setSessionState: (state: SessionState) => void;
-    setCurrentQuestion: (question: GetNextQuestionResponse | null) => void;
     setAudioState: (state: AudioState) => void;
     toggleMute: () => void;
     addTranscript: (transcript: Omit<Transcript, "id" | "timestamp">) => void;
@@ -65,31 +57,29 @@ interface VivaSessionStore {
     setTimeRemaining: (seconds: number) => void;
     setTimerWarning: (shown: boolean) => void;
     setError: (error: string | null) => void;
+
+    // -- NEW: Action to set conclusion data --
+    setConclusionData: (data: ConclusionData | null) => void;
+
     resetSession: () => void;
 }
 
-/**
- * Initial state
- */
 const initialState = {
     sessionId: null,
     ephemeralToken: null,
+    googleModel: null,
     voiceName: "Kore",
-    sessionDurationMinutes: 10,
+    sessionDurationMinutes: 5,
     sessionState: SessionState.IDLE,
-    currentQuestion: null,
     audioState: AudioState.IDLE,
     isMuted: false,
     transcripts: [],
-    timeRemaining: 600, // 10 minutes in seconds
+    timeRemaining: 300,
     timerWarningShown: false,
     error: null,
-    conclusionData: null,
+    conclusionData: null, // Initialize as null
 };
 
-/**
- * Create the Zustand store
- */
 export const useVivaStore = create<VivaSessionStore>((set) => ({
     ...initialState,
 
@@ -97,14 +87,13 @@ export const useVivaStore = create<VivaSessionStore>((set) => ({
         set({
             sessionId: data.viva_session_id,
             ephemeralToken: data.ephemeral_token,
+            googleModel: data.google_model,
             voiceName: data.voice_name,
             sessionDurationMinutes: data.session_duration_minutes,
             timeRemaining: data.session_duration_minutes * 60,
         }),
 
     setSessionState: (state) => set({ sessionState: state }),
-
-    setCurrentQuestion: (question) => set({ currentQuestion: question }),
 
     setAudioState: (state) => set({ audioState: state }),
 
