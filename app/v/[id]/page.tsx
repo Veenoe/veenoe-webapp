@@ -9,6 +9,7 @@ import { ResultPageHeader } from "@/components/v/ResultPageHeader";
 import { ScoreCard } from "@/components/v/ScoreCard";
 import { SummaryCard } from "@/components/v/SummaryCard";
 import { FeedbackCard } from "@/components/v/FeedbackCard";
+import { toast } from "sonner";
 
 export default function VivaResultPage() {
     const params = useParams();
@@ -16,6 +17,19 @@ export default function VivaResultPage() {
     const sessionId = params.id as string;
 
     const { data: session, isLoading, isError } = useVivaResult(sessionId);
+
+    const handleShare = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            toast.success("Link copied to clipboard!", {
+                description: "You can now share this result with others.",
+            });
+        } catch {
+            toast.error("Failed to copy link", {
+                description: "Please copy the URL manually from the address bar.",
+            });
+        }
+    };
 
     if (isLoading) {
         return (
@@ -48,7 +62,7 @@ export default function VivaResultPage() {
                     startedAt={session.started_at}
                     classLevel={session.class_level}
                     onBack={() => router.push("/")}
-                    onShare={() => { }}
+                    onShare={handleShare}
                     onDone={() => router.push("/")}
                 />
 
