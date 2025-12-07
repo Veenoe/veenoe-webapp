@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useScrollAnimation } from "@/lib/hooks/useScrollAnimation";
-// We no longer need 'next/link' here
+import Link from "next/link";
 
 export function MovementSection() {
   const { ref, isInView } = useScrollAnimation({ threshold: 0.3 });
@@ -82,15 +82,15 @@ export function MovementSection() {
               asChild // 1. `asChild` is on the Button.
               className="group bg-linear-to-r from-pumpkin-500 to-jasper-500 hover:from-jasper-500 hover:to-pumpkin-500 text-white-smoke-900 text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-2xl transition-all duration-300"
             >
-              <a
-                href="https://forms.gle/QdJ9yWVHiPZziEvh8" // 2. Use a standard <a> tag.
+              <Link
+                href="https://forms.gle/QdJ9yWVHiPZziEvh8"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                {/* 3. The content is now the child of <a>, not a fragment. */}
+                {/* 3. The content is now the child of <Link>, not a fragment. */}
                 Join the Waitlist
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </a>
+              </Link>
             </Button>
 
             <p className="text-muted-foreground text-sm mt-4">
@@ -106,7 +106,7 @@ export function MovementSection() {
             className="mt-16"
           >
             <p className="text-4xl md:text-5xl font-light text-foreground mb-4">
-            Veenoe
+              Veenoe
             </p>
           </motion.div>
         </motion.div>

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { MessageSquare, MoreHorizontal, Pencil, Trash2, History, Mic, BookOpen } from "lucide-react"
 import { useHistory, useRenameSession, useDeleteSession } from "@/lib/hooks/use-history"
 import {
@@ -71,7 +72,7 @@ export function HistoryList() {
                 {(historyData?.sessions || []).map((session) => (
                     <SidebarMenuItem key={session.viva_session_id}>
                         <SidebarMenuButton asChild isActive={false} className="group-data-[collapsible=icon]:!p-2">
-                            <a href={`/viva/${session.viva_session_id}`} onClick={(e) => {
+                            <Link href={`/viva/${session.viva_session_id}`} onClick={(e) => {
                                 if (editingId === session.viva_session_id) e.preventDefault()
                             }}>
                                 {getSessionIcon(session.session_type)}
@@ -90,7 +91,7 @@ export function HistoryList() {
                                 ) : (
                                     <span>{session.title || session.topic || "Untitled Session"}</span>
                                 )}
-                            </a>
+                            </Link>
                         </SidebarMenuButton>
                         {!editingId && (
                             <DropdownMenu>

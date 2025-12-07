@@ -3,6 +3,7 @@
 import * as React from "react"
 import { MessageSquarePlus, Search } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 import { useSidebar } from "@/components/ui/sidebar"
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger } from "@/components/ui/sidebar"
 import { SearchDialog } from "./search-dialog"
@@ -21,14 +22,14 @@ export function SidebarHeaderArea() {
                     <div className="flex w-full items-center justify-between group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0">
                         {/* Logo & Text - Visible when expanded */}
                         <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-                            <a href="/" className="flex items-center gap-2">
+                            <Link href="/" className="flex items-center gap-2">
                                 <div className="flex bg-transparent">
                                     <Image src="/images/veeno.png" alt="Veenoe" width={32} height={32} className="object-contain" />
                                 </div>
                                 <div className="flex flex-col gap-0.5 leading-none">
                                     <span className="font-semibold text-lg">Veenoe</span>
                                 </div>
-                            </a>
+                            </Link>
                         </div>
 
                         {/* Collapsed View: Logo that shows Trigger on Hover */}
@@ -46,10 +47,10 @@ export function SidebarHeaderArea() {
                 <SidebarMenuItem>
                     <div className="flex flex-col gap-1 mt-2">
                         <SidebarMenuButton asChild tooltip="New Chat">
-                            <a href="/">
+                            <Link href="/">
                                 <MessageSquarePlus />
                                 <span>New Session</span>
-                            </a>
+                            </Link>
                         </SidebarMenuButton>
                         <SidebarMenuButton
                             tooltip="Search"

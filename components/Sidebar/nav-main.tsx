@@ -1,6 +1,7 @@
 "use client"
 
 import { ChevronRight, MoreHorizontal, Pencil, Trash2, type LucideIcon } from "lucide-react"
+import Link from "next/link"
 import { useState } from "react"
 import {
   Collapsible,
@@ -69,10 +70,10 @@ export function NavMain({
           {items.map((item) => (
             <SidebarMenuItem key={item.id}>
               <SidebarMenuButton asChild tooltip={item.title} isActive={item.isActive}>
-                <a href={item.url}>
+                <Link href={item.url}>
                   {item.icon && <item.icon />}
                   <span>{item.title}</span>
-                </a>
+                </Link>
               </SidebarMenuButton>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

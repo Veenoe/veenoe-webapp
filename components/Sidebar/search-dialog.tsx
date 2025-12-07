@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Search, MessageSquare, Mic, BookOpen } from "lucide-react"
+import Link from "next/link"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useHistory } from "@/lib/hooks/use-history"
@@ -63,7 +64,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
                                 </div>
                             )}
                             {(query ? filteredSessions : historyData?.sessions || []).slice(0, query ? undefined : 5).map((session) => (
-                                <a
+                                <Link
                                     key={session.viva_session_id}
                                     href={`/viva/${session.viva_session_id}`}
                                     onClick={() => onOpenChange(false)}
@@ -71,7 +72,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
                                 >
                                     {getSessionIcon(session.session_type)}
                                     <span className="truncate">{session.title || session.topic || "Untitled"}</span>
-                                </a>
+                                </Link>
                             ))}
                             {!query && (
                                 <div className="px-2 py-2 text-xs text-muted-foreground text-center">
