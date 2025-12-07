@@ -47,7 +47,7 @@ export function SidebarHeaderArea() {
                 <SidebarMenuItem>
                     <div className="flex flex-col gap-1 mt-2">
                         <SidebarMenuButton asChild tooltip="New Chat">
-                            <Link href="/">
+                            <Link href="/viva">
                                 <MessageSquarePlus />
                                 <span>New Session</span>
                             </Link>

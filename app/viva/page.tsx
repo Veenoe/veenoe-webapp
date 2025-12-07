@@ -1,11 +1,6 @@
-/**
- * Viva Room Page - Main Viva Interface
- * Handles the complete viva examination flow with voice interaction
- */
-
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,21 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { VoiceSelector } from "@/components/viva/VoiceSelector";
 import { ThinkingConfig } from "@/components/viva/ThinkingConfig";
-import { SessionTimer } from "@/components/viva/SessionTimer";
 import { useVivaSession } from "@/lib/hooks/useVivaSession";
 import { startVivaSession } from "@/lib/api/client";
-import { SessionState, AudioState } from "@/types/viva";
 import { VivaActiveSession } from "@/components/viva/VivaActiveSession";
-import { VivaConclusion } from "@/components/viva/VivaConclusion";
 import { useUser } from "@clerk/nextjs";
 import {
     Loader2,
-    Mic,
-    MicOff,
-    Phone,
-    PhoneOff,
     AlertCircle,
-    CheckCircle2,
 } from "lucide-react";
 
 export default function VivaRoomPage() {
@@ -43,14 +30,13 @@ export default function VivaRoomPage() {
     const [topic, setTopic] = useState("");
     const [classLevel, setClassLevel] = useState("12");
     const [voiceName, setVoiceName] = useState("Kore");
-    const [enableThinking, setEnableThinking] = useState(true);
-    const [thinkingBudget, setThinkingBudget] = useState(1024);
+    // Removed Thinking State as per new simple architecture
+    // const [enableThinking, setEnableThinking] = useState(true);
+    // const [thinkingBudget, setThinkingBudget] = useState(1024);
+    
     const [isStarting, setIsStarting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    /**
-     * Start the viva session (Step 1: Backend Init)
-     */
     const handleStartSession = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -60,7 +46,6 @@ export default function VivaRoomPage() {
             return;
         }
 
-        // Validation
         if (!studentName.trim() || !topic.trim()) {
             setError("Please fill in all required fields");
             return;
@@ -75,7 +60,6 @@ export default function VivaRoomPage() {
         setIsStarting(true);
 
         try {
-            // Start viva session via backend
             const response = await startVivaSession({
                 student_name: studentName.trim(),
                 user_id: user.id,
@@ -83,14 +67,11 @@ export default function VivaRoomPage() {
                 class_level: classLevelNum,
                 session_type: "viva",
                 voice_name: voiceName,
-                enable_thinking: enableThinking,
-                thinking_budget: enableThinking ? thinkingBudget : 0,
+                enable_thinking: false, // Disabled for simplicity
+                thinking_budget: 0,
             });
 
-            // Save session data
             vivaSession.setSessionData(response);
-
-            // Hide config form and show info dialog
             setShowConfig(false);
             setShowInfoDialog(true);
 
@@ -102,41 +83,16 @@ export default function VivaRoomPage() {
         }
     };
 
-    /**
-     * Confirm Start (Step 2: Connect to Gemini)
-     */
     const handleConfirmStart = async () => {
         try {
             setShowInfoDialog(false);
-
-            // Initialize Gemini Live connection
+            // Just initialize. Recording starts automatically inside initializeSession
             await vivaSession.initializeSession();
-
-            // Start recording
-            await vivaSession.startRecording();
         } catch (err) {
             console.error("Failed to connect to Gemini:", err);
-            // If connection fails, we might want to show error or go back
-            // For now, let's just log it. The session hook handles errors too.
         }
     };
 
-    /**
-     * End the session
-     */
-    const handleEndSession = () => {
-        vivaSession.endSession();
-        router.push("/");
-    };
-
-    /**
-     * Toggle microphone mute
-     */
-    const handleToggleMute = () => {
-        vivaSession.toggleMute();
-    };
-
-    // Show configuration form before session starts
     if (showConfig) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -183,12 +139,7 @@ export default function VivaRoomPage() {
 
                             <VoiceSelector value={voiceName} onValueChange={setVoiceName} />
 
-                            <ThinkingConfig
-                                enabled={enableThinking}
-                                budget={thinkingBudget}
-                                onEnabledChange={setEnableThinking}
-                                onBudgetChange={setThinkingBudget}
-                            />
+                            {/* Removed Thinking Config Component */}
 
                             {error && (
                                 <Alert variant="destructive">
@@ -218,7 +169,6 @@ export default function VivaRoomPage() {
         );
     }
 
-    // Info Dialog Overlay
     if (showInfoDialog) {
         return (
             <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -229,15 +179,8 @@ export default function VivaRoomPage() {
                     <CardContent className="space-y-6">
                         <div className="space-y-4 text-center">
                             <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                                <p className="font-medium text-foreground">To start the viva:</p>
-                                <p className="text-muted-foreground italic">"Start Viva"</p>
-                                <p className="text-sm text-muted-foreground">(Say this in your preferred language)</p>
-                            </div>
-
-                            <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                                <p className="font-medium text-foreground">To end the session at any time:</p>
-                                <p className="text-muted-foreground italic">"End Viva"</p>
-                                <p className="text-sm text-muted-foreground">(Say this in your preferred language)</p>
+                                <p className="font-medium text-foreground">AI will start speaking immediately.</p>
+                                <p className="text-sm text-muted-foreground">The session is timed for 5 minutes.</p>
                             </div>
                         </div>
 
@@ -245,7 +188,7 @@ export default function VivaRoomPage() {
                             className="w-full bg-pumpkin hover:bg-pumpkin-600 h-12 text-lg"
                             onClick={handleConfirmStart}
                         >
-                            Okay, Start Session
+                            Start Session
                         </Button>
                     </CardContent>
                 </Card>
@@ -253,26 +196,9 @@ export default function VivaRoomPage() {
         );
     }
 
-    // Main viva interface
-    if (vivaSession.sessionState === SessionState.COMPLETED && vivaSession.conclusionData) {
-        return (
-            <VivaConclusion
-                score={vivaSession.conclusionData.score}
-                total={vivaSession.conclusionData.total}
-                feedback={vivaSession.conclusionData.feedback}
-            />
-        );
-    }
-
     return (
         <div className="min-h-screen bg-background p-4 flex flex-col">
-            {/* Header with Timer - Only show if not active session component (which has its own timer) */}
-            {/* Actually, VivaActiveSession handles the layout now. */}
-
-            <VivaActiveSession
-                vivaSession={vivaSession}
-                onEndSession={handleEndSession}
-            />
+            <VivaActiveSession vivaSession={vivaSession} />
         </div>
     );
 }

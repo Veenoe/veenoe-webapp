@@ -72,7 +72,7 @@ export function HistoryList() {
                 {(historyData?.sessions || []).map((session) => (
                     <SidebarMenuItem key={session.viva_session_id}>
                         <SidebarMenuButton asChild isActive={false} className="group-data-[collapsible=icon]:!p-2">
-                            <Link href={`/viva/${session.viva_session_id}`} onClick={(e) => {
+                            <Link href={`/v/${session.viva_session_id}`} onClick={(e) => {
                                 if (editingId === session.viva_session_id) e.preventDefault()
                             }}>
                                 {getSessionIcon(session.session_type)}

@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useVivaStore } from "@/lib/store/viva-store";
 import { GeminiLiveClientSDK } from "@/lib/gemini/live-client-sdk";
 import { AudioHandler } from "@/lib/gemini/audio-handler";
 import { AudioPlayer } from "@/lib/gemini/audio-player";
 import { SessionState, AudioState } from "@/types/viva";
-import {
-  concludeViva,
-} from "@/lib/api/client";
+import { concludeViva } from "@/lib/api/client";
 
 export function useVivaSession() {
+  const router = useRouter();
   const store = useVivaStore();
 
   const {
@@ -25,328 +25,224 @@ export function useVivaSession() {
   const audioHandlerRef = useRef<AudioHandler | null>(null);
   const audioPlayerRef = useRef<AudioPlayer | null>(null);
 
-  // Refs to track state for VAD control
   const isAudioPlayingRef = useRef(false);
   const isTurnCompleteRef = useRef(true);
-
-  // Ref for debounce timeout
+  
+  // New Ref: Tracks if we have received the conclude tool but are waiting for audio to finish
+  const isConclusionPendingRef = useRef(false);
+  
   const recordingSwitchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  /**
-   * Helper to schedule switching to recording state with a debounce
-   * This prevents "flip-flopping" if there's a small gap in audio or turn signals
-   */
   const scheduleSwitchToRecording = useCallback(() => {
-    if (recordingSwitchTimeoutRef.current) {
-      clearTimeout(recordingSwitchTimeoutRef.current);
-    }
+    if (recordingSwitchTimeoutRef.current) clearTimeout(recordingSwitchTimeoutRef.current);
+    
+    // Only switch to recording if we aren't about to end
+    if (isConclusionPendingRef.current) return;
 
-    console.log("[useVivaSession] Scheduling switch to RECORDING (500ms debounce)...");
     recordingSwitchTimeoutRef.current = setTimeout(() => {
-      console.log("[useVivaSession] Executing switch to RECORDING");
       setAudioState(AudioState.RECORDING);
       recordingSwitchTimeoutRef.current = null;
     }, 500);
   }, [setAudioState]);
 
-  /**
-   * Helper to cancel any pending switch to recording
-   */
   const cancelSwitchToRecording = useCallback(() => {
     if (recordingSwitchTimeoutRef.current) {
-      console.log("[useVivaSession] Cancelling pending switch to RECORDING");
       clearTimeout(recordingSwitchTimeoutRef.current);
       recordingSwitchTimeoutRef.current = null;
     }
   }, []);
 
-  /**
-   * Handle tool calls from Gemini Live API
-   */
+  const cleanupResources = useCallback(() => {
+    cancelSwitchToRecording();
+    if (geminiClientRef.current) {
+      geminiClientRef.current.disconnect();
+      geminiClientRef.current = null;
+    }
+    if (audioHandlerRef.current) {
+      audioHandlerRef.current.cleanup();
+      audioHandlerRef.current = null;
+    }
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.cleanup();
+      audioPlayerRef.current = null;
+    }
+  }, [cancelSwitchToRecording]);
+
+  // Helper to finalize the session state (Show popup)
+  const finishConclusion = useCallback(() => {
+    console.log("[useVivaSession] Audio finished. Finalizing session...");
+    cleanupResources();
+    setSessionState(SessionState.COMPLETED);
+    isConclusionPendingRef.current = false;
+  }, [cleanupResources, setSessionState]);
+
   const handleToolCall = useCallback(
     async (toolName: string, args: Record<string, unknown>) => {
       console.log(`[useVivaSession] Handling tool call: ${toolName}`, args);
-      try {
-        const currentSessionId = useVivaStore.getState().sessionId;
-        if (!currentSessionId) {
-          console.error("[useVivaSession] No active session ID found for tool call");
-          return;
-        }
+      const currentSessionId = useVivaStore.getState().sessionId;
+      
+      if (!currentSessionId) return;
 
-        switch (toolName) {
-          case "conclude_viva": {
-            console.log("[useVivaSession] Concluding viva session...");
-            const result = await concludeViva({
-              viva_session_id: currentSessionId,
-              final_feedback: args.final_feedback as string,
-            });
-            console.log("[useVivaSession] Viva concluded successfully", result);
+      if (toolName === "conclude_viva") {
+        try {
+          console.log("[useVivaSession] AI requested conclusion. Saving results...");
+          
+          // 1. Save data to backend
+          await concludeViva({
+            viva_session_id: currentSessionId,
+            score: (args.score as number) ?? 0,
+            summary: (args.summary as string) ?? "",
+            strong_points: (args.strong_points as string[]) ?? [],
+            areas_of_improvement: (args.areas_of_improvement as string[]) ?? [],
+          });
 
-            useVivaStore.getState().setConclusionData({
-              score: (args.score as number) || result.correct_answers,
-              total: 10,
-              feedback: result.final_feedback
-            });
-            setSessionState(SessionState.COMPLETED);
-            break;
+          // 2. Update Local Store for the Popup UI
+          useVivaStore.getState().setConclusionData({
+             score: (args.score as number) ?? 0,
+             total: 10,
+             feedback: (args.summary as string) ?? "",
+          });
+
+          // 3. DECISION POINT: Wait for audio or finish now?
+          if (isAudioPlayingRef.current) {
+              console.log("[useVivaSession] Audio is still playing. Waiting for it to finish before showing results.");
+              isConclusionPendingRef.current = true;
+              // We do NOT call cleanupResources() yet.
+          } else {
+              console.log("[useVivaSession] No audio playing. Finishing immediately.");
+              finishConclusion();
           }
-          default:
-            console.warn(`[useVivaSession] Unknown tool call: ${toolName}`);
+          
+        } catch (error) {
+          console.error("Failed to conclude session:", error);
+          setError("Failed to save session results.");
+          // In case of error, force finish to avoid getting stuck
+          finishConclusion(); 
         }
-      } catch (error) {
-        console.error(`[useVivaSession] Tool call ${toolName} failed:`, error);
       }
     },
-    [setSessionState]
+    [setSessionState, setError, finishConclusion]
   );
 
-  /**
-   * Start recording audio (Internal helper)
-   * This is now called internally when connection is established
-   */
   const _startAudioPipeline = useCallback(async () => {
-    if (!audioHandlerRef.current || !geminiClientRef.current) {
-      console.warn("[useVivaSession] Cannot start audio pipeline: Handler or Client not initialized");
-      return;
-    }
+    if (!audioHandlerRef.current || !geminiClientRef.current) return;
 
     try {
-      console.log("[useVivaSession] Starting audio recording pipeline...");
       setAudioState(AudioState.RECORDING);
-
       await audioHandlerRef.current.startRecording((audioData) => {
         const { isMuted, audioState } = useVivaStore.getState();
-
-        // Only send audio if not muted AND not currently playing (AI speaking)
-        // This is the CLIENT-SIDE VAD enforcement
         if (geminiClientRef.current && !isMuted && audioState === AudioState.RECORDING) {
           geminiClientRef.current.sendAudio(audioData);
         }
       });
-      console.log("[useVivaSession] Audio recording started");
     } catch (error) {
-      console.error("[useVivaSession] Failed to start recording:", error);
       setError("Failed to start recording");
       setAudioState(AudioState.IDLE);
     }
   }, [setAudioState, setError]);
 
-  /**
-   * Initialize the viva session with Gemini Live API
-   */
   const initializeSession = useCallback(async () => {
-    console.log("[useVivaSession] Initializing session...");
-
-    // Priority order:
-    // 1. Local env API key (for development)
-    // 2. Ephemeral token from backend (for production)
-
-    const localApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     const ephemeralToken = useVivaStore.getState().ephemeralToken;
-
-    // Validate ephemeral token format
-    const isValidEphemeralToken = ephemeralToken && (
-      ephemeralToken.startsWith('AIza') ||
-      ephemeralToken.startsWith('auth_tokens/')
-    );
-
-    // Use local key first (dev), then ephemeral (prod)
-    const credentials = localApiKey || (isValidEphemeralToken ? ephemeralToken : null);
-
-    if (!credentials) {
-      console.error("[useVivaSession] No valid credentials found");
-      setError("No API key or ephemeral token available. Please set NEXT_PUBLIC_GEMINI_API_KEY or start a viva session.");
-      return;
-    }
+    if (!ephemeralToken) return;
 
     try {
       setSessionState(SessionState.STARTING);
+      // Reset flags on new session
+      isConclusionPendingRef.current = false;
 
-      // 1. Initialize Audio Handler and Player
-      console.log("[useVivaSession] Initializing AudioHandler...");
       audioHandlerRef.current = new AudioHandler();
       await audioHandlerRef.current.initialize();
 
-      console.log("[useVivaSession] Initializing AudioPlayer...");
       audioPlayerRef.current = new AudioPlayer({
         onPlayStart: () => {
-          console.log("[useVivaSession] Audio playback started (AI speaking)");
           isAudioPlayingRef.current = true;
           setAudioState(AudioState.PLAYING);
-          cancelSwitchToRecording(); // Ensure we don't switch back to recording while playing
+          cancelSwitchToRecording();
         },
         onPlayEnd: () => {
-          console.log("[useVivaSession] Audio playback ended");
+          console.log("[useVivaSession] Audio Playback Ended");
           isAudioPlayingRef.current = false;
 
-          // Only switch to recording if the turn is ALSO complete
-          if (isTurnCompleteRef.current) {
-            console.log("[useVivaSession] Turn complete + Audio ended -> Scheduling switch to RECORDING");
-            scheduleSwitchToRecording();
-          } else {
-            console.log("[useVivaSession] Audio ended but turn NOT complete -> Waiting...");
+          // CRITICAL FIX: Check if we were waiting to conclude
+          if (isConclusionPendingRef.current) {
+              finishConclusion();
+              return;
           }
+
+          // Otherwise, normal turn logic
+          if (isTurnCompleteRef.current) scheduleSwitchToRecording();
         },
       });
       await audioPlayerRef.current.initialize();
 
-      // 2. Initialize Gemini Client with SDK
-      console.log("[useVivaSession] Initializing GeminiLiveClientSDK...");
-      geminiClientRef.current = new GeminiLiveClientSDK(credentials, {
+      geminiClientRef.current = new GeminiLiveClientSDK(ephemeralToken, {
         onConnected: () => {
-          console.log("[useVivaSession] Connected to Gemini Live API");
           setSessionState(SessionState.ACTIVE);
-
-          // 3. Start Audio Pipeline
           _startAudioPipeline();
         },
-        onDisconnected: () => {
-          console.log("[useVivaSession] Disconnected from Gemini Live API");
-        },
-        onError: (error) => {
-          console.error("[useVivaSession] Gemini Live API error:", error);
-          setError(error.message);
+        onError: (e) => {
+          setError(e.message);
           setSessionState(SessionState.ERROR);
         },
-        onAudioData: async (base64Audio, mimeType) => {
-          // If we receive audio, the turn is definitely not complete (or a new one started)
+        onAudioData: async (base64) => {
+          // If we are pending conclusion, we still allow final audio chunks to play
           isTurnCompleteRef.current = false;
-
-          // Cancel any pending switch to recording since we are receiving audio
           cancelSwitchToRecording();
-
-          // IMMEDIATE STATE UPDATE: Mark as playing synchronously
+          
           if (!isAudioPlayingRef.current) {
-            console.log("[useVivaSession] Received audio data -> Setting state to PLAYING (Sync)");
             isAudioPlayingRef.current = true;
             setAudioState(AudioState.PLAYING);
           }
-
-          if (audioPlayerRef.current) {
-            await audioPlayerRef.current.playAudio(base64Audio);
-          }
+          await audioPlayerRef.current?.playAudio(base64);
         },
         onTurnComplete: () => {
-          console.log("[useVivaSession] Turn complete signal received");
           isTurnCompleteRef.current = true;
-
-          // If audio has already finished playing, we can start recording now
-          if (!isAudioPlayingRef.current) {
-            console.log("[useVivaSession] Turn complete + No audio playing -> Scheduling switch to RECORDING");
-            scheduleSwitchToRecording();
-          } else {
-            console.log("[useVivaSession] Turn complete but audio still playing -> Waiting for playback end");
+          // Only switch to recording if we aren't concluding
+          if (!isAudioPlayingRef.current && !isConclusionPendingRef.current) {
+             scheduleSwitchToRecording();
           }
         },
         onInterrupted: () => {
-          console.log("[useVivaSession] Interruption detected! Stopping audio and switching to RECORDING");
-
-          // Stop audio immediately
-          if (audioPlayerRef.current) {
-            audioPlayerRef.current.stop();
-          }
-
-          // Cancel any pending debounce
+          audioPlayerRef.current?.stop();
           cancelSwitchToRecording();
-
-          // Reset flags
           isAudioPlayingRef.current = false;
           isTurnCompleteRef.current = true;
-
-          // Switch to recording immediately
           setAudioState(AudioState.RECORDING);
         },
-        onTranscript: (text, isFinal) => {
-          addTranscript({
-            role: "assistant",
-            text,
-            isFinal,
-          });
-        },
-        onToolCall: async (toolName, args) => {
-          await handleToolCall(toolName, args);
-        },
+        onTranscript: (text, isFinal) => addTranscript({ role: "assistant", text, isFinal }),
+        onToolCall: handleToolCall,
       });
 
-      // 5. Initiate Connection
       await geminiClientRef.current.connect();
-
-    } catch (error) {
-      console.error("[useVivaSession] Failed to initialize session:", error);
-      setError(
-        error instanceof Error ? error.message : "Initialization failed"
-      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Connection failed");
       setSessionState(SessionState.ERROR);
     }
-  }, [setSessionState, setError, addTranscript, handleToolCall, _startAudioPipeline, scheduleSwitchToRecording, cancelSwitchToRecording]);
+  }, [setSessionState, setError, addTranscript, handleToolCall, _startAudioPipeline, scheduleSwitchToRecording, cancelSwitchToRecording, finishConclusion]);
 
-  /**
-   * End the viva session
-   */
-  const endSession = useCallback(() => {
-    console.log("[useVivaSession] Ending session...");
-
-    cancelSwitchToRecording();
-
-    if (geminiClientRef.current) {
-      geminiClientRef.current.disconnect();
-      geminiClientRef.current = null;
+  const requestConclusion = useCallback(() => {
+    if (geminiClientRef.current && store.sessionState === SessionState.ACTIVE) {
+        console.log("[useVivaSession] User requested end. Prompting AI for conclusion...");
+        geminiClientRef.current.sendText("The user needs to leave now. Please immediately evaluate the session so far and call the conclude_viva tool with your feedback.");
+        setSessionState(SessionState.CONCLUDING);
+    } else {
+        finishConclusion();
+        router.push("/");
     }
+  }, [store.sessionState, router, finishConclusion]);
 
-    if (audioHandlerRef.current) {
-      audioHandlerRef.current.cleanup();
-      audioHandlerRef.current = null;
-    }
-
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.cleanup();
-      audioPlayerRef.current = null;
-    }
-
-    setSessionState(SessionState.IDLE);
-    console.log("[useVivaSession] Session ended");
-  }, [setSessionState, cancelSwitchToRecording]);
-
-  /**
-   * Toggle mute helper
-   */
   const toggleMute = useCallback(() => {
-    const { toggleMute: storeToggle } = useVivaStore.getState();
-    storeToggle();
-  }, []);
+    store.toggleMute();
+  }, [store]);
 
-  /**
-   * Manual Start Recording
-   */
-  const startRecording = useCallback(async () => {
-    if (geminiClientRef.current?.getConnectionState() === "connected") {
-      await _startAudioPipeline();
-    }
-  }, [_startAudioPipeline]);
-
-  /**
-   * Stop recording audio
-   */
-  const stopRecording = useCallback(() => {
-    if (audioHandlerRef.current) {
-      audioHandlerRef.current.stopRecording();
-      setAudioState(AudioState.IDLE);
-    }
-  }, [setAudioState]);
-
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      endSession();
-    };
-  }, [endSession]);
+    return () => cleanupResources();
+  }, [cleanupResources]);
 
   return {
     ...store,
     initializeSession,
-    startRecording,
-    stopRecording,
-    endSession,
+    requestConclusion,
     toggleMute
   };
 }

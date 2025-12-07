@@ -66,7 +66,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
                             {(query ? filteredSessions : historyData?.sessions || []).slice(0, query ? undefined : 5).map((session) => (
                                 <Link
                                     key={session.viva_session_id}
-                                    href={`/viva/${session.viva_session_id}`}
+                                    href={`/v/${session.viva_session_id}`}
                                     onClick={() => onOpenChange(false)}
                                     className="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
                                 >
