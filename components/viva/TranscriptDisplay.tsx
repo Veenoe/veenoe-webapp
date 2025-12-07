@@ -25,7 +25,11 @@ export function TranscriptDisplay({
                 </p>
             ) : (
                 <p className="text-lg text-muted-foreground animate-pulse font-light">
-                    {audioState === AudioState.RECORDING ? "Listening..." : "Connecting..."}
+                    {audioState === AudioState.RECORDING
+                        ? "Listening..."
+                        : audioState === AudioState.PLAYING
+                            ? "AI Speaking..."
+                            : "Waiting..."}
                 </p>
             )}
         </div>

@@ -35,7 +35,7 @@ export class AudioPlayer {
             float32AudioData.length,
             24000
         );
-        audioBuffer.copyToChannel(float32AudioData as any, 0);
+        audioBuffer.copyToChannel(new Float32Array(float32AudioData), 0);
 
         // Create source
         const source = this.audioContext.createBufferSource();

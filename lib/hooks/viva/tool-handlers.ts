@@ -49,6 +49,13 @@ export function createToolHandler(deps: ToolHandlerDependencies) {
                 });
 
                 // 3. DECISION POINT: Wait for audio or finish now?
+                // The AI sends audio and tool call together, but audio takes time to decode/queue.
+                // Wait 300ms to give audio a chance to start playing before checking state.
+                // This ensures the AI's goodbye message plays before showing results.
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                console.log(`[ToolHandler] After 300ms delay - isAudioPlaying: ${isAudioPlayingRef.current}`);
+
                 if (isAudioPlayingRef.current) {
                     console.log("[ToolHandler] Audio is still playing. Waiting for it to finish.");
                     isConclusionPendingRef.current = true;

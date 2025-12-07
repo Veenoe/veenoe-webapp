@@ -19,10 +19,11 @@ export function VivaInfoDialog({ open, onConfirm }: VivaInfoDialogProps) {
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <div className="space-y-4 text-center">
-                        <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                            <p className="font-medium text-foreground">AI will start speaking immediately.</p>
-                            <p className="text-sm text-muted-foreground">The session is timed for 5 minutes.</p>
-                        </div>
+                        <p className="text-muted-foreground">To start the viva, say</p>
+                        <p className="text-3xl font-bold text-pumpkin animate-pulse drop-shadow-[0_0_15px_rgba(255,107,0,0.5)]">
+                            "Start the Viva"
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-4">Session is timed for 5 minutes</p>
                     </div>
 
                     <Button

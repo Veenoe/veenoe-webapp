@@ -24,16 +24,23 @@ export interface GeminiLiveEventHandlers {
  * Handles connection, message processing, and state management.
  */
 export class GeminiLiveClientSDK {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private session: any = null;
     private eventHandlers: GeminiLiveEventHandlers = {};
     private responseQueue: unknown[] = [];
     private isProcessing = false;
+    private modelName: string;
+
+    // Default model - can be overridden by backend
+    private static readonly DEFAULT_MODEL = 'models/gemini-2.5-flash-native-audio-preview-09-2025';
 
     constructor(
         private apiKey: string,
-        handlers: GeminiLiveEventHandlers = {}
+        handlers: GeminiLiveEventHandlers = {},
+        modelName?: string
     ) {
         this.eventHandlers = handlers;
+        this.modelName = modelName || GeminiLiveClientSDK.DEFAULT_MODEL;
     }
 
     /**
@@ -56,7 +63,7 @@ export class GeminiLiveClientSDK {
             httpOptions: { apiVersion: 'v1alpha' }
         });
 
-        const model = 'models/gemini-2.5-flash-native-audio-preview-09-2025';
+        const model = this.modelName;
 
         const config = {
             responseModalities: [Modality.AUDIO],

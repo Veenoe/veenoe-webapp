@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useVivaStore } from "@/lib/store/viva-store";
 import { GeminiLiveClientSDK } from "@/lib/gemini/live-client-sdk";
-import { AudioHandler } from "@/lib/gemini/audio-handler";
+import { AudioRecorder } from "@/lib/gemini/audio-recorder";
 import { AudioPlayer } from "@/lib/gemini/audio-player";
 import { SessionState, AudioState } from "@/types/viva";
 import { createToolHandler } from "./viva/tool-handlers";
@@ -24,7 +24,7 @@ export function useVivaSession() {
 
   // Refs for managing resources
   const geminiClientRef = useRef<GeminiLiveClientSDK | null>(null);
-  const audioHandlerRef = useRef<AudioHandler | null>(null);
+  const audioHandlerRef = useRef<AudioRecorder | null>(null);
   const audioPlayerRef = useRef<AudioPlayer | null>(null);
 
   // State tracking refs
@@ -79,7 +79,7 @@ export function useVivaSession() {
 
     try {
       setAudioState(AudioState.RECORDING);
-      await audioHandlerRef.current.startRecording((audioData) => {
+      await audioHandlerRef.current.startRecording((audioData: ArrayBuffer) => {
         const { isMuted, audioState } = useVivaStore.getState();
         if (geminiClientRef.current && !isMuted && audioState === AudioState.RECORDING) {
           geminiClientRef.current.sendAudio(audioData);
@@ -100,8 +100,8 @@ export function useVivaSession() {
       setSessionState(SessionState.STARTING);
       isConclusionPendingRef.current = false;
 
-      // Initialize audio handler
-      audioHandlerRef.current = new AudioHandler();
+      // Initialize audio recorder (handles microphone input)
+      audioHandlerRef.current = new AudioRecorder();
       await audioHandlerRef.current.initialize();
 
       // Initialize audio player with pipeline callbacks
@@ -109,41 +109,47 @@ export function useVivaSession() {
       await audioPlayerRef.current.initialize();
 
       // Initialize Gemini client with event handlers
-      geminiClientRef.current = new GeminiLiveClientSDK(ephemeralToken, {
-        onConnected: () => {
-          setSessionState(SessionState.ACTIVE);
-          _startAudioPipeline();
-        },
-        onError: (e) => {
-          setError(e.message);
-          setSessionState(SessionState.ERROR);
-        },
-        onAudioData: async (base64) => {
-          isTurnCompleteRef.current = false;
-          audioPipeline.cancelSwitchToRecording();
+      // Get model from backend response and pass to SDK
+      const googleModel = useVivaStore.getState().googleModel;
+      geminiClientRef.current = new GeminiLiveClientSDK(
+        ephemeralToken,
+        {
+          onConnected: () => {
+            setSessionState(SessionState.ACTIVE);
+            _startAudioPipeline();
+          },
+          onError: (e) => {
+            setError(e.message);
+            setSessionState(SessionState.ERROR);
+          },
+          onAudioData: async (base64) => {
+            isTurnCompleteRef.current = false;
+            audioPipeline.cancelSwitchToRecording();
 
-          if (!isAudioPlayingRef.current) {
-            isAudioPlayingRef.current = true;
-            setAudioState(AudioState.PLAYING);
-          }
-          await audioPlayerRef.current?.playAudio(base64);
+            if (!isAudioPlayingRef.current) {
+              isAudioPlayingRef.current = true;
+              setAudioState(AudioState.PLAYING);
+            }
+            await audioPlayerRef.current?.playAudio(base64);
+          },
+          onTurnComplete: () => {
+            isTurnCompleteRef.current = true;
+            if (!isAudioPlayingRef.current && !isConclusionPendingRef.current) {
+              audioPipeline.scheduleSwitchToRecording();
+            }
+          },
+          onInterrupted: () => {
+            audioPlayerRef.current?.stop();
+            audioPipeline.cancelSwitchToRecording();
+            isAudioPlayingRef.current = false;
+            isTurnCompleteRef.current = true;
+            setAudioState(AudioState.RECORDING);
+          },
+          onTranscript: (text, isFinal) => addTranscript({ role: "assistant", text, isFinal }),
+          onToolCall: handleToolCall,
         },
-        onTurnComplete: () => {
-          isTurnCompleteRef.current = true;
-          if (!isAudioPlayingRef.current && !isConclusionPendingRef.current) {
-            audioPipeline.scheduleSwitchToRecording();
-          }
-        },
-        onInterrupted: () => {
-          audioPlayerRef.current?.stop();
-          audioPipeline.cancelSwitchToRecording();
-          isAudioPlayingRef.current = false;
-          isTurnCompleteRef.current = true;
-          setAudioState(AudioState.RECORDING);
-        },
-        onTranscript: (text, isFinal) => addTranscript({ role: "assistant", text, isFinal }),
-        onToolCall: handleToolCall,
-      });
+        googleModel ?? undefined
+      );
 
       await geminiClientRef.current.connect();
     } catch (err) {
