@@ -10,7 +10,7 @@ import {
   SignedOut,
 } from '@clerk/nextjs';
 import QueryProvider from "@/components/providers/query-provider";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
@@ -43,6 +43,8 @@ export default function RootLayout({
                 <AppSidebar />
                 <SidebarInset>
                   <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 border-b px-4">
+                    {/* Mobile sidebar trigger - only visible on small screens */}
+                    <SidebarTrigger className="md:hidden" />
                     <div className="flex items-center gap-2 px-4">
                       <div className="flex-1">
                         {/* Breadcrumb or Title could go here */}
@@ -60,7 +62,7 @@ export default function RootLayout({
                       </SignedOut>
                     </div>
                   </header>
-                  <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+                  <div className="flex flex-1 flex-col overflow-hidden">
                     {children}
                   </div>
                 </SidebarInset>
