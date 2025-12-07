@@ -21,21 +21,21 @@ export function SidebarHeaderArea() {
                 <SidebarMenuItem>
                     <div className="flex w-full items-center justify-between group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0">
                         {/* Logo & Text - Visible when expanded */}
-                        <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-                            <Link href="/" className="flex items-center gap-2">
+                        <div className="flex items-center gap-3 group-data-[collapsible=icon]:hidden">
+                            <Link href="/" className="flex items-center gap-3">
                                 <div className="flex bg-transparent">
-                                    <Image src="/images/veeno.png" alt="Veenoe" width={32} height={32} className="object-contain" />
+                                    <Image src="/images/veeno.png" alt="Veenoe" width={36} height={36} className="object-contain" />
                                 </div>
                                 <div className="flex flex-col gap-0.5 leading-none">
-                                    <span className="font-semibold text-lg">Veenoe</span>
+                                    <span className="font-semibold text-xl">Veenoe</span>
                                 </div>
                             </Link>
                         </div>
 
                         {/* Collapsed View: Logo that shows Trigger on Hover */}
-                        <div className="hidden group-data-[collapsible=icon]:flex items-center justify-center relative group/logo-trigger h-8 w-8">
+                        <div className="hidden group-data-[collapsible=icon]:flex items-center justify-center relative group/logo-trigger h-10 w-10">
                             <div className="absolute inset-0 flex items-center justify-center transition-opacity duration-200 group-hover/logo-trigger:opacity-0">
-                                <Image src="/images/veeno.png" alt="Veenoe" width={24} height={24} className="object-contain" />
+                                <Image src="/images/veeno.png" alt="Veenoe" width={28} height={28} className="object-contain" />
                             </div>
                             <SidebarTrigger className="absolute opacity-0 group-hover/logo-trigger:opacity-100 bg-transparent hover:bg-transparent" />
                         </div>
@@ -45,7 +45,7 @@ export function SidebarHeaderArea() {
                     </div>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                    <div className="flex flex-col gap-1 mt-2">
+                    <div className="flex flex-col gap-1.5 mt-3">
                         <SidebarMenuButton asChild tooltip="New Chat">
                             <Link href="/viva">
                                 <MessageSquarePlus />
