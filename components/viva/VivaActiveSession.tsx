@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { useUser } from "@clerk/nextjs";
 import { SessionTimer } from "./SessionTimer";
 import { VoiceVisualizer } from "./VoiceVisualizer";
 import { SessionControls } from "./SessionControls";
@@ -17,6 +19,8 @@ interface VivaActiveSessionProps {
 
 export function VivaActiveSession({ vivaSession }: VivaActiveSessionProps) {
     const router = useRouter();
+    const queryClient = useQueryClient();
+    const { user } = useUser();
     const {
         audioState,
         isMuted,
@@ -33,11 +37,16 @@ export function VivaActiveSession({ vivaSession }: VivaActiveSessionProps) {
     const isCompleted = sessionState === SessionState.COMPLETED;
 
     // Automatically open the dialog when session is completed
+    // Also refresh the sidebar history so new session appears
     useEffect(() => {
         if (isCompleted) {
             setIsResultOpen(true);
+            // Invalidate history query so sidebar updates with new session
+            if (user?.id) {
+                queryClient.invalidateQueries({ queryKey: ['history', user.id] });
+            }
         }
-    }, [isCompleted]);
+    }, [isCompleted, queryClient, user?.id]);
 
     const handleViewReport = () => {
         if (sessionId) {

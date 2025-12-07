@@ -63,7 +63,6 @@ export default function VivaResultPage() {
                     classLevel={session.class_level}
                     onBack={() => router.push("/")}
                     onShare={handleShare}
-                    onDone={() => router.push("/")}
                 />
 
                 {/* Score & Summary Grid */}

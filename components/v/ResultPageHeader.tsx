@@ -10,7 +10,6 @@ interface ResultPageHeaderProps {
     classLevel: number;
     onBack: () => void;
     onShare: () => void;
-    onDone: () => void;
 }
 
 export function ResultPageHeader({
@@ -19,7 +18,6 @@ export function ResultPageHeader({
     classLevel,
     onBack,
     onShare,
-    onDone,
 }: ResultPageHeaderProps) {
     return (
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -44,9 +42,6 @@ export function ResultPageHeader({
             <div className="flex gap-2">
                 <Button variant="outline" className="gap-2" onClick={onShare}>
                     <Share2 className="h-4 w-4" /> Share
-                </Button>
-                <Button onClick={onDone} className="gap-2 bg-pumpkin hover:bg-pumpkin-600 text-white">
-                    <Home className="h-4 w-4" /> Done
                 </Button>
             </div>
         </div>
