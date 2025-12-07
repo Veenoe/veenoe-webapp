@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getVivaSession } from "@/lib/api/client";
+import { getVivaSession } from "@/lib/api/axios";
 import { VivaSession } from "@/types/viva";
 
 export function useVivaResult(sessionId: string) {
