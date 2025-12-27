@@ -4,20 +4,22 @@
  */
 
 import { useVivaStore } from "@/lib/store/viva-store";
-import { concludeViva } from "@/lib/api/axios";
+import { concludeViva, setAuthToken } from "@/lib/api/axios";
 
 export interface ToolHandlerDependencies {
     setError: (error: string | null) => void;
     finishConclusion: () => void;
     isAudioPlayingRef: React.MutableRefObject<boolean>;
     isConclusionPendingRef: React.MutableRefObject<boolean>;
+    /** Function to get the current auth token - required for API calls */
+    getToken: () => Promise<string | null>;
 }
 
 /**
  * Creates a tool call handler with the provided dependencies
  */
 export function createToolHandler(deps: ToolHandlerDependencies) {
-    const { setError, finishConclusion, isAudioPlayingRef, isConclusionPendingRef } = deps;
+    const { setError, finishConclusion, isAudioPlayingRef, isConclusionPendingRef, getToken } = deps;
 
     return async function handleToolCall(
         toolName: string,
@@ -31,6 +33,10 @@ export function createToolHandler(deps: ToolHandlerDependencies) {
         if (toolName === "conclude_viva") {
             try {
                 console.log("[ToolHandler] AI requested conclusion. Saving results...");
+
+                // Get fresh auth token before API call
+                const token = await getToken();
+                setAuthToken(token);
 
                 // 1. Save data to backend
                 await concludeViva({

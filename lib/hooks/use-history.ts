@@ -1,11 +1,30 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser, useAuth } from '@clerk/nextjs';
 import { historyService } from '@/lib/api/history';
-import { setAuthToken } from '@/lib/api/axios';
+import { setAuthToken, APIError } from '@/lib/api/axios';
 import { VivaSessionSummary, HistoryResponse } from '@/types/viva';
 import { toast } from 'sonner';
 
 export type { VivaSessionSummary, HistoryResponse };
+
+/**
+ * Get user-friendly error message based on API error status
+ */
+function getErrorMessage(err: unknown, action: 'rename' | 'delete'): string {
+    if (err instanceof APIError) {
+        switch (err.status) {
+            case 401:
+                return 'Please sign in to continue';
+            case 403:
+                return `You don't have permission to ${action} this session`;
+            case 404:
+                return 'Session not found';
+            default:
+                return err.message || `Failed to ${action} session`;
+        }
+    }
+    return `Failed to ${action} session`;
+}
 
 /**
  * Hook to fetch the authenticated user's viva history.
@@ -64,11 +83,11 @@ export function useRenameSession() {
             return { previousHistory };
         },
 
-        onError: (err, newTodo, context) => {
+        onError: (err, _variables, context) => {
             if (context?.previousHistory) {
                 queryClient.setQueryData(['history', user?.id], context.previousHistory);
             }
-            toast.error('Failed to rename session');
+            toast.error(getErrorMessage(err, 'rename'));
         },
 
         onSettled: () => {
@@ -106,11 +125,11 @@ export function useDeleteSession() {
             return { previousHistory };
         },
 
-        onError: (err, newTodo, context) => {
+        onError: (err, _sessionId, context) => {
             if (context?.previousHistory) {
                 queryClient.setQueryData(['history', user?.id], context.previousHistory);
             }
-            toast.error('Failed to delete session');
+            toast.error(getErrorMessage(err, 'delete'));
         },
 
         onSettled: () => {

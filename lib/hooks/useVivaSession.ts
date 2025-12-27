@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { useVivaStore } from "@/lib/store/viva-store";
 import { GeminiLiveClientSDK } from "@/lib/gemini/live-client-sdk";
 import { AudioRecorder } from "@/lib/gemini/audio-recorder";
@@ -12,6 +13,7 @@ import { createAudioPipeline } from "./viva/audio-pipeline";
 
 export function useVivaSession() {
   const router = useRouter();
+  const { getToken } = useAuth();
   const store = useVivaStore();
 
   const {
@@ -65,13 +67,14 @@ export function useVivaSession() {
     finishConclusion,
   }), [setAudioState, finishConclusion]);
 
-  // Create tool handler
+  // Create tool handler (with auth token getter for API calls)
   const handleToolCall = useMemo(() => createToolHandler({
     setError,
     finishConclusion,
     isAudioPlayingRef,
     isConclusionPendingRef,
-  }), [setError, finishConclusion]);
+    getToken,
+  }), [setError, finishConclusion, getToken]);
 
   // Start audio pipeline
   const _startAudioPipeline = useCallback(async () => {
