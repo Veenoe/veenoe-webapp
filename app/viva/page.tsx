@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useVivaSession } from "@/lib/hooks/useVivaSession";
 import { startVivaSession, setAuthToken } from "@/lib/api/axios";
 import { VivaActiveSession } from "@/components/viva/VivaActiveSession";
-import { VivaConfigForm, VivaConfigData } from "@/components/viva/VivaConfigForm";
+import { VivaConfigForm } from "@/components/viva/VivaConfigForm";
+import { VivaConfigData } from "@/lib/hooks/viva/useVivaSessionConfig";
 import { VivaInfoDialog } from "@/components/viva/VivaInfoDialog";
 import { useUser, useAuth } from "@clerk/nextjs";
 
