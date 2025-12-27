@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import type {
     VivaStartRequest,
     VivaStartResponse,
@@ -16,9 +16,37 @@ const api = axios.create({
     },
 });
 
+// --- Token Injection ---
+// Store for the auth token (set before making API calls)
+let authToken: string | null = null;
+
+/**
+ * Set the authentication token for all subsequent API requests.
+ * Call this with the Clerk session token before making API calls.
+ * 
+ * @example
+ * // In a React component:
+ * const { getToken } = useAuth();
+ * const token = await getToken();
+ * setAuthToken(token);
+ */
+export function setAuthToken(token: string | null): void {
+    authToken = token;
+}
+
+/**
+ * Get the current auth token (for debugging/testing).
+ */
+export function getAuthToken(): string | null {
+    return authToken;
+}
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
-    async (config) => {
+    (config: InternalAxiosRequestConfig) => {
+        if (authToken) {
+            config.headers.Authorization = `Bearer ${authToken}`;
+        }
         return config;
     },
     (error) => {
@@ -32,6 +60,10 @@ api.interceptors.response.use(
         return response;
     },
     (error) => {
+        // Handle 401 errors (token expired, etc.)
+        if (error.response?.status === 401) {
+            console.warn('API returned 401 - authentication required');
+        }
         return Promise.reject(error);
     }
 );
@@ -86,4 +118,3 @@ export async function getVivaSession(sessionId: string): Promise<VivaSession> {
 }
 
 export default api;
-

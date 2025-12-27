@@ -4,7 +4,7 @@
 
 export interface VivaStartRequest {
     student_name: string;
-    user_id: string;
+    // Note: user_id removed - now extracted from JWT on server-side
     topic: string;
     class_level: number;
     session_type?: string;
