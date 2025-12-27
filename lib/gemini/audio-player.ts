@@ -1,3 +1,18 @@
+/**
+ * AudioPlayer - Handles audio playback for Gemini Live API responses.
+ * 
+ * Design Decisions (First Principles):
+ * 1. Lazy AudioContext creation (browser autoplay policy)
+ * 2. Source tracking with proper cleanup to prevent memory leaks
+ * 3. Guard checks in callbacks to handle race conditions during cleanup
+ * 4. Clear separation between normal end and forced stop
+ */
+
+// Debug utility - disabled in production
+const debug = process.env.NODE_ENV !== 'production'
+    ? (...args: unknown[]) => console.log('[AudioPlayer]', ...args)
+    : () => { };
+
 export class AudioPlayer {
     private audioContext: AudioContext | null = null;
     private nextStartTime = 0;
@@ -5,6 +20,7 @@ export class AudioPlayer {
     private onPlayEnd?: () => void;
     private sources = new Set<AudioBufferSourceNode>();
     private isPlaying = false;
+    private isDestroyed = false;  // Guard flag to prevent stale callbacks
 
     constructor(callbacks?: { onPlayStart?: () => void; onPlayEnd?: () => void }) {
         this.onPlayStart = callbacks?.onPlayStart;
@@ -13,18 +29,29 @@ export class AudioPlayer {
 
     async initialize(): Promise<void> {
         // Audio context will be created on first play to respect browser autoplay policies
-        console.log("Audio player initialized");
+        debug("Initialized (AudioContext will be created on first play)");
     }
 
     async playAudio(base64String: string): Promise<void> {
-        if (!this.audioContext || this.audioContext.state === "closed") {
-            this.audioContext = new AudioContext({ sampleRate: 24000 });
-            this.nextStartTime = this.audioContext.currentTime;
+        // Guard: Don't play if destroyed
+        if (this.isDestroyed) {
+            debug("Ignoring play request - player is destroyed");
+            return;
         }
 
-        // Resume context if suspended (browser autoplay policy)
-        if (this.audioContext.state === "suspended") {
-            await this.audioContext.resume();
+        try {
+            if (!this.audioContext || this.audioContext.state === "closed") {
+                this.audioContext = new AudioContext({ sampleRate: 24000 });
+                this.nextStartTime = this.audioContext.currentTime;
+            }
+
+            // Resume context if suspended (browser autoplay policy)
+            if (this.audioContext.state === "suspended") {
+                await this.audioContext.resume();
+            }
+        } catch (error) {
+            debug("Failed to create/resume AudioContext:", error);
+            throw new Error("Audio playback is not supported in this browser");
         }
 
         const float32AudioData = this.base64ToFloat32AudioData(base64String);
@@ -61,9 +88,17 @@ export class AudioPlayer {
 
         // Cleanup when this specific source ends
         source.onended = () => {
+            // Guard: Check if source was already cleaned up (prevents memory leak)
+            // This can happen if stop() was called while audio was playing
+            if (!this.sources.has(source)) {
+                return;
+            }
+
             this.sources.delete(source);
+
             // If no more sources are playing, trigger end callback
-            if (this.sources.size === 0 && this.isPlaying) {
+            // But only if we haven't been destroyed
+            if (this.sources.size === 0 && this.isPlaying && !this.isDestroyed) {
                 this.isPlaying = false;
                 this.onPlayEnd?.();
             }
@@ -71,11 +106,15 @@ export class AudioPlayer {
     }
 
     stop(): void {
-        console.log("[AudioPlayer] Stopping all audio sources");
+        debug("Stopping all audio sources");
+
+        // Clear all sources
         this.sources.forEach(source => {
+            // Remove callback first to prevent it from firing
+            source.onended = null;
             try {
                 source.stop();
-            } catch (e) {
+            } catch {
                 // Ignore errors if source already stopped
             }
         });
@@ -116,11 +155,16 @@ export class AudioPlayer {
     }
 
     cleanup(): void {
+        debug("Cleaning up");
+
+        // Mark as destroyed to prevent any pending callbacks from executing
+        this.isDestroyed = true;
+
         this.stop();
+
         if (this.audioContext) {
             this.audioContext.close();
             this.audioContext = null;
         }
-        console.log("Audio player cleaned up");
     }
 }

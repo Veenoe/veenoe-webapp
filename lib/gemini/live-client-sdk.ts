@@ -7,6 +7,11 @@ import {
     ToolCallPayload
 } from './message-processor';
 
+// Debug utility - disabled in production
+const debug = process.env.NODE_ENV !== 'production'
+    ? (...args: unknown[]) => console.log('[GeminiLiveClientSDK]', ...args)
+    : () => { };
+
 export interface GeminiLiveEventHandlers {
     onConnected?: () => void;
     onDisconnected?: () => void;
@@ -20,8 +25,29 @@ export interface GeminiLiveEventHandlers {
 }
 
 /**
+ * Configuration for connection retry behavior.
+ */
+interface RetryConfig {
+    maxRetries: number;
+    baseDelayMs: number;
+    maxDelayMs: number;
+}
+
+const DEFAULT_RETRY_CONFIG: RetryConfig = {
+    maxRetries: 3,
+    baseDelayMs: 1000,
+    maxDelayMs: 10000,
+};
+
+/**
  * SDK Wrapper for Gemini Live API
+ * 
  * Handles connection, message processing, and state management.
+ * 
+ * Design Decisions (First Principles):
+ * 1. Exponential backoff for connection retries
+ * 2. Debug utility for development logging
+ * 3. Clean separation of connection and retry logic
  */
 export class GeminiLiveClientSDK {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -30,6 +56,7 @@ export class GeminiLiveClientSDK {
     private responseQueue: unknown[] = [];
     private isProcessing = false;
     private modelName: string;
+    private retryConfig: RetryConfig;
 
     // Default model - can be overridden by backend
     private static readonly DEFAULT_MODEL = 'models/gemini-2.5-flash-native-audio-preview-09-2025';
@@ -37,23 +64,33 @@ export class GeminiLiveClientSDK {
     constructor(
         private apiKey: string,
         handlers: GeminiLiveEventHandlers = {},
-        modelName?: string
+        modelName?: string,
+        retryConfig?: Partial<RetryConfig>
     ) {
         this.eventHandlers = handlers;
         this.modelName = modelName || GeminiLiveClientSDK.DEFAULT_MODEL;
+        this.retryConfig = { ...DEFAULT_RETRY_CONFIG, ...retryConfig };
     }
 
     /**
-     * Establishes a WebSocket connection to the Gemini Live API.
+     * Establishes a WebSocket connection with exponential backoff retry.
+     * This is the primary method to call for connecting.
      */
     async connect(): Promise<void> {
-        console.log("[GeminiLiveClientSDK] Initiating connection...");
+        await this.connectWithRetry();
+    }
+
+    /**
+     * Internal connection logic with retry support.
+     */
+    private async connectWithRetry(attempt = 0): Promise<void> {
+        debug(`Initiating connection (attempt ${attempt + 1}/${this.retryConfig.maxRetries + 1})...`);
 
         const isApiKey = this.apiKey.startsWith('AIza');
         const isEphemeralToken = this.apiKey.startsWith('auth_tokens/');
 
         if (!isApiKey && !isEphemeralToken) {
-            console.error('[GeminiLiveClientSDK] Invalid credentials format.');
+            debug('Invalid credentials format');
             this.eventHandlers.onError?.(new Error('Invalid credentials format'));
             return;
         }
@@ -78,12 +115,12 @@ export class GeminiLiveClientSDK {
         };
 
         try {
-            console.log("[GeminiLiveClientSDK] Connecting to model:", model);
+            debug("Connecting to model:", model);
             this.session = await ai.live.connect({
                 model,
                 callbacks: {
                     onopen: () => {
-                        console.log('[GeminiLiveClientSDK] Connection established');
+                        debug('Connection established');
                         this.eventHandlers.onConnected?.();
                     },
                     onmessage: (message: unknown) => {
@@ -93,22 +130,42 @@ export class GeminiLiveClientSDK {
                         }
                     },
                     onerror: (e: unknown) => {
-                        console.error('[GeminiLiveClientSDK] Connection error:', e);
+                        debug('Connection error:', e);
                         this.eventHandlers.onError?.(new Error(String(e)));
                     },
                     onclose: () => {
-                        console.log('[GeminiLiveClientSDK] Connection closed');
+                        debug('Connection closed');
                         this.eventHandlers.onDisconnected?.();
                     },
                 },
                 config,
             });
         } catch (error) {
-            console.error("[GeminiLiveClientSDK] Connection failed:", error);
+            debug("Connection failed:", error);
+
+            // Check if we should retry
+            if (attempt < this.retryConfig.maxRetries) {
+                const delay = Math.min(
+                    this.retryConfig.baseDelayMs * Math.pow(2, attempt),
+                    this.retryConfig.maxDelayMs
+                );
+                debug(`Retrying in ${delay}ms...`);
+                await this.delay(delay);
+                return this.connectWithRetry(attempt + 1);
+            }
+
+            // Max retries exceeded - notify error
             this.eventHandlers.onError?.(
-                error instanceof Error ? error : new Error('Connection failed')
+                error instanceof Error ? error : new Error('Connection failed after retries')
             );
         }
+    }
+
+    /**
+     * Utility function for async delay.
+     */
+    private delay(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     /**

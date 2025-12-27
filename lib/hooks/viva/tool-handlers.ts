@@ -1,10 +1,35 @@
 /**
  * Tool Handlers for Viva Session
  * Handles AI tool calls (conclude_viva, future tools) - easily testable
+ * 
+ * Design Decisions (First Principles):
+ * 1. Separation from main hook for testability
+ * 2. Dependency injection for side effects
+ * 3. Clear constants for timing-critical values
  */
 
 import { useVivaStore } from "@/lib/store/viva-store";
 import { concludeViva, setAuthToken } from "@/lib/api/axios";
+
+// Debug utility - disabled in production
+const debug = process.env.NODE_ENV !== 'production'
+    ? (...args: unknown[]) => console.log('[ToolHandler]', ...args)
+    : () => { };
+
+// ---------------------------------------------------------------------------
+// Configuration Constants
+// ---------------------------------------------------------------------------
+
+/**
+ * Grace period (in milliseconds) to wait for audio buffer to fill before
+ * checking if audio is playing. This ensures the AI's goodbye message
+ * has time to start decoding and begin playback before we decide whether
+ * to wait for it or finish immediately.
+ * 
+ * Why 300ms: Audio chunks are typically 100-200ms, and we need to account
+ * for decode time, buffer scheduling, and OS audio subsystem latency.
+ */
+const AUDIO_BUFFER_GRACE_PERIOD_MS = 300;
 
 export interface ToolHandlerDependencies {
     setError: (error: string | null) => void;
@@ -25,14 +50,14 @@ export function createToolHandler(deps: ToolHandlerDependencies) {
         toolName: string,
         args: Record<string, unknown>
     ): Promise<void> {
-        console.log(`[ToolHandler] Handling tool call: ${toolName}`, args);
+        debug(`Handling tool call: ${toolName}`, args);
         const currentSessionId = useVivaStore.getState().sessionId;
 
         if (!currentSessionId) return;
 
         if (toolName === "conclude_viva") {
             try {
-                console.log("[ToolHandler] AI requested conclusion. Saving results...");
+                debug("AI requested conclusion. Saving results...");
 
                 // Get fresh auth token before API call
                 const token = await getToken();
@@ -56,22 +81,20 @@ export function createToolHandler(deps: ToolHandlerDependencies) {
 
                 // 3. DECISION POINT: Wait for audio or finish now?
                 // The AI sends audio and tool call together, but audio takes time to decode/queue.
-                // Wait 300ms to give audio a chance to start playing before checking state.
-                // This ensures the AI's goodbye message plays before showing results.
-                await new Promise(resolve => setTimeout(resolve, 300));
+                await new Promise(resolve => setTimeout(resolve, AUDIO_BUFFER_GRACE_PERIOD_MS));
 
-                console.log(`[ToolHandler] After 300ms delay - isAudioPlaying: ${isAudioPlayingRef.current}`);
+                debug(`After ${AUDIO_BUFFER_GRACE_PERIOD_MS}ms delay - isAudioPlaying: ${isAudioPlayingRef.current}`);
 
                 if (isAudioPlayingRef.current) {
-                    console.log("[ToolHandler] Audio is still playing. Waiting for it to finish.");
+                    debug("Audio is still playing. Waiting for it to finish.");
                     isConclusionPendingRef.current = true;
                 } else {
-                    console.log("[ToolHandler] No audio playing. Finishing immediately.");
+                    debug("No audio playing. Finishing immediately.");
                     finishConclusion();
                 }
 
             } catch (error) {
-                console.error("[ToolHandler] Failed to conclude session:", error);
+                debug("Failed to conclude session:", error);
                 setError("Failed to save session results.");
                 // In case of error, force finish to avoid getting stuck
                 finishConclusion();
@@ -79,3 +102,4 @@ export function createToolHandler(deps: ToolHandlerDependencies) {
         }
     };
 }
+

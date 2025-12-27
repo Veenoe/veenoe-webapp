@@ -16,36 +16,77 @@ const api = axios.create({
     },
 });
 
-// --- Token Injection ---
-// Store for the auth token (set before making API calls)
-let authToken: string | null = null;
+// ---------------------------------------------------------------------------
+// Token Getter Pattern (Thread-Safe Alternative to Global Mutable State)
+// ---------------------------------------------------------------------------
+// Instead of storing a mutable token that can be overwritten by concurrent
+// requests, we store a function that fetches a fresh token per request.
+// This eliminates race conditions in scenarios like:
+// - Multiple browser tabs
+// - Concurrent API calls
+// - Token refresh during request
+
+type TokenGetter = () => Promise<string | null>;
+let tokenGetter: TokenGetter | null = null;
 
 /**
- * Set the authentication token for all subsequent API requests.
- * Call this with the Clerk session token before making API calls.
+ * Set the token getter function for all subsequent API requests.
+ * This should be called once during app initialization with a function
+ * that returns the current auth token (e.g., from Clerk).
  * 
  * @example
- * // In a React component:
- * const { getToken } = useAuth();
- * const token = await getToken();
- * setAuthToken(token);
+ * // In your app's root component or provider:
+ * import { useAuth } from '@clerk/nextjs';
+ * 
+ * function AuthProvider({ children }) {
+ *   const { getToken } = useAuth();
+ *   
+ *   useEffect(() => {
+ *     setTokenGetter(getToken);
+ *   }, [getToken]);
+ *   
+ *   return children;
+ * }
+ */
+export function setTokenGetter(getter: TokenGetter): void {
+    tokenGetter = getter;
+}
+
+/**
+ * @deprecated Use setTokenGetter instead for race-condition-free auth.
+ * This function is kept for backward compatibility during migration.
  */
 export function setAuthToken(token: string | null): void {
-    authToken = token;
+    // Create a simple getter that returns the provided token
+    // This maintains backward compatibility while encouraging migration
+    if (token) {
+        tokenGetter = async () => token;
+    } else {
+        tokenGetter = null;
+    }
 }
 
 /**
  * Get the current auth token (for debugging/testing).
+ * Returns a promise since token fetching may be async.
  */
-export function getAuthToken(): string | null {
-    return authToken;
+export async function getAuthToken(): Promise<string | null> {
+    if (!tokenGetter) return null;
+    return await tokenGetter();
 }
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
-        if (authToken) {
-            config.headers.Authorization = `Bearer ${authToken}`;
+    async (config: InternalAxiosRequestConfig) => {
+        if (tokenGetter) {
+            try {
+                const token = await tokenGetter();
+                if (token) {
+                    config.headers.Authorization = `Bearer ${token}`;
+                }
+            } catch (error) {
+                console.warn('Failed to get auth token:', error);
+            }
         }
         return config;
     },
