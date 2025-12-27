@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,12 +8,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { VoiceSelector } from "@/components/viva/VoiceSelector";
 import { Loader2, AlertCircle } from "lucide-react";
 
-export interface VivaConfigData {
-    studentName: string;
-    topic: string;
-    classLevel: string;
-    voiceName: string;
-}
+import { useVivaSessionConfig, VivaConfigData } from "@/lib/hooks/viva/useVivaSessionConfig";
+import { NameConfigField } from "./NameConfigField";
+import { ClassLevelSelector } from "./ClassLevelSelector";
 
 interface VivaConfigFormProps {
     onSubmit: (data: VivaConfigData) => Promise<void>;
@@ -22,17 +18,35 @@ interface VivaConfigFormProps {
     error: string | null;
 }
 
+/**
+ * The Main Controller Component for the Viva Configuration Form.
+ * 
+ * Architecture:
+ * - Logic: Delegated to `useVivaSessionConfig` hook (Headless).
+ * - UI: Delegates complex sections to `NameConfigField` and `ClassLevelSelector`.
+ * - Layout: Orchestrates the overall grid and submit button.
+ */
 export function VivaConfigForm({ onSubmit, isSubmitting, error }: VivaConfigFormProps) {
-    const [studentName, setStudentName] = useState("");
-    const [topic, setTopic] = useState("");
-    const [classLevel, setClassLevel] = useState("12");
-    const [voiceName, setVoiceName] = useState("Kore");
+    // 1. Initialize Headless Logic
+    const { state, actions } = useVivaSessionConfig(onSubmit);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        await onSubmit({ studentName, topic, classLevel, voiceName });
-    };
+    // 2. Handle Hydration / Loading State
+    if (!state.isMounted) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center p-4">
+                <Card className="w-full max-w-2xl border-border shadow-lg">
+                    <CardHeader>
+                        <CardTitle className="text-2xl">Quick Setup</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex justify-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
+    // 3. Render Form
     return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
             <Card className="w-full max-w-2xl border-border shadow-lg">
@@ -40,44 +54,49 @@ export function VivaConfigForm({ onSubmit, isSubmitting, error }: VivaConfigForm
                     <CardTitle className="text-2xl">Quick Setup</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="name">Your Name *</Label>
-                            <Input
-                                id="name"
-                                value={studentName}
-                                onChange={(e) => setStudentName(e.target.value)}
-                                placeholder="Enter your name"
-                                required
-                            />
-                        </div>
+                    <form onSubmit={actions.handleSubmit} className="space-y-4">
 
+                        {/* Modular Component: Name Input */}
+                        <NameConfigField
+                            studentName={state.studentName}
+                            isEditing={state.isEditingName}
+                            tempName={state.tempName}
+                            isSaving={state.isSavingName}
+                            isLoaded={state.isLoaded}
+                            onTempNameChange={actions.setTempName}
+                            onSave={actions.handleSaveName}
+                            onCancel={actions.cancelEditingName}
+                            onEditStart={actions.startEditingName}
+                        />
+
+                        {/* Standard Field: Topic */}
                         <div className="space-y-2">
                             <Label htmlFor="topic">Topic *</Label>
                             <Input
                                 id="topic"
-                                value={topic}
-                                onChange={(e) => setTopic(e.target.value)}
+                                value={state.topic}
+                                onChange={(e) => actions.setTopic(e.target.value)}
                                 placeholder="e.g., Python, History, Biology"
                                 required
                             />
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="class">Class Level (1-12) *</Label>
-                            <Input
-                                id="class"
-                                type="number"
-                                min="1"
-                                max="12"
-                                value={classLevel}
-                                onChange={(e) => setClassLevel(e.target.value)}
-                                required
-                            />
-                        </div>
+                        {/* Modular Component: Class Selector */}
+                        <ClassLevelSelector
+                            classLevel={state.classLevel}
+                            isOtherClass={state.isOtherClass}
+                            otherClassValue={state.otherClassValue}
+                            onClassChange={actions.handleClassChange}
+                            onOtherValueChange={actions.handleOtherClassChange}
+                        />
 
-                        <VoiceSelector value={voiceName} onValueChange={setVoiceName} />
+                        {/* Standard Component: Voice Selector */}
+                        <VoiceSelector
+                            value={state.voiceName}
+                            onValueChange={actions.setVoiceName}
+                        />
 
+                        {/* Error Handling */}
                         {error && (
                             <Alert variant="destructive">
                                 <AlertCircle className="h-4 w-4" />
@@ -85,10 +104,11 @@ export function VivaConfigForm({ onSubmit, isSubmitting, error }: VivaConfigForm
                             </Alert>
                         )}
 
+                        {/* Submit Action */}
                         <Button
                             type="submit"
                             className="w-full bg-pumpkin hover:bg-pumpkin-600"
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || !state.studentName}
                         >
                             {isSubmitting ? (
                                 <>
