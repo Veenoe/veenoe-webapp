@@ -3,7 +3,7 @@
  */
 
 import { create } from "zustand";
-import { SessionState, AudioState, VivaFeedback } from "@/types/viva";
+import { SessionState, AudioState } from "@/types/viva";
 import type { VivaStartResponse } from "@/types/viva";
 
 export interface Transcript {
@@ -105,7 +105,8 @@ export const useVivaStore = create<VivaSessionStore>((set) => ({
                 ...state.transcripts,
                 {
                     ...transcript,
-                    id: `transcript-${Date.now()}-${Math.random()}`,
+                    // crypto.randomUUID() guarantees uniqueness, unlike Date.now()+Math.random()
+                    id: crypto.randomUUID(),
                     timestamp: Date.now(),
                 },
             ],

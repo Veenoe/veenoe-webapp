@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import { useVivaSession } from "@/lib/hooks/useVivaSession";
-import { startVivaSession } from "@/lib/api/axios";
+import { startVivaSession, setAuthToken } from "@/lib/api/axios";
 import { VivaActiveSession } from "@/components/viva/VivaActiveSession";
 import { VivaConfigForm, VivaConfigData } from "@/components/viva/VivaConfigForm";
 import { VivaInfoDialog } from "@/components/viva/VivaInfoDialog";
-import { useUser } from "@clerk/nextjs";
+import { useUser, useAuth } from "@clerk/nextjs";
 
 export default function VivaRoomPage() {
     const vivaSession = useVivaSession();
     const { user } = useUser();
+    const { getToken } = useAuth();
 
     // Pre-session configuration state
     const [showConfig, setShowConfig] = useState(true);
@@ -40,9 +41,13 @@ export default function VivaRoomPage() {
         setIsStarting(true);
 
         try {
+            // Inject auth token before API call
+            const token = await getToken();
+            setAuthToken(token);
+
             const response = await startVivaSession({
                 student_name: data.studentName.trim(),
-                user_id: user.id,
+                // user_id removed - now extracted from JWT on server
                 topic: data.topic.trim(),
                 class_level: classLevelNum,
                 session_type: "viva",

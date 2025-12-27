@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import type {
     VivaStartRequest,
     VivaStartResponse,
@@ -16,9 +16,78 @@ const api = axios.create({
     },
 });
 
+// ---------------------------------------------------------------------------
+// Token Getter Pattern (Thread-Safe Alternative to Global Mutable State)
+// ---------------------------------------------------------------------------
+// Instead of storing a mutable token that can be overwritten by concurrent
+// requests, we store a function that fetches a fresh token per request.
+// This eliminates race conditions in scenarios like:
+// - Multiple browser tabs
+// - Concurrent API calls
+// - Token refresh during request
+
+type TokenGetter = () => Promise<string | null>;
+let tokenGetter: TokenGetter | null = null;
+
+/**
+ * Set the token getter function for all subsequent API requests.
+ * This should be called once during app initialization with a function
+ * that returns the current auth token (e.g., from Clerk).
+ * 
+ * @example
+ * // In your app's root component or provider:
+ * import { useAuth } from '@clerk/nextjs';
+ * 
+ * function AuthProvider({ children }) {
+ *   const { getToken } = useAuth();
+ *   
+ *   useEffect(() => {
+ *     setTokenGetter(getToken);
+ *   }, [getToken]);
+ *   
+ *   return children;
+ * }
+ */
+export function setTokenGetter(getter: TokenGetter): void {
+    tokenGetter = getter;
+}
+
+/**
+ * @deprecated Use setTokenGetter instead for race-condition-free auth.
+ * This function is kept for backward compatibility during migration.
+ */
+export function setAuthToken(token: string | null): void {
+    // Create a simple getter that returns the provided token
+    // This maintains backward compatibility while encouraging migration
+    if (token) {
+        tokenGetter = async () => token;
+    } else {
+        tokenGetter = null;
+    }
+}
+
+/**
+ * Get the current auth token (for debugging/testing).
+ * Returns a promise since token fetching may be async.
+ */
+export async function getAuthToken(): Promise<string | null> {
+    if (!tokenGetter) return null;
+    return await tokenGetter();
+}
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
-    async (config) => {
+    async (config: InternalAxiosRequestConfig) => {
+        if (tokenGetter) {
+            try {
+                const token = await tokenGetter();
+                if (token) {
+                    config.headers.Authorization = `Bearer ${token}`;
+                }
+            } catch (error) {
+                console.warn('Failed to get auth token:', error);
+            }
+        }
         return config;
     },
     (error) => {
@@ -32,6 +101,10 @@ api.interceptors.response.use(
         return response;
     },
     (error) => {
+        // Handle 401 errors (token expired, etc.)
+        if (error.response?.status === 401) {
+            console.warn('API returned 401 - authentication required');
+        }
         return Promise.reject(error);
     }
 );
@@ -86,4 +159,3 @@ export async function getVivaSession(sessionId: string): Promise<VivaSession> {
 }
 
 export default api;
-
