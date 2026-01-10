@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useVivaSession } from "@/lib/hooks/useVivaSession";
-import { startVivaSession, setAuthToken } from "@/lib/api/axios";
+import { startVivaSession, setTokenGetter } from "@/lib/api/axios";
 import { VivaActiveSession } from "@/components/viva/VivaActiveSession";
 import { VivaConfigForm } from "@/components/viva/VivaConfigForm";
 import { VivaConfigData } from "@/lib/hooks/viva/useVivaSessionConfig";
@@ -36,9 +36,11 @@ export default function VivaRoomPage() {
         setIsStarting(true);
 
         try {
-            // Inject auth token before API call
-            const token = await getToken();
-            setAuthToken(token);
+            // Configure auth token getter to avoid race conditions
+            setTokenGetter(() => getToken());
+
+            // Reset previous session state to prevent "ghost" messages
+            vivaSession.resetSession();
 
             const response = await startVivaSession({
                 student_name: data.studentName.trim(),
