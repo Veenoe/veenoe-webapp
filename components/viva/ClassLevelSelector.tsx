@@ -45,13 +45,13 @@ export function ClassLevelSelector({
                             Class {num}
                         </SelectItem>
                     ))}
-                    <SelectItem value="Other">Other</SelectItem>
+                    <SelectItem value="College/Professional">College/Professional</SelectItem>
                 </SelectContent>
             </Select>
 
             {isOtherClass && (
                 <Input
-                    placeholder="Enter Class / Year"
+                    placeholder="e.g: BSC Physics 2nd year / CS / CA"
                     value={otherClassValue}
                     onChange={onOtherValueChange}
                     className="mt-2"
