@@ -28,14 +28,8 @@ export default function VivaRoomPage() {
             return;
         }
 
-        if (!data.studentName.trim() || !data.topic.trim()) {
+        if (!data.studentName.trim() || !data.topic.trim() || !data.classLevel.trim()) {
             setError("Please fill in all required fields");
-            return;
-        }
-
-        const classLevelNum = parseInt(data.classLevel);
-        if (isNaN(classLevelNum) || classLevelNum < 1 || classLevelNum > 12) {
-            setError("Class level must be between 1 and 12");
             return;
         }
 
@@ -50,7 +44,7 @@ export default function VivaRoomPage() {
                 student_name: data.studentName.trim(),
                 // user_id removed - now extracted from JWT on server
                 topic: data.topic.trim(),
-                class_level: classLevelNum,
+                class_level: data.classLevel,
                 session_type: "viva",
                 voice_name: data.voiceName,
                 enable_thinking: false,

@@ -6,7 +6,7 @@ export interface VivaStartRequest {
     student_name: string;
     // Note: user_id removed - now extracted from JWT on server-side
     topic: string;
-    class_level: number;
+    class_level: string;
     session_type?: string;
     voice_name?: string;
     enable_thinking?: boolean;
@@ -34,7 +34,7 @@ export interface VivaSession {
     viva_session_id: string;
     student_name: string;
     topic: string;
-    class_level: number;
+    class_level: string;
     status: string;
     started_at: string;
     ended_at?: string;
@@ -85,7 +85,7 @@ export interface VivaSessionSummary {
     viva_session_id: string;
     title: string;
     topic: string;
-    class_level: number;
+    class_level: string;
     started_at: string;
     session_type: string;
     status: string;
