@@ -7,7 +7,7 @@ import { ArrowLeft, Share2, Home, Calendar, BookOpen } from "lucide-react";
 interface ResultPageHeaderProps {
     topic: string;
     startedAt: string;
-    classLevel: number;
+    classLevel: string;
     onBack: () => void;
     onShare: () => void;
 }
@@ -34,7 +34,7 @@ export function ResultPageHeader({
                     <Separator orientation="vertical" className="h-4" />
                     <span className="flex items-center gap-1">
                         <BookOpen className="h-3.5 w-3.5" />
-                        Class {classLevel}
+                        {classLevel}
                     </span>
                 </div>
             </div>
