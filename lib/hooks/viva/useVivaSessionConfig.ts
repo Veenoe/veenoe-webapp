@@ -62,7 +62,7 @@ export function useVivaSessionConfig(onSubmit: (data: VivaConfigData) => Promise
                     setClassLevel(savedClass);
                     setIsOtherClass(false);
                 } else {
-                    setClassLevel("Other");
+                    setClassLevel("College/Professional");
                     setIsOtherClass(true);
                     setOtherClassValue(savedClass);
                 }
@@ -108,9 +108,9 @@ export function useVivaSessionConfig(onSubmit: (data: VivaConfigData) => Promise
     };
 
     const handleClassChange = (value: string) => {
-        if (value === "Other") {
+        if (value === "College/Professional") {
             setIsOtherClass(true);
-            setClassLevel("Other");
+            setClassLevel("College/Professional");
         } else {
             setIsOtherClass(false);
             setClassLevel(value);

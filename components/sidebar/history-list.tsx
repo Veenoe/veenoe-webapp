@@ -11,6 +11,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
     SidebarMenuAction,
+    SidebarMenuSkeleton,
     useSidebar,
 } from "@/components/ui/sidebar"
 import {
@@ -23,7 +24,7 @@ import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 export function HistoryList() {
-    const { data: historyData } = useHistory()
+    const { data: historyData, isLoading } = useHistory()
     const { mutate: renameSession } = useRenameSession()
     const { mutate: deleteSession } = useDeleteSession()
     const { state } = useSidebar()
@@ -60,6 +61,21 @@ export function HistoryList() {
                             <span>Your Sessions</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarGroup>
+        )
+    }
+
+    if (isLoading) {
+        return (
+            <SidebarGroup>
+                <SidebarGroupLabel>Your Sessions</SidebarGroupLabel>
+                <SidebarMenu>
+                    {Array.from({ length: 5 }).map((_, index) => (
+                        <SidebarMenuItem key={index}>
+                            <SidebarMenuSkeleton showIcon />
+                        </SidebarMenuItem>
+                    ))}
                 </SidebarMenu>
             </SidebarGroup>
         )

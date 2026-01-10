@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useVivaSession } from "@/lib/hooks/useVivaSession";
-import { startVivaSession, setAuthToken } from "@/lib/api/axios";
+import { startVivaSession, setTokenGetter } from "@/lib/api/axios";
 import { VivaActiveSession } from "@/components/viva/VivaActiveSession";
 import { VivaConfigForm } from "@/components/viva/VivaConfigForm";
 import { VivaConfigData } from "@/lib/hooks/viva/useVivaSessionConfig";
@@ -28,29 +28,25 @@ export default function VivaRoomPage() {
             return;
         }
 
-        if (!data.studentName.trim() || !data.topic.trim()) {
+        if (!data.studentName.trim() || !data.topic.trim() || !data.classLevel.trim()) {
             setError("Please fill in all required fields");
-            return;
-        }
-
-        const classLevelNum = parseInt(data.classLevel);
-        if (isNaN(classLevelNum) || classLevelNum < 1 || classLevelNum > 12) {
-            setError("Class level must be between 1 and 12");
             return;
         }
 
         setIsStarting(true);
 
         try {
-            // Inject auth token before API call
-            const token = await getToken();
-            setAuthToken(token);
+            // Configure auth token getter to avoid race conditions
+            setTokenGetter(() => getToken());
+
+            // Reset previous session state to prevent "ghost" messages
+            vivaSession.resetSession();
 
             const response = await startVivaSession({
                 student_name: data.studentName.trim(),
                 // user_id removed - now extracted from JWT on server
                 topic: data.topic.trim(),
-                class_level: classLevelNum,
+                class_level: data.classLevel,
                 session_type: "viva",
                 voice_name: data.voiceName,
                 enable_thinking: false,
