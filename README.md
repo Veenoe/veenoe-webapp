@@ -2,7 +2,7 @@
 
 Modern, production-ready frontend for the AI-powered viva examination system built with Next.js 15, React 19, Tailwind CSS v4, and shadcn/ui.
 
-## 🚀 Features
+## Features
 
 - ✅ **Real-time Voice Interaction** - Natural conversations with AI examiner via Gemini Live API
 - ✅ **Advanced AI Reasoning** - Thinking capabilities for better question evaluation
@@ -11,7 +11,7 @@ Modern, production-ready frontend for the AI-powered viva examination system bui
 - ✅ **Adaptive Questioning** - AI adjusts difficulty based on performance
 - ✅ **Real-time Transcription** - See the conversation as it happens
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 - **Next.js 16.0.1** - React framework with App Router
 - **React 19.2.0** - Latest with Server Components
@@ -21,7 +21,7 @@ Modern, production-ready frontend for the AI-powered viva examination system bui
 - **Zustand** - State management
 - **Gemini Live API** - Real-time audio streaming
 
-## 📦 Installation
+##  Installation
 
 ```bash
 # Install dependencies
@@ -31,7 +31,7 @@ npm install
 cp .env.example .env.local
 ```
 
-## 🔧 Environment Variables
+##  Environment Variables
 
 Create a `.env.local` file:
 
@@ -40,7 +40,7 @@ Create a `.env.local` file:
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-## 🏃 Running the App
+##  Running the App
 
 ```bash
 # Development mode
@@ -55,7 +55,7 @@ npm start
 
 The app will be available at `http://localhost:3000`
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 vee-app/
@@ -77,7 +77,7 @@ vee-app/
 └── types/                   # TypeScript type definitions
 ```
 
-## 🎨 Key Components
+##  Key Components
 
 ### VoiceSelector
 Dropdown for selecting AI voice personality.
@@ -95,7 +95,7 @@ Manages complete session lifecycle:
 - Tool call handling
 - Session cleanup
 
-## 🔌 Backend Integration
+##  Backend Integration
 
 The frontend connects to the FastAPI backend running on `http://localhost:8000`.
 
@@ -105,7 +105,7 @@ The frontend connects to the FastAPI backend running on `http://localhost:8000`.
 - `POST /api/v1/viva/evaluate-response` - Evaluate answer
 - `POST /api/v1/viva/conclude-viva` - End session
 
-## 🎯 User Flow
+##  User Flow
 
 1. **Home Page** → Click "Try Beta Version"
 2. **Viva Room** → Fill in basic info (name, topic, class level)
@@ -114,7 +114,7 @@ The frontend connects to the FastAPI backend running on `http://localhost:8000`.
 5. **Conversation** → Speak naturally with AI examiner
 6. **Auto-conclude** → Session ends after 10 minutes or manually
 
-## 🧪 Testing
+##  Testing
 
 ```bash
 # Run linter
@@ -124,31 +124,31 @@ npm run lint
 npx tsc --noEmit
 ```
 
-## 📝 Code Quality
+##  Code Quality
 
-- ✅ **TypeScript** - Full type safety
-- ✅ **JSDoc Comments** - Comprehensive documentation
-- ✅ **Modular Architecture** - Clean separation of concerns
-- ✅ **Error Handling** - Graceful error recovery
-- ✅ **Accessibility** - ARIA labels and keyboard navigation
+-  **TypeScript** - Full type safety
+-  **JSDoc Comments** - Comprehensive documentation
+-  **Modular Architecture** - Clean separation of concerns
+-  **Error Handling** - Graceful error recovery
+-  **Accessibility** - ARIA labels and keyboard navigation
 
-## 🎨 Theme
+##  Theme
 
 Uses custom color palette from `globals.css`:
 - **Pumpkin** - Primary accent color
 - **Jasper** - Secondary accent
 - **White Smoke** - Neutral backgrounds
 
-## 🔐 Security
+##  Security
 
 - Ephemeral tokens for Gemini Live API
 - No API keys exposed in frontend
 - Server-to-server authentication
 
-## 📄 License
+##  License
 
 MIT
 
-## 🤝 Contributing
+##  Contributing
 
 This is a beta version. Feedback welcome!
