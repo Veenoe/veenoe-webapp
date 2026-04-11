@@ -19,18 +19,48 @@ export function HeroSection() {
                 Veenoe
             </h1>
 
-            {/* Coming Soon Badge */}
-            <div className="rounded-full bg-light-orange-600 px-4 py-1.5 text-sm font-medium text-orange-600 dark:bg-pumpkin-900 dark:text-pumpkin-200">
-                <p className="text-lg md:text-xl font-medium tracking-wide">
-                    Coming Soon
-                </p>
-            </div>
+            {/* Try Now Badge - Interactive */}
+            <Link href="/viva" className="group relative inline-block">
+                <span
+                    aria-hidden="true"
+                    className="absolute inset-0 rounded-full bg-pumpkin-400/40 blur-xl transition-all duration-500 group-hover:scale-125 group-hover:opacity-100 dark:bg-pumpkin-500/30"
+                />
+
+                <span className="relative flex items-center justify-center">
+                    <span
+                        aria-hidden="true"
+                        className="absolute -left-2 top-1 h-2 w-2 animate-pulse rounded-full bg-yellow-300 shadow-[0_0_12px_rgba(253,224,71,0.9)]"
+                    />
+                    <span
+                        aria-hidden="true"
+                        className="absolute -right-1 top-0 h-1.5 w-1.5 animate-bounce rounded-full bg-white/90 [animation-duration:1.8s]"
+                    />
+                    <span
+                        aria-hidden="true"
+                        className="absolute bottom-1 right-5 h-1.5 w-1.5 animate-ping rounded-full bg-orange-200 [animation-duration:2.4s]"
+                    />
+
+                    <span className="relative overflow-hidden rounded-full border border-white/30 bg-gradient-to-r from-light-orange-500 via-pumpkin-500 to-light-orange-600 px-5 py-2 text-white shadow-[0_12px_30px_rgba(249,115,22,0.28)] transition-all duration-300 group-hover:-translate-y-0.5 group-hover:scale-105 group-hover:shadow-[0_18px_40px_rgba(249,115,22,0.38)] dark:border-pumpkin-300/20">
+                        <span
+                            aria-hidden="true"
+                            className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-1000 group-hover:translate-x-full"
+                        />
+                        <span className="relative flex items-center gap-2 text-lg font-semibold tracking-wide md:text-xl">
+                            <span className="inline-flex h-2 w-2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.95)]" />
+                            Try Now
+                            <span className="transition-transform duration-300 group-hover:translate-x-1">
+                                &rarr;
+                            </span>
+                        </span>
+                    </span>
+                </span>
+            </Link>
 
             {/* Main Paragraph */}
             <p className="mt-2 max-w-2xl text-xl leading-relaxed text-muted-foreground">
                 In a world where learning has become mechanical, where students
                 memorize but don&apos;t understand, where education tests recall but not
-                insight—
+                insight -
                 <span className="font-medium text-pumpkin-500 dark:text-pumpkin-400">
                     &nbsp;we reimagine the journey of knowledge.
                 </span>
@@ -38,7 +68,6 @@ export function HeroSection() {
 
             {/* CTA Button Group - Aligned Side by Side */}
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-
                 {/* Secondary Action: Subtle Styling */}
                 <Link href="/about">
                     <Button
@@ -59,9 +88,11 @@ export function HeroSection() {
                         <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
 
                         <span className="relative flex items-center gap-2">
-                            Try Beta Version
+                            Explore Veenoe
                             {/* Simple arrow or icon adds to the CTA feel */}
-                            <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+                            <span className="transition-transform duration-300 group-hover:translate-x-1">
+                                &rarr;
+                            </span>
                         </span>
                     </Button>
                 </Link>
