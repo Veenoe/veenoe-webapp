@@ -13,18 +13,29 @@ const debug = process.env.NODE_ENV !== 'production'
     ? (...args: unknown[]) => console.log('[AudioPlayer]', ...args)
     : () => { };
 
+export interface AudioPlayerCallbacks {
+    onPlayStart?: () => void;
+    onPlayEnd?: () => void;
+    onAudioScheduled?: (queueDurationMs: number) => void;
+    onUnderrun?: () => void;
+}
+
 export class AudioPlayer {
     private audioContext: AudioContext | null = null;
     private nextStartTime = 0;
     private onPlayStart?: () => void;
     private onPlayEnd?: () => void;
+    private onAudioScheduled?: (queueDurationMs: number) => void;
+    private onUnderrun?: () => void;
     private sources = new Set<AudioBufferSourceNode>();
     private isPlaying = false;
     private isDestroyed = false;  // Guard flag to prevent stale callbacks
 
-    constructor(callbacks?: { onPlayStart?: () => void; onPlayEnd?: () => void }) {
+    constructor(callbacks?: AudioPlayerCallbacks) {
         this.onPlayStart = callbacks?.onPlayStart;
         this.onPlayEnd = callbacks?.onPlayEnd;
+        this.onAudioScheduled = callbacks?.onAudioScheduled;
+        this.onUnderrun = callbacks?.onUnderrun;
     }
 
     async initialize(): Promise<void> {
@@ -69,10 +80,19 @@ export class AudioPlayer {
         source.buffer = audioBuffer;
         source.connect(this.audioContext.destination);
 
+        // Check for playback underrun (gap in audio stream while actively playing)
+        const currentTime = this.audioContext.currentTime;
+        if (this.isPlaying && this.nextStartTime < currentTime) {
+            this.onUnderrun?.();
+        }
+
         // Schedule playback
         // Ensure we don't schedule in the past, but also keep the stream continuous
-        this.nextStartTime = Math.max(this.nextStartTime, this.audioContext.currentTime);
+        this.nextStartTime = Math.max(this.nextStartTime, currentTime);
         source.start(this.nextStartTime);
+
+        const queuedDurationMs = Math.max(0, (this.nextStartTime - currentTime) * 1000);
+        this.onAudioScheduled?.(queuedDurationMs);
 
         // Track the source
         this.sources.add(source);

@@ -38,6 +38,11 @@ Create a `.env.local` file:
 ```env
 # Backend API URL
 NEXT_PUBLIC_API_URL=http://localhost:8000
+
+# PostHog Voice Telemetry (VEENOE-16)
+NEXT_PUBLIC_POSTHOG_KEY=
+NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+NEXT_PUBLIC_VOICE_DIAGNOSTICS=true
 ```
 
 ##  Running the App
@@ -117,12 +122,20 @@ The frontend connects to the FastAPI backend running on `http://localhost:8000`.
 ##  Testing
 
 ```bash
+# Run unit tests
+npm test
+
 # Run linter
 npm run lint
 
 # Type check
 npx tsc --noEmit
 ```
+
+## 🎙️ Voice Telemetry & Analytics (Voice v2)
+
+Real-time audio latency, transport metrics, PostHog Product Analytics, and developer diagnostics are documented in [`docs/voice-telemetry.md`](docs/voice-telemetry.md).
+
 
 ##  Code Quality
 

@@ -22,6 +22,7 @@ export interface GeminiLiveEventHandlers {
     onToolCall?: (toolName: string, args: Record<string, unknown>) => void;
     onTurnComplete?: () => void;
     onInterrupted?: () => void;
+    onReconnectAttempt?: (attempt: number) => void;
 }
 
 /**
@@ -150,6 +151,7 @@ export class GeminiLiveClientSDK {
                     this.retryConfig.maxDelayMs
                 );
                 debug(`Retrying in ${delay}ms...`);
+                this.eventHandlers.onReconnectAttempt?.(attempt + 1);
                 await this.delay(delay);
                 return this.connectWithRetry(attempt + 1);
             }
@@ -266,7 +268,6 @@ export class GeminiLiveClientSDK {
         console.log("[GeminiLiveClientSDK] Disconnecting...");
         if (this.session) {
             try {
-                // @ts-ignore
                 if (typeof this.session.close === 'function') this.session.close();
             } catch (e) {
                 console.warn("[GeminiLiveClientSDK] Error closing session", e);

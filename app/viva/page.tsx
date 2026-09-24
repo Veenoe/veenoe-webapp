@@ -7,6 +7,7 @@ import { VivaActiveSession } from "@/components/viva/VivaActiveSession";
 import { VivaConfigForm } from "@/components/viva/VivaConfigForm";
 import { VivaConfigData } from "@/lib/hooks/viva/useVivaSessionConfig";
 import { VivaInfoDialog } from "@/components/viva/VivaInfoDialog";
+import { VoiceDiagnosticsPanel } from "@/components/viva/VoiceDiagnosticsPanel";
 import { useUser, useAuth } from "@clerk/nextjs";
 
 export default function VivaRoomPage() {
@@ -94,8 +95,9 @@ export default function VivaRoomPage() {
     }
 
     return (
-        <div className="min-h-screen bg-background p-4 flex flex-col">
+        <div className="min-h-screen bg-background p-4 flex flex-col relative">
             <VivaActiveSession vivaSession={vivaSession} />
+            <VoiceDiagnosticsPanel />
         </div>
     );
 }
