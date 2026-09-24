@@ -44,11 +44,7 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
  * SDK Wrapper for Gemini Live API
  * 
  * Handles connection, message processing, and state management.
- * 
- * Design Decisions (First Principles):
- * 1. Exponential backoff for connection retries
- * 2. Debug utility for development logging
- * 3. Clean separation of connection and retry logic
+ * Pure transport layer without third-party analytics coupling.
  */
 export class GeminiLiveClientSDK {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -203,27 +199,30 @@ export class GeminiLiveClientSDK {
                 this.eventHandlers.onInterrupted?.();
                 break;
 
-            case 'transcript':
+            case 'transcript': {
                 const transcript = payload as TranscriptPayload;
                 console.log(`[GeminiLiveClientSDK] Transcript (Final: ${transcript.isFinal})`);
                 this.eventHandlers.onTranscript?.(transcript.text, transcript.isFinal);
                 break;
+            }
 
-            case 'audio':
+            case 'audio': {
                 const audio = payload as AudioPayload;
                 this.eventHandlers.onAudioData?.(audio.data, audio.mimeType);
                 break;
+            }
 
             case 'turn_complete':
                 console.log("[GeminiLiveClientSDK] Turn complete");
                 this.eventHandlers.onTurnComplete?.();
                 break;
 
-            case 'tool_call':
+            case 'tool_call': {
                 const toolCall = payload as ToolCallPayload;
                 console.log(`[GeminiLiveClientSDK] Tool call: ${toolCall.name}`);
                 this.eventHandlers.onToolCall?.(toolCall.name, toolCall.args);
                 break;
+            }
         }
     }
 

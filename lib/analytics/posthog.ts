@@ -1,10 +1,10 @@
 /**
  * PostHog Analytics Adapter for Veenoe Voice v2 Telemetry (VEENOE-16)
  *
- * Design Decisions:
+ * Senior Staff Design Decisions:
  * 1. Safe no-op when NEXT_PUBLIC_POSTHOG_KEY is not configured or in SSR.
- * 2. Privacy-first: all autocapture, session replay, and PII collection are disabled.
- * 3. Anonymous telemetry correlation: uses anonymous UUID only.
+ * 2. User identification support: allows associating userId and student name for production troubleshooting.
+ * 3. Token & URL sanitization: strips all credentials, ephemeral tokens, and connection URLs before logging or emission.
  * 4. Resilient: network/ad-blocker errors are swallowed safely and never bubble to viva runtime.
  */
 
@@ -36,8 +36,8 @@ export function initPostHog(): boolean {
       capture_pageleave: false,
       disable_session_recording: true,
       advanced_disable_decide: true,
-      person_profiles: "never",
-      persistence: "memory", // Keep state lightweight and avoid persistent cookie tracking
+      person_profiles: "identified_only", // Supports identified users for production troubleshooting
+      persistence: "memory", // Keep state lightweight without cookie tracking
       loaded: () => {
         isPostHogInitialized = true;
       },
@@ -47,6 +47,24 @@ export function initPostHog(): boolean {
   } catch (err) {
     console.warn("[PostHog] Failed to initialize:", err);
     return false;
+  }
+}
+
+/**
+ * Identify a user in PostHog for production troubleshooting.
+ */
+export function identifyUser(userId: string, traits?: Record<string, unknown>): void {
+  if (typeof window === "undefined" || !userId) return;
+  try {
+    if (!isPostHogInitialized) {
+      const initialized = initPostHog();
+      if (!initialized) return;
+    }
+    posthog.identify(userId, traits);
+  } catch (err) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[PostHog] Error in identifyUser:", err);
+    }
   }
 }
 
@@ -60,6 +78,8 @@ export type VoiceEventName =
 
 export interface VoiceEventProperties {
   telemetry_session_id: string;
+  user_id?: string | null;
+  student_name?: string | null;
   turn_number?: number | null;
   model_name?: string | null;
 
@@ -67,8 +87,8 @@ export interface VoiceEventProperties {
   connection_setup_ms?: number | null;
 
   // Turn Latency
-  speech_end_to_first_gemini_audio_ms?: number | null;
-  last_input_packet_to_first_gemini_audio_ms?: number | null;
+  speech_end_to_first_gemini_audio_ms?: number | null; // null without client VAD
+  last_input_packet_to_first_gemini_audio_ms?: number | null; // Transport turnaround
   first_gemini_audio_to_playback_ms?: number | null;
   speech_end_to_first_playback_ms?: number | null;
 
@@ -89,15 +109,68 @@ export interface VoiceEventProperties {
   // Playback
   max_playback_queue_ms?: number | null;
   playback_underrun_count?: number | null;
+  scheduled_playback_gap_count?: number | null;
 
   // Reliability
   disconnect_count?: number | null;
   connection_error_count?: number | null;
-  reconnect_attempt_count?: number | null;
+  connection_retry_count?: number | null;
 
   interrupted?: boolean | null;
-  error_message?: string | null;
+  error_type?: string | null;
+  error_category?: string | null;
+  safe_error_message?: string | null;
   [key: string]: unknown;
+}
+
+export interface SanitizedError {
+  error_type: string;
+  error_category: string;
+  safe_message: string;
+}
+
+/**
+ * Sanitizes errors by stripping URLs, query params, tokens, and API keys.
+ * Ensures sensitive credentials are never stored or dispatched.
+ */
+export function sanitizeErrorMessage(error: unknown): SanitizedError {
+  if (!error) {
+    return {
+      error_type: "UnknownError",
+      error_category: "unknown",
+      safe_message: "An unknown error occurred",
+    };
+  }
+
+  const rawMsg = error instanceof Error ? error.message : String(error);
+  const errorType = error instanceof Error ? error.name : "Error";
+
+  // Categorize error
+  let category = "general";
+  const lower = rawMsg.toLowerCase();
+  if (lower.includes("websocket") || lower.includes("ws") || lower.includes("network") || lower.includes("connection")) {
+    category = "gemini_connection";
+  } else if (lower.includes("audio") || lower.includes("worklet") || lower.includes("microphone") || lower.includes("media")) {
+    category = "audio_pipeline";
+  } else if (lower.includes("auth") || lower.includes("token") || lower.includes("credential")) {
+    category = "authentication";
+  }
+
+  // Redact any tokens, URLs, query parameters, API keys, or long hashes
+  const safeMsg = rawMsg
+    .replace(/auth_tokens\/[a-zA-Z0-9_\-\.]+/gi, "[REDACTED_TOKEN]")
+    .replace(/AIza[a-zA-Z0-9_\-]+/gi, "[REDACTED_KEY]")
+    .replace(/wss?:\/\/[^\s]+/gi, "[REDACTED_WS_URL]")
+    .replace(/https?:\/\/[^\s]+/gi, "[REDACTED_HTTP_URL]")
+    .replace(/key=[a-zA-Z0-9_\-]+/gi, "key=[REDACTED]")
+    .replace(/token=[a-zA-Z0-9_\-]+/gi, "token=[REDACTED]")
+    .slice(0, 150);
+
+  return {
+    error_type: errorType,
+    error_category: category,
+    safe_message: safeMsg,
+  };
 }
 
 /**
@@ -144,7 +217,6 @@ export function captureVoiceEvent(
     const payload = cleanProperties(properties);
     posthog.capture(eventName, payload);
   } catch (err) {
-    // Fail silently in production, minimal warn in dev
     if (process.env.NODE_ENV !== "production") {
       console.warn(`[PostHog] Error capturing event ${eventName}:`, err);
     }

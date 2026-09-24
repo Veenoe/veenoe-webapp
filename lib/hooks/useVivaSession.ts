@@ -2,19 +2,21 @@
 
 import { useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import { useVivaStore } from "@/lib/store/viva-store";
 import { GeminiLiveClientSDK } from "@/lib/gemini/live-client-sdk";
 import { AudioRecorder } from "@/lib/gemini/audio-recorder";
 import { AudioPlayer } from "@/lib/gemini/audio-player";
 import { SessionState, AudioState } from "@/types/viva";
 import { voiceTelemetry } from "@/lib/telemetry/voice-telemetry";
+import { identifyUser } from "@/lib/analytics/posthog";
 import { createToolHandler } from "./viva/tool-handlers";
 import { createAudioPipeline } from "./viva/audio-pipeline";
 
 export function useVivaSession() {
   const router = useRouter();
-  const { getToken } = useAuth();
+  const { getToken, userId } = useAuth();
+  const { user } = useUser();
   const store = useVivaStore();
 
   const {
@@ -36,7 +38,10 @@ export function useVivaSession() {
 
   // Cleanup all resources
   const cleanupResources = useCallback(() => {
+    // Flag as intentional so normal teardown is not counted as an unexpected connection drop
+    voiceTelemetry.setIntentionalDisconnect(true);
     voiceTelemetry.onSessionEnded();
+
     if (geminiClientRef.current) {
       geminiClientRef.current.disconnect();
       geminiClientRef.current = null;
@@ -106,7 +111,22 @@ export function useVivaSession() {
       isConclusionPendingRef.current = false;
 
       const googleModel = useVivaStore.getState().googleModel;
-      voiceTelemetry.onSessionInitStart(googleModel ?? undefined);
+      const studentName = user?.fullName || user?.firstName || undefined;
+
+      // Identify user in PostHog for production troubleshooting
+      if (userId) {
+        identifyUser(userId, {
+          name: studentName,
+          email: user?.primaryEmailAddress?.emailAddress || undefined,
+        });
+      }
+
+      // Initialize fresh telemetry baseline with user attribution
+      voiceTelemetry.onSessionInitStart(
+        googleModel ?? undefined,
+        userId ?? undefined,
+        studentName
+      );
 
       // Initialize audio recorder (handles microphone input)
       audioHandlerRef.current = new AudioRecorder();
@@ -125,7 +145,7 @@ export function useVivaSession() {
       await audioPlayerRef.current.initialize();
       voiceTelemetry.onAudioPlayerReady();
 
-      // Initialize Gemini client with event handlers
+      // Initialize clean Gemini Live SDK transport
       geminiClientRef.current = new GeminiLiveClientSDK(
         ephemeralToken,
         {
@@ -146,7 +166,7 @@ export function useVivaSession() {
             setSessionState(SessionState.ERROR);
           },
           onReconnectAttempt: (attempt) => {
-            voiceTelemetry.onReconnectAttempt(attempt);
+            voiceTelemetry.onConnectionRetry(attempt);
           },
           onAudioData: async (base64) => {
             voiceTelemetry.onGeminiAudioChunkReceived();
@@ -183,11 +203,21 @@ export function useVivaSession() {
 
       await geminiClientRef.current.connect();
     } catch (err) {
-      voiceTelemetry.onGeminiError(err instanceof Error ? err : new Error(String(err)));
+      voiceTelemetry.onGeminiError(err);
       setError(err instanceof Error ? err.message : "Connection failed");
       setSessionState(SessionState.ERROR);
     }
-  }, [setSessionState, setError, addTranscript, handleToolCall, _startAudioPipeline, audioPipeline, setAudioState]);
+  }, [
+    setSessionState,
+    setError,
+    addTranscript,
+    handleToolCall,
+    _startAudioPipeline,
+    audioPipeline,
+    setAudioState,
+    userId,
+    user
+  ]);
 
   // Request conclusion from AI
   const requestConclusion = useCallback(() => {

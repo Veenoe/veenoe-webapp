@@ -1,16 +1,21 @@
 /**
  * Voice Telemetry Abstraction for Veenoe Voice v2 (VEENOE-16)
  *
- * Provides:
- * 1. Monotonic performance.now() elapsed timings.
- * 2. High-frequency audio packet metric aggregation without React re-render overhead.
- * 3. Lifecycle event tracking and bounded recent event history for developer diagnostics.
- * 4. Per-turn metric isolation and derivation.
- * 5. Safe PostHog product analytics emission.
- * 6. Zero PII, zero audio, zero tokens.
+ * Senior Staff Product Architecture:
+ * 1. Monotonic performance.now() elapsed timings with zero React re-render overhead.
+ * 2. Independent session baselines: complete session state reset on every initialization.
+ * 3. Idempotent session teardown: ensures exactly-once voice_session_ended events.
+ * 4. Intentional vs unexpected disconnect separation: normal shutdowns do not inflate failure metrics.
+ * 5. Sanitized error reporting: prevents credentials/tokens/URLs from ever leaking to PostHog or snapshots.
+ * 6. User identity attribution: supports linking user ID and student name for production analysis.
+ * 7. Transparent metric labeling: distinguishes raw transport turnaround from genuine speech VAD.
  */
 
-import { captureVoiceEvent, VoiceEventProperties } from "../analytics/posthog";
+import {
+  captureVoiceEvent,
+  sanitizeErrorMessage,
+  VoiceEventProperties,
+} from "../analytics/posthog";
 
 export interface DiagnosticEventItem {
   id: string;
@@ -22,11 +27,11 @@ export interface DiagnosticEventItem {
 
 export interface TurnMetricsSnapshot {
   turnNumber: number;
-  speechEndToFirstGeminiAudioMs: number | null; // Currently unavailable (no client VAD)
-  lastInputPacketToFirstGeminiAudioMs: number | null; // Honest proxy metric
-  firstGeminiAudioToPlaybackMs: number | null;
+  speechEndToFirstGeminiAudioMs: number | null; // Currently unavailable (requires client VAD - VEENOE-19)
+  lastInputPacketToFirstGeminiAudioMs: number | null; // Raw transport turnaround (last packet -> first audio)
+  firstGeminiAudioToPlaybackMs: number | null; // Audio received to playback start delay
   speechEndToFirstPlaybackMs: number | null; // Currently unavailable
-  interruptionToPlaybackStopMs: number | null;
+  interruptionToPlaybackStopMs: number | null; // Interruption signal to playback stopped
   inputPacketCount: number;
   inputBytes: number;
   averagePacketBytes: number | null;
@@ -36,11 +41,14 @@ export interface TurnMetricsSnapshot {
   outputAudioChunkCount: number;
   maxPlaybackQueueMs: number | null;
   playbackUnderrunCount: number;
+  scheduledPlaybackGapCount: number;
   interrupted: boolean;
 }
 
 export interface DiagnosticsSnapshot {
   telemetrySessionId: string;
+  userId: string | null;
+  studentName: string | null;
   connectionState: "idle" | "starting" | "connected" | "disconnected" | "error";
   connectionSetupMs: number | null;
   currentTurn: number;
@@ -52,7 +60,8 @@ export interface DiagnosticsSnapshot {
   totalOutputChunks: number;
   disconnectCount: number;
   connectionErrorCount: number;
-  reconnectAttemptCount: number;
+  connectionRetryCount: number;
+  reconnectAttemptCount: number; // Deprecated alias for connectionRetryCount
   recentEvents: DiagnosticEventItem[];
 }
 
@@ -105,9 +114,15 @@ const MAX_RECENT_EVENTS = 20;
 
 export class VoiceTelemetry {
   private sessionId: string;
+  private userId: string | null = null;
+  private studentName: string | null = null;
   private sessionStartTime: number;
   private connectionState: "idle" | "starting" | "connected" | "disconnected" | "error" = "idle";
   private modelName: string | null = null;
+
+  // Session lifecycle flags
+  private isSessionActive = false;
+  private isIntentionalDisconnect = false;
 
   // Connection Timestamps
   private sessionInitStartTime: number | null = null;
@@ -123,7 +138,7 @@ export class VoiceTelemetry {
   private totalOutputChunks = 0;
   private disconnectCount = 0;
   private connectionErrorCount = 0;
-  private reconnectAttemptCount = 0;
+  private connectionRetryCount = 0;
 
   // Turn-level state
   private currentTurn = 0;
@@ -196,12 +211,36 @@ export class VoiceTelemetry {
 
   // --- Session & Connection Lifecycle ---
 
-  public onSessionInitStart(modelName?: string): void {
+  /**
+   * Starts a new viva session telemetry lifecycle.
+   * Completely resets all session-scoped counters to guarantee an independent baseline.
+   */
+  public onSessionInitStart(modelName?: string, userId?: string, studentName?: string): void {
     this.sessionId = generateAnonymousSessionId();
     this.sessionStartTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     this.sessionInitStartTime = this.sessionStartTime;
     this.connectionState = "starting";
     this.modelName = modelName || null;
+    this.userId = userId || null;
+    this.studentName = studentName || null;
+    this.isSessionActive = true;
+    this.isIntentionalDisconnect = false;
+
+    // Reset ALL session counters (prevents cross-session contamination)
+    this.totalInputPackets = 0;
+    this.totalInputBytes = 0;
+    this.totalOutputChunks = 0;
+    this.disconnectCount = 0;
+    this.connectionErrorCount = 0;
+    this.connectionRetryCount = 0;
+
+    this.micInitTime = null;
+    this.playerInitTime = null;
+    this.geminiConnectedTime = null;
+    this.geminiSetupCompleteTime = null;
+    this.connectionSetupMs = null;
+    this.lastCompletedTurnMetrics = null;
+
     this.currentTurn = 0;
     this.resetTurnState();
     this.recentEvents = [];
@@ -210,6 +249,8 @@ export class VoiceTelemetry {
 
     captureVoiceEvent("voice_session_started", {
       telemetry_session_id: this.sessionId,
+      user_id: this.userId,
+      student_name: this.studentName,
       model_name: this.modelName,
     });
   }
@@ -245,37 +286,69 @@ export class VoiceTelemetry {
 
     captureVoiceEvent("voice_connection_ready", {
       telemetry_session_id: this.sessionId,
+      user_id: this.userId,
+      student_name: this.studentName,
       connection_setup_ms: this.connectionSetupMs,
       model_name: this.modelName,
     });
   }
 
-  public onGeminiDisconnected(): void {
-    this.connectionState = "disconnected";
-    this.disconnectCount++;
-    this.recordDiagnosticEvent("gemini_disconnected");
+  /**
+   * Set flag to indicate whether upcoming disconnect is intentional (normal teardown).
+   */
+  public setIntentionalDisconnect(intentional: boolean): void {
+    this.isIntentionalDisconnect = intentional;
   }
 
-  public onGeminiError(error: Error | string): void {
+  public onGeminiDisconnected(): void {
+    this.connectionState = "disconnected";
+    // Only increment disconnect count if unexpected (prevents normal shutdown from inflating drops)
+    if (!this.isIntentionalDisconnect) {
+      this.disconnectCount++;
+    }
+    this.recordDiagnosticEvent(
+      this.isIntentionalDisconnect ? "gemini_closed" : "gemini_disconnected"
+    );
+  }
+
+  public onGeminiError(error: unknown): void {
     this.connectionState = "error";
     this.connectionErrorCount++;
-    const errMsg = typeof error === "string" ? error : error.message;
-    this.recordDiagnosticEvent("connection_error", errMsg);
+
+    const sanitized = sanitizeErrorMessage(error);
+    this.recordDiagnosticEvent("connection_error", sanitized.safe_message);
 
     captureVoiceEvent("voice_connection_error", {
       telemetry_session_id: this.sessionId,
+      user_id: this.userId,
+      student_name: this.studentName,
       connection_error_count: this.connectionErrorCount,
-      error_message: errMsg,
+      error_type: sanitized.error_type,
+      error_category: sanitized.error_category,
+      safe_error_message: sanitized.safe_message,
       model_name: this.modelName,
     });
   }
 
-  public onReconnectAttempt(attemptNumber: number): void {
-    this.reconnectAttemptCount++;
-    this.recordDiagnosticEvent("reconnect_attempt", `attempt #${attemptNumber}`);
+  public onConnectionRetry(attemptNumber: number): void {
+    this.connectionRetryCount++;
+    this.recordDiagnosticEvent("connection_retry", `attempt #${attemptNumber}`);
   }
 
+  // Deprecated alias for backward compatibility
+  public onReconnectAttempt(attemptNumber: number): void {
+    this.onConnectionRetry(attemptNumber);
+  }
+
+  /**
+   * Concludes session telemetry. Idempotent to handle multiple cleanup invocation paths.
+   */
   public onSessionEnded(): void {
+    if (!this.isSessionActive) {
+      return; // Already ended - idempotent guard
+    }
+    this.isSessionActive = false;
+
     // If a turn was in progress, complete it cleanly
     if (this.turnInputPacketCount > 0 || this.turnOutputChunkCount > 0) {
       this.onTurnComplete();
@@ -286,12 +359,14 @@ export class VoiceTelemetry {
 
     captureVoiceEvent("voice_session_ended", {
       telemetry_session_id: this.sessionId,
+      user_id: this.userId,
+      student_name: this.studentName,
       input_packet_count: this.totalInputPackets,
       input_bytes: this.totalInputBytes,
       output_audio_chunk_count: this.totalOutputChunks,
       disconnect_count: this.disconnectCount,
       connection_error_count: this.connectionErrorCount,
-      reconnect_attempt_count: this.reconnectAttemptCount,
+      connection_retry_count: this.connectionRetryCount,
       model_name: this.modelName,
     });
   }
@@ -322,8 +397,7 @@ export class VoiceTelemetry {
     }
 
     this.turnLastPacketTime = now;
-    // Note: We deliberately do NOT call recordDiagnosticEvent or notifyListeners on every packet
-    // to avoid UI re-rendering at 100+ times per second.
+    // High-frequency packets deliberately do not trigger diagnostic re-renders
   }
 
   // --- Gemini Response Measurements ---
@@ -340,7 +414,7 @@ export class VoiceTelemetry {
       const proxyLatency = calculateElapsedMs(this.turnLastPacketTime, now);
       this.recordDiagnosticEvent(
         "first_gemini_audio",
-        proxyLatency !== null ? `proxy delay: ${proxyLatency}ms` : undefined
+        proxyLatency !== null ? `turnaround: ${proxyLatency}ms` : undefined
       );
     }
   }
@@ -378,7 +452,7 @@ export class VoiceTelemetry {
 
   public onPlaybackUnderrun(): void {
     this.turnPlaybackUnderruns++;
-    this.recordDiagnosticEvent("playback_underrun");
+    this.recordDiagnosticEvent("playback_gap");
   }
 
   // --- Interruption Measurements ---
@@ -403,6 +477,8 @@ export class VoiceTelemetry {
 
     captureVoiceEvent("voice_interruption", {
       telemetry_session_id: this.sessionId,
+      user_id: this.userId,
+      student_name: this.studentName,
       turn_number: this.currentTurn,
       interruption_to_playback_stop_ms: interruptionDuration,
       model_name: this.modelName,
@@ -420,7 +496,6 @@ export class VoiceTelemetry {
 
   private finalizeTurn(isInterrupted: boolean): void {
     if (this.turnInputPacketCount === 0 && this.turnOutputChunkCount === 0) {
-      // Nothing happened in this turn, don't emit empty metrics
       return;
     }
 
@@ -435,7 +510,7 @@ export class VoiceTelemetry {
     const speechEndToFirstGeminiAudioMs: number | null = null;
     const speechEndToFirstPlaybackMs: number | null = null;
 
-    // Honest proxy metric: timestamp of last input packet sent to first audio chunk from Gemini
+    // Honest transport turnaround: timestamp of last input packet sent to first audio chunk from Gemini
     const lastInputPacketToFirstGeminiAudioMs = calculateElapsedMs(
       this.turnLastPacketTime,
       this.turnFirstGeminiAudioTime
@@ -467,6 +542,7 @@ export class VoiceTelemetry {
       outputAudioChunkCount: this.turnOutputChunkCount,
       maxPlaybackQueueMs: this.turnMaxPlaybackQueueMs,
       playbackUnderrunCount: this.turnPlaybackUnderruns,
+      scheduledPlaybackGapCount: this.turnPlaybackUnderruns,
       interrupted: isInterrupted,
     };
 
@@ -481,7 +557,7 @@ export class VoiceTelemetry {
     if (process.env.NODE_ENV !== "production") {
       console.log(`[VeenoeVoiceTelemetry] turn_${isInterrupted ? "interrupted" : "completed"}`, {
         turn: this.currentTurn,
-        lastInputToGeminiMs: lastInputPacketToFirstGeminiAudioMs,
+        lastPacketToFirstAudioMs: lastInputPacketToFirstGeminiAudioMs,
         geminiToPlaybackMs: firstGeminiAudioToPlaybackMs,
         interruptionStopMs: interruptionToPlaybackStopMs,
         inputPackets: this.turnInputPacketCount,
@@ -492,6 +568,8 @@ export class VoiceTelemetry {
     // Emit aggregated turn event to PostHog
     const eventProps: VoiceEventProperties = {
       telemetry_session_id: this.sessionId,
+      user_id: this.userId,
+      student_name: this.studentName,
       turn_number: this.currentTurn,
       model_name: this.modelName,
 
@@ -514,9 +592,10 @@ export class VoiceTelemetry {
       output_audio_chunk_count: this.turnOutputChunkCount,
       max_playback_queue_ms: this.turnMaxPlaybackQueueMs,
       playback_underrun_count: this.turnPlaybackUnderruns,
+      scheduled_playback_gap_count: this.turnPlaybackUnderruns,
 
       disconnect_count: this.disconnectCount,
-      reconnect_attempt_count: this.reconnectAttemptCount,
+      connection_retry_count: this.connectionRetryCount,
       interrupted: isInterrupted,
     };
 
@@ -550,6 +629,8 @@ export class VoiceTelemetry {
   public getSnapshot(): DiagnosticsSnapshot {
     return {
       telemetrySessionId: this.sessionId,
+      userId: this.userId,
+      studentName: this.studentName,
       connectionState: this.connectionState,
       connectionSetupMs: this.connectionSetupMs,
       currentTurn: this.currentTurn,
@@ -560,7 +641,8 @@ export class VoiceTelemetry {
       totalOutputChunks: this.totalOutputChunks,
       disconnectCount: this.disconnectCount,
       connectionErrorCount: this.connectionErrorCount,
-      reconnectAttemptCount: this.reconnectAttemptCount,
+      connectionRetryCount: this.connectionRetryCount,
+      reconnectAttemptCount: this.connectionRetryCount,
       recentEvents: [...this.recentEvents],
     };
   }

@@ -109,12 +109,17 @@ export function VoiceDiagnosticsPanel() {
         <div className="mt-2 p-3 bg-card/95 backdrop-blur-md border border-border rounded-lg shadow-2xl space-y-3 max-h-[80vh] overflow-y-auto">
           {/* Header Action Row */}
           <div className="flex items-center justify-between pb-2 border-b border-border/60 text-muted-foreground text-[11px]">
-            <div className="flex items-center gap-1">
-              <Wifi className="h-3 w-3" />
-              <span>Session:</span>
-              <span className="font-mono text-foreground truncate max-w-[120px]" title={snapshot.telemetrySessionId}>
-                {snapshot.telemetrySessionId.slice(0, 8)}...
-              </span>
+            <div className="flex items-center gap-1.5 truncate max-w-[200px]">
+              <Wifi className="h-3 w-3 shrink-0" />
+              {snapshot.studentName ? (
+                <span className="truncate text-foreground font-semibold" title={snapshot.studentName}>
+                  {snapshot.studentName}
+                </span>
+              ) : (
+                <span className="font-mono text-foreground truncate max-w-[120px]" title={snapshot.telemetrySessionId}>
+                  {snapshot.telemetrySessionId.slice(0, 8)}...
+                </span>
+              )}
             </div>
             <button
               onClick={handleCopy}
@@ -150,7 +155,9 @@ export function VoiceDiagnosticsPanel() {
 
             <div className="space-y-1 text-[11px]">
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Input -&gt; Gemini (proxy):</span>
+                <span className="text-muted-foreground" title="Elapsed ms from last microphone PCM packet sent to first audio chunk received. True speech-end latency pending client VAD in VEENOE-19.">
+                  Transport turnaround:
+                </span>
                 <span className="font-bold text-foreground">
                   {lastTurn?.lastInputPacketToFirstGeminiAudioMs !== null && lastTurn?.lastInputPacketToFirstGeminiAudioMs !== undefined
                     ? `${lastTurn.lastInputPacketToFirstGeminiAudioMs} ms`
@@ -242,7 +249,7 @@ export function VoiceDiagnosticsPanel() {
           <div className="flex justify-between items-center text-[10px] text-muted-foreground px-1">
             <span>Disconnects: <strong className="text-foreground">{snapshot.disconnectCount}</strong></span>
             <span>Errors: <strong className="text-foreground">{snapshot.connectionErrorCount}</strong></span>
-            <span>Reconnects: <strong className="text-foreground">{snapshot.reconnectAttemptCount}</strong></span>
+            <span>Retries: <strong className="text-foreground">{snapshot.connectionRetryCount}</strong></span>
           </div>
 
           {/* Bounded Recent Event Timeline */}

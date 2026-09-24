@@ -7,7 +7,7 @@ import {
   calculatePcmDurationMs,
   VoiceTelemetry,
 } from "../lib/telemetry/voice-telemetry";
-import { captureVoiceEvent, initPostHog } from "../lib/analytics/posthog";
+import { captureVoiceEvent, initPostHog, sanitizeErrorMessage, identifyUser } from "../lib/analytics/posthog";
 
 test("duration calculation with valid timestamps", () => {
   const result = calculateElapsedMs(100.25, 250.75);
@@ -39,24 +39,116 @@ test("pure statistics calculations (average, pps, pcm duration)", () => {
   assert.equal(calculatePcmDurationMs(0), null);
 });
 
-test("session initialization and reset", () => {
+test("complete session reset across multiple sessions (no cumulative data leak)", () => {
   const telemetry = new VoiceTelemetry();
-  telemetry.onSessionInitStart("models/gemini-2.5-flash");
+
+  // Session 1: Student conducts an active viva
+  telemetry.onSessionInitStart("models/gemini-2.5-flash", "user_123", "Alice");
+  telemetry.onMicrophoneReady();
+  telemetry.onAudioPlayerReady();
+  telemetry.onGeminiConnected();
+  telemetry.onGeminiSetupComplete();
+
+  // Stream packets and receive audio
+  for (let i = 0; i < 50; i++) {
+    telemetry.onMicrophonePacketSent(256);
+  }
+  telemetry.onGeminiAudioChunkReceived();
+  telemetry.onGeminiError(new Error("Transient socket glitch"));
+  telemetry.onConnectionRetry(1);
+  telemetry.onTurnComplete();
 
   const snap1 = telemetry.getSnapshot();
-  assert.equal(snap1.connectionState, "starting");
-  assert.equal(snap1.modelName, "models/gemini-2.5-flash");
-  assert.equal(snap1.totalInputPackets, 0);
+  assert.equal(snap1.userId, "user_123");
+  assert.equal(snap1.studentName, "Alice");
+  assert.equal(snap1.totalInputPackets, 50);
+  assert.equal(snap1.totalInputBytes, 12800);
+  assert.equal(snap1.totalOutputChunks, 1);
+  assert.equal(snap1.connectionErrorCount, 1);
+  assert.equal(snap1.connectionRetryCount, 1);
+  assert.ok(snap1.connectionSetupMs !== null);
+  assert.ok(snap1.lastTurnMetrics !== null);
 
-  const firstSessionId = snap1.telemetrySessionId;
-  assert.ok(firstSessionId.length > 0);
+  telemetry.setIntentionalDisconnect(true);
+  telemetry.onSessionEnded();
 
-  // Re-initializing session generates new session ID and resets state
-  telemetry.onSessionInitStart("models/gemini-2.5-pro");
+  // Session 2: Fresh viva started in the same browser tab
+  telemetry.onSessionInitStart("models/gemini-2.5-pro", "user_456", "Bob");
+
   const snap2 = telemetry.getSnapshot();
-  assert.notEqual(snap2.telemetrySessionId, firstSessionId);
+  // CRITICAL REGRESSION TEST: All session totals must be completely reset to zero
+  assert.notEqual(snap2.telemetrySessionId, snap1.telemetrySessionId);
+  assert.equal(snap2.userId, "user_456");
+  assert.equal(snap2.studentName, "Bob");
   assert.equal(snap2.modelName, "models/gemini-2.5-pro");
+  assert.equal(snap2.totalInputPackets, 0);
+  assert.equal(snap2.totalInputBytes, 0);
+  assert.equal(snap2.totalOutputChunks, 0);
+  assert.equal(snap2.disconnectCount, 0);
+  assert.equal(snap2.connectionErrorCount, 0);
+  assert.equal(snap2.connectionRetryCount, 0);
+  assert.equal(snap2.connectionSetupMs, null);
+  assert.equal(snap2.lastTurnMetrics, null);
   assert.equal(snap2.currentTurn, 0);
+  assert.equal(snap2.recentEvents.length, 1); // Only the new session_init_start
+});
+
+test("idempotent onSessionEnded prevents duplicate termination events", () => {
+  const telemetry = new VoiceTelemetry();
+  telemetry.onSessionInitStart();
+
+  telemetry.onMicrophonePacketSent(256);
+  telemetry.onGeminiAudioChunkReceived();
+
+  // First session end (e.g. from finishConclusion)
+  telemetry.onSessionEnded();
+  const snap1 = telemetry.getSnapshot();
+  const eventCount1 = snap1.recentEvents.length;
+
+  // Second session end (e.g. from React component unmount useEffect)
+  telemetry.onSessionEnded();
+  const snap2 = telemetry.getSnapshot();
+  const eventCount2 = snap2.recentEvents.length;
+
+  // Must not record duplicate session_ended events
+  assert.equal(eventCount1, eventCount2);
+});
+
+test("intentional disconnect does not increment disconnectCount", () => {
+  const telemetry = new VoiceTelemetry();
+  telemetry.onSessionInitStart();
+
+  // Normal teardown: flag intentional disconnect before closing socket
+  telemetry.setIntentionalDisconnect(true);
+  telemetry.onGeminiDisconnected();
+
+  const snap = telemetry.getSnapshot();
+  assert.equal(snap.disconnectCount, 0); // Must remain 0 for normal shutdown
+  assert.equal(snap.recentEvents.some((e) => e.name === "gemini_closed"), true);
+
+  // Unexpected drop: not intentional
+  telemetry.setIntentionalDisconnect(false);
+  telemetry.onGeminiDisconnected();
+
+  const snapUnexpected = telemetry.getSnapshot();
+  assert.equal(snapUnexpected.disconnectCount, 1);
+  assert.equal(snapUnexpected.recentEvents.some((e) => e.name === "gemini_disconnected"), true);
+});
+
+test("error sanitization strips credentials, tokens, and URLs", () => {
+  // Test with dangerous token URL error message
+  const dangerousError = new Error(
+    "WebSocket failed connecting to wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=AIzaSyA123SecretKey&auth_token=auth_tokens/sample_ephemeral_token_xyz"
+  );
+
+  const sanitized = sanitizeErrorMessage(dangerousError);
+
+  assert.equal(sanitized.error_type, "Error");
+  assert.equal(sanitized.error_category, "gemini_connection");
+  // Must NOT contain the raw API key or token
+  assert.ok(!sanitized.safe_message.includes("AIzaSyA123SecretKey"));
+  assert.ok(!sanitized.safe_message.includes("sample_ephemeral_token_xyz"));
+  assert.ok(sanitized.safe_message.includes("[REDACTED_WS_URL]"));
 });
 
 test("microphone transport aggregation without per-packet emission", () => {
@@ -140,16 +232,19 @@ test("bounded recent event history does not exceed 20 items", () => {
   assert.ok(snap.recentEvents.length <= 20);
 });
 
-test("PostHog adapter safely no-ops without credentials or in test env", () => {
+test("PostHog adapter safely no-ops without credentials and supports user identification", () => {
   // Ensure unconfigured environment does not throw
   delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
   const initResult = initPostHog();
   assert.equal(initResult, false);
 
-  // captureVoiceEvent should silently succeed without error
+  // identifyUser and captureVoiceEvent should silently succeed without error
   assert.doesNotThrow(() => {
+    identifyUser("user_789", { name: "Charlie" });
     captureVoiceEvent("voice_session_started", {
       telemetry_session_id: "test-session",
+      user_id: "user_789",
+      student_name: "Charlie",
     });
     captureVoiceEvent("voice_turn_completed", {
       telemetry_session_id: "test-session",
