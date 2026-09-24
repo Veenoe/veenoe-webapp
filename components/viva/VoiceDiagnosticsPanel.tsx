@@ -24,6 +24,7 @@ export function VoiceDiagnosticsPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [snapshot, setSnapshot] = useState<DiagnosticsSnapshot>(() => voiceTelemetry.getSnapshot());
   const [copied, setCopied] = useState(false);
+  const [pinged, setPinged] = useState(false);
   const [, startTransition] = useTransition();
 
   // Throttle polling while open, plus subscribe to significant telemetry events
@@ -66,6 +67,12 @@ export function VoiceDiagnosticsPanel() {
     } catch (e) {
       console.error("Failed to copy telemetry JSON", e);
     }
+  };
+
+  const handlePing = () => {
+    voiceTelemetry.sendTestPing();
+    setPinged(true);
+    setTimeout(() => setPinged(false), 2000);
   };
 
   const lastTurn = snapshot.lastTurnMetrics;
@@ -121,14 +128,24 @@ export function VoiceDiagnosticsPanel() {
                 </span>
               )}
             </div>
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-1 px-2 py-0.5 rounded bg-secondary hover:bg-secondary/80 text-secondary-foreground transition-colors cursor-pointer text-[10px]"
-              title="Copy telemetry JSON snapshot"
-            >
-              {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
-              {copied ? "Copied" : "Copy JSON"}
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handlePing}
+                className="flex items-center gap-1 px-2 py-0.5 rounded bg-primary/20 hover:bg-primary/30 text-primary transition-colors cursor-pointer text-[10px]"
+                title="Send a test ping event to PostHog"
+              >
+                {pinged ? <Check className="h-3 w-3 text-emerald-500" /> : <Terminal className="h-3 w-3" />}
+                {pinged ? "Sent!" : "Ping PostHog"}
+              </button>
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1 px-2 py-0.5 rounded bg-secondary hover:bg-secondary/80 text-secondary-foreground transition-colors cursor-pointer text-[10px]"
+                title="Copy telemetry JSON snapshot"
+              >
+                {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                {copied ? "Copied" : "Copy JSON"}
+              </button>
+            </div>
           </div>
 
           {/* Setup & Connection Row */}

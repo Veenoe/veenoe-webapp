@@ -74,7 +74,8 @@ export type VoiceEventName =
   | "voice_turn_completed"
   | "voice_interruption"
   | "voice_connection_error"
-  | "voice_session_ended";
+  | "voice_session_ended"
+  | "voice_diagnostics_ping";
 
 export interface VoiceEventProperties {
   telemetry_session_id: string;

@@ -646,6 +646,20 @@ export class VoiceTelemetry {
       recentEvents: [...this.recentEvents],
     };
   }
+
+  /**
+   * Diagnostic utility to verify live PostHog connectivity from developer UI.
+   */
+  public sendTestPing(): void {
+    captureVoiceEvent("voice_diagnostics_ping", {
+      telemetry_session_id: this.sessionId,
+      user_id: this.userId,
+      student_name: this.studentName,
+      model_name: this.modelName,
+      ping_timestamp: new Date().toISOString(),
+    });
+    this.recordDiagnosticEvent("posthog_ping", "Diagnostics ping dispatched");
+  }
 }
 
 // Global singleton instance for the application session
