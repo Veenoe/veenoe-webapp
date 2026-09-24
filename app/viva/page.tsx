@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useVivaSession } from "@/lib/hooks/useVivaSession";
 import { startVivaSession, setTokenGetter } from "@/lib/api/axios";
 import { VivaActiveSession } from "@/components/viva/VivaActiveSession";
@@ -8,6 +8,7 @@ import { VivaConfigForm } from "@/components/viva/VivaConfigForm";
 import { VivaConfigData } from "@/lib/hooks/viva/useVivaSessionConfig";
 import { VivaInfoDialog } from "@/components/viva/VivaInfoDialog";
 import { VoiceDiagnosticsPanel } from "@/components/viva/VoiceDiagnosticsPanel";
+import { initPostHog } from "@/lib/analytics/posthog";
 import { useUser, useAuth } from "@clerk/nextjs";
 
 export default function VivaRoomPage() {
@@ -20,6 +21,10 @@ export default function VivaRoomPage() {
     const [showInfoDialog, setShowInfoDialog] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        initPostHog();
+    }, []);
 
     const handleConfigSubmit = async (data: VivaConfigData) => {
         setError(null);
