@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useVivaSession } from "@/lib/hooks/useVivaSession";
 import { startVivaSession, setTokenGetter } from "@/lib/api/axios";
 import { VivaActiveSession } from "@/components/viva/VivaActiveSession";
 import { VivaConfigForm } from "@/components/viva/VivaConfigForm";
 import { VivaConfigData } from "@/lib/hooks/viva/useVivaSessionConfig";
 import { VivaInfoDialog } from "@/components/viva/VivaInfoDialog";
+import { VoiceDiagnosticsPanel } from "@/components/viva/VoiceDiagnosticsPanel";
+import { initPostHog } from "@/lib/analytics/posthog";
 import { useUser, useAuth } from "@clerk/nextjs";
 
 export default function VivaRoomPage() {
@@ -19,6 +21,10 @@ export default function VivaRoomPage() {
     const [showInfoDialog, setShowInfoDialog] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        initPostHog();
+    }, []);
 
     const handleConfigSubmit = async (data: VivaConfigData) => {
         setError(null);
@@ -74,28 +80,25 @@ export default function VivaRoomPage() {
         }
     };
 
-    if (showConfig) {
-        return (
-            <VivaConfigForm
-                onSubmit={handleConfigSubmit}
-                isSubmitting={isStarting}
-                error={error}
-            />
-        );
-    }
-
-    if (showInfoDialog) {
-        return (
-            <VivaInfoDialog
-                open={showInfoDialog}
-                onConfirm={handleConfirmStart}
-            />
-        );
-    }
-
     return (
-        <div className="min-h-screen bg-background p-4 flex flex-col">
-            <VivaActiveSession vivaSession={vivaSession} />
+        <div className="min-h-screen bg-background relative flex flex-col">
+            {showConfig ? (
+                <VivaConfigForm
+                    onSubmit={handleConfigSubmit}
+                    isSubmitting={isStarting}
+                    error={error}
+                />
+            ) : showInfoDialog ? (
+                <VivaInfoDialog
+                    open={showInfoDialog}
+                    onConfirm={handleConfirmStart}
+                />
+            ) : (
+                <div className="p-4 flex-1 flex flex-col relative">
+                    <VivaActiveSession vivaSession={vivaSession} />
+                </div>
+            )}
+            <VoiceDiagnosticsPanel />
         </div>
     );
 }

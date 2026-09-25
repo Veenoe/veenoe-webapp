@@ -4,6 +4,7 @@
  */
 
 import { AudioState } from "@/types/viva";
+import type { AudioPlayerCallbacks } from "@/lib/gemini/audio-player";
 
 export interface AudioPipelineDependencies {
     setAudioState: (state: AudioState) => void;
@@ -16,10 +17,7 @@ export interface AudioPipelineDependencies {
 export interface AudioPipelineController {
     scheduleSwitchToRecording: () => void;
     cancelSwitchToRecording: () => void;
-    createPlaybackCallbacks: () => {
-        onPlayStart: () => void;
-        onPlayEnd: () => void;
-    };
+    createPlaybackCallbacks: (extraCallbacks?: Partial<AudioPlayerCallbacks>) => AudioPlayerCallbacks;
     cleanup: () => void;
 }
 
@@ -56,15 +54,17 @@ export function createAudioPipeline(deps: AudioPipelineDependencies): AudioPipel
         }, 500);
     };
 
-    const createPlaybackCallbacks = () => ({
+    const createPlaybackCallbacks = (extraCallbacks?: Partial<AudioPlayerCallbacks>): AudioPlayerCallbacks => ({
         onPlayStart: () => {
             isAudioPlayingRef.current = true;
             setAudioState(AudioState.PLAYING);
             cancelSwitchToRecording();
+            extraCallbacks?.onPlayStart?.();
         },
         onPlayEnd: () => {
             console.log("[AudioPipeline] Audio Playback Ended");
             isAudioPlayingRef.current = false;
+            extraCallbacks?.onPlayEnd?.();
 
             // CRITICAL: Check if we were waiting to conclude
             if (isConclusionPendingRef.current) {
@@ -76,6 +76,12 @@ export function createAudioPipeline(deps: AudioPipelineDependencies): AudioPipel
             if (isTurnCompleteRef.current) {
                 scheduleSwitchToRecording();
             }
+        },
+        onAudioScheduled: (queueDurationMs) => {
+            extraCallbacks?.onAudioScheduled?.(queueDurationMs);
+        },
+        onUnderrun: () => {
+            extraCallbacks?.onUnderrun?.();
         },
     });
 

@@ -8,6 +8,7 @@ import { GeminiLiveClientSDK } from "@/lib/gemini/live-client-sdk";
 import { AudioRecorder } from "@/lib/gemini/audio-recorder";
 import { AudioPlayer } from "@/lib/gemini/audio-player";
 import { SessionState, AudioState } from "@/types/viva";
+import { voiceTelemetry } from "@/lib/telemetry/voice-telemetry";
 import { createToolHandler } from "./viva/tool-handlers";
 import { createAudioPipeline } from "./viva/audio-pipeline";
 
@@ -17,7 +18,6 @@ export function useVivaSession() {
   const store = useVivaStore();
 
   const {
-    sessionId,
     setSessionState,
     setError,
     addTranscript,
@@ -36,6 +36,10 @@ export function useVivaSession() {
 
   // Cleanup all resources
   const cleanupResources = useCallback(() => {
+    // Flag as intentional so normal teardown is not counted as an unexpected connection drop
+    voiceTelemetry.setIntentionalDisconnect(true);
+    voiceTelemetry.onSessionEnded();
+
     if (geminiClientRef.current) {
       geminiClientRef.current.disconnect();
       geminiClientRef.current = null;
@@ -85,10 +89,11 @@ export function useVivaSession() {
       await audioHandlerRef.current.startRecording((audioData: ArrayBuffer) => {
         const { isMuted, audioState } = useVivaStore.getState();
         if (geminiClientRef.current && !isMuted && audioState === AudioState.RECORDING) {
+          voiceTelemetry.onMicrophonePacketSent(audioData.byteLength);
           geminiClientRef.current.sendAudio(audioData);
         }
       });
-    } catch (error) {
+    } catch {
       setError("Failed to start recording");
       setAudioState(AudioState.IDLE);
     }
@@ -103,29 +108,53 @@ export function useVivaSession() {
       setSessionState(SessionState.STARTING);
       isConclusionPendingRef.current = false;
 
+      const googleModel = useVivaStore.getState().googleModel;
+
+      // Initialize fresh anonymous telemetry baseline
+      voiceTelemetry.onSessionInitStart(googleModel ?? undefined);
+
       // Initialize audio recorder (handles microphone input)
       audioHandlerRef.current = new AudioRecorder();
       await audioHandlerRef.current.initialize();
+      voiceTelemetry.onMicrophoneReady();
 
-      // Initialize audio player with pipeline callbacks
-      audioPlayerRef.current = new AudioPlayer(audioPipeline.createPlaybackCallbacks());
+      // Initialize audio player with pipeline callbacks and telemetry hooks
+      audioPlayerRef.current = new AudioPlayer(
+        audioPipeline.createPlaybackCallbacks({
+          onPlayStart: () => voiceTelemetry.onPlaybackStarted(),
+          onPlayEnd: () => voiceTelemetry.onPlaybackEnded(),
+          onAudioScheduled: (queueDurationMs) => voiceTelemetry.onAudioScheduled(queueDurationMs),
+          onUnderrun: () => voiceTelemetry.onPlaybackUnderrun(),
+        })
+      );
       await audioPlayerRef.current.initialize();
+      voiceTelemetry.onAudioPlayerReady();
 
-      // Initialize Gemini client with event handlers
-      // Get model from backend response and pass to SDK
-      const googleModel = useVivaStore.getState().googleModel;
+      // Initialize clean Gemini Live SDK transport
       geminiClientRef.current = new GeminiLiveClientSDK(
         ephemeralToken,
         {
           onConnected: () => {
+            voiceTelemetry.onGeminiConnected();
             setSessionState(SessionState.ACTIVE);
             _startAudioPipeline();
           },
+          onSetupComplete: () => {
+            voiceTelemetry.onGeminiSetupComplete();
+          },
+          onDisconnected: () => {
+            voiceTelemetry.onGeminiDisconnected();
+          },
           onError: (e) => {
+            voiceTelemetry.onGeminiError(e);
             setError(e.message);
             setSessionState(SessionState.ERROR);
           },
+          onReconnectAttempt: (attempt) => {
+            voiceTelemetry.onConnectionRetry(attempt);
+          },
           onAudioData: async (base64) => {
+            voiceTelemetry.onGeminiAudioChunkReceived();
             isTurnCompleteRef.current = false;
             audioPipeline.cancelSwitchToRecording();
 
@@ -136,13 +165,16 @@ export function useVivaSession() {
             await audioPlayerRef.current?.playAudio(base64);
           },
           onTurnComplete: () => {
+            voiceTelemetry.onTurnComplete();
             isTurnCompleteRef.current = true;
             if (!isAudioPlayingRef.current && !isConclusionPendingRef.current) {
               audioPipeline.scheduleSwitchToRecording();
             }
           },
           onInterrupted: () => {
+            voiceTelemetry.onInterruptionSignalReceived();
             audioPlayerRef.current?.stop();
+            voiceTelemetry.onPlaybackStoppedDueToInterruption();
             audioPipeline.cancelSwitchToRecording();
             isAudioPlayingRef.current = false;
             isTurnCompleteRef.current = true;
@@ -156,10 +188,19 @@ export function useVivaSession() {
 
       await geminiClientRef.current.connect();
     } catch (err) {
+      voiceTelemetry.onGeminiError(err);
       setError(err instanceof Error ? err.message : "Connection failed");
       setSessionState(SessionState.ERROR);
     }
-  }, [setSessionState, setError, addTranscript, handleToolCall, _startAudioPipeline, audioPipeline, setAudioState]);
+  }, [
+    setSessionState,
+    setError,
+    addTranscript,
+    handleToolCall,
+    _startAudioPipeline,
+    audioPipeline,
+    setAudioState,
+  ]);
 
   // Request conclusion from AI
   const requestConclusion = useCallback(() => {
@@ -190,6 +231,7 @@ export function useVivaSession() {
 
   return {
     ...store,
+    telemetry: voiceTelemetry,
     initializeSession,
     requestConclusion,
     toggleMute
