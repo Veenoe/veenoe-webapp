@@ -80,28 +80,24 @@ export default function VivaRoomPage() {
         }
     };
 
-    if (showConfig) {
-        return (
-            <VivaConfigForm
-                onSubmit={handleConfigSubmit}
-                isSubmitting={isStarting}
-                error={error}
-            />
-        );
-    }
-
-    if (showInfoDialog) {
-        return (
-            <VivaInfoDialog
-                open={showInfoDialog}
-                onConfirm={handleConfirmStart}
-            />
-        );
-    }
-
     return (
-        <div className="min-h-screen bg-background p-4 flex flex-col relative">
-            <VivaActiveSession vivaSession={vivaSession} />
+        <div className="min-h-screen bg-background relative flex flex-col">
+            {showConfig ? (
+                <VivaConfigForm
+                    onSubmit={handleConfigSubmit}
+                    isSubmitting={isStarting}
+                    error={error}
+                />
+            ) : showInfoDialog ? (
+                <VivaInfoDialog
+                    open={showInfoDialog}
+                    onConfirm={handleConfirmStart}
+                />
+            ) : (
+                <div className="p-4 flex-1 flex flex-col relative">
+                    <VivaActiveSession vivaSession={vivaSession} />
+                </div>
+            )}
             <VoiceDiagnosticsPanel />
         </div>
     );
