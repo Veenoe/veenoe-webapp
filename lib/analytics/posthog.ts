@@ -1,11 +1,13 @@
 /**
  * PostHog Analytics Adapter for Veenoe Voice v2 Telemetry (VEENOE-16)
  *
- * Senior Staff Design Decisions:
- * 1. Safe no-op when NEXT_PUBLIC_POSTHOG_KEY is not configured or in SSR.
- * 2. User identification support: allows associating userId and student name for production troubleshooting.
- * 3. Token & URL sanitization: strips all credentials, ephemeral tokens, and connection URLs before logging or emission.
- * 4. Resilient: network/ad-blocker errors are swallowed safely and never bubble to viva runtime.
+ * Design Decisions:
+ * 1. Anonymous technical performance telemetry only.
+ *    PostHog does not receive student names, emails, Clerk IDs, transcripts, raw audio, or credentials.
+ * 2. Safe no-op when NEXT_PUBLIC_POSTHOG_KEY is not configured or in SSR.
+ * 3. Person profiles disabled ("never"): no user identities or personal tracking.
+ * 4. Token & URL sanitization: strips all credentials, ephemeral tokens, and connection URLs.
+ * 5. Resilient: network/ad-blocker errors are swallowed safely and never bubble to viva runtime.
  */
 
 import posthog from "posthog-js";
@@ -36,7 +38,7 @@ export function initPostHog(): boolean {
       capture_pageleave: false,
       disable_session_recording: true,
       advanced_disable_decide: true,
-      person_profiles: "identified_only", // Supports identified users for production troubleshooting
+      person_profiles: "never", // Anonymous performance analytics only - no person profiles
       persistence: "memory", // Keep state lightweight without cookie tracking
       loaded: () => {
         isPostHogInitialized = true;
@@ -47,24 +49,6 @@ export function initPostHog(): boolean {
   } catch (err) {
     console.warn("[PostHog] Failed to initialize:", err);
     return false;
-  }
-}
-
-/**
- * Identify a user in PostHog for production troubleshooting.
- */
-export function identifyUser(userId: string, traits?: Record<string, unknown>): void {
-  if (typeof window === "undefined" || !userId) return;
-  try {
-    if (!isPostHogInitialized) {
-      const initialized = initPostHog();
-      if (!initialized) return;
-    }
-    posthog.identify(userId, traits);
-  } catch (err) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn("[PostHog] Error in identifyUser:", err);
-    }
   }
 }
 
@@ -79,8 +63,6 @@ export type VoiceEventName =
 
 export interface VoiceEventProperties {
   telemetry_session_id: string;
-  user_id?: string | null;
-  student_name?: string | null;
   turn_number?: number | null;
   model_name?: string | null;
 
@@ -120,7 +102,6 @@ export interface VoiceEventProperties {
   interrupted?: boolean | null;
   error_type?: string | null;
   error_category?: string | null;
-  safe_error_message?: string | null;
   [key: string]: unknown;
 }
 
@@ -174,15 +155,39 @@ export function sanitizeErrorMessage(error: unknown): SanitizedError {
   };
 }
 
+const FORBIDDEN_PROPERTY_KEYS = new Set([
+  "user_id",
+  "userid",
+  "student_name",
+  "studentname",
+  "name",
+  "email",
+  "error_message",
+  "safe_error_message",
+  "raw_error",
+  "message",
+  "raw_audio",
+  "audio",
+  "transcript",
+  "token",
+  "key",
+  "auth_token",
+  "ephemeral_token",
+]);
+
 /**
- * Clean payload to strip undefined values and ensure numbers are numbers,
- * preventing any unintended data leakage.
+ * Clean payload to strip undefined values, enforce strict anonymity,
+ * and prevent any unintended PII or audio data leakage.
  */
 function cleanProperties(properties: Record<string, unknown>): Record<string, unknown> {
   const cleaned: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(properties)) {
-    if (value === undefined) {
+    if (value === undefined || value === null) {
+      continue;
+    }
+    // Strict privacy boundary: reject any PII, error text, tokens, or audio fields
+    if (FORBIDDEN_PROPERTY_KEYS.has(key.toLowerCase())) {
       continue;
     }
     // Reject any accidental buffers or audio arrays

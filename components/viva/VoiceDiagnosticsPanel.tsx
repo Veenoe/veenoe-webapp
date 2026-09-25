@@ -118,15 +118,10 @@ export function VoiceDiagnosticsPanel() {
           <div className="flex items-center justify-between pb-2 border-b border-border/60 text-muted-foreground text-[11px]">
             <div className="flex items-center gap-1.5 truncate max-w-[200px]">
               <Wifi className="h-3 w-3 shrink-0" />
-              {snapshot.studentName ? (
-                <span className="truncate text-foreground font-semibold" title={snapshot.studentName}>
-                  {snapshot.studentName}
-                </span>
-              ) : (
-                <span className="font-mono text-foreground truncate max-w-[120px]" title={snapshot.telemetrySessionId}>
-                  {snapshot.telemetrySessionId.slice(0, 8)}...
-                </span>
-              )}
+              <span>Session:</span>
+              <span className="font-mono text-foreground truncate max-w-[120px]" title={snapshot.telemetrySessionId}>
+                {snapshot.telemetrySessionId.slice(0, 8)}...
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
               <button

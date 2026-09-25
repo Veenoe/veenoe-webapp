@@ -32,12 +32,15 @@ NEXT_PUBLIC_VOICE_DIAGNOSTICS=true
 
 ## PostHog Setup
 
+Voice telemetry is anonymous technical performance telemetry.
+PostHog does not receive student names, emails, Clerk IDs, transcripts, raw audio, or credentials.
+
 PostHog is integrated via `posthog-js` with strict privacy constraints:
 - **Autocapture:** Disabled (`autocapture: false`)
 - **Session Replay:** Disabled (`disable_session_recording: true`)
 - **Pageviews:** Disabled (`capture_pageview: false`)
 - **PII / Identities:** Person profiles set to `"never"`. No student names, emails, Clerk user IDs, or transcripts are sent.
-- **Payload Sanitization:** Raw PCM audio buffers, base64 data, and API tokens are strictly filtered out before dispatch.
+- **Payload Sanitization:** Raw PCM audio buffers, base64 data, error messages, and API tokens are strictly filtered out before dispatch.
 
 ### Event Names & Vocabulary
 
@@ -47,7 +50,7 @@ PostHog is integrated via `posthog-js` with strict privacy constraints:
 | `voice_connection_ready` | Gemini `setup_complete` received | `telemetry_session_id`, `connection_setup_ms`, `model_name` |
 | `voice_turn_completed` | Model turn completed or finished | `turn_number`, `last_input_packet_to_first_gemini_audio_ms`, `first_gemini_audio_to_playback_ms`, `input_packet_count`, `input_bytes`, `packets_per_second`, `output_audio_chunk_count`, `max_playback_queue_ms`, `playback_underrun_count`, `interrupted` |
 | `voice_interruption` | Gemini interruption detected & playback stopped | `turn_number`, `interruption_to_playback_stop_ms` |
-| `voice_connection_error` | WebSocket / setup error | `connection_error_count`, `error_message` |
+| `voice_connection_error` | WebSocket / setup error | `telemetry_session_id`, `error_type`, `error_category`, `connection_error_count`, `model_name` |
 | `voice_session_ended` | Session teardown / concluded | `total_input_packets`, `total_input_bytes`, `total_output_chunks`, `disconnect_count`, `connection_error_count` |
 
 > **Note on VAD Timestamps:** The current Gemini Live protocol does not deliver client-side VAD speech endpoint markers. As a result, `speech_end_to_first_gemini_audio_ms` is marked unavailable (`null`), and the honest proxy metric `last_input_packet_to_first_gemini_audio_ms` is recorded.

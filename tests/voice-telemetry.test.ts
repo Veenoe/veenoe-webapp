@@ -7,7 +7,7 @@ import {
   calculatePcmDurationMs,
   VoiceTelemetry,
 } from "../lib/telemetry/voice-telemetry";
-import { captureVoiceEvent, initPostHog, sanitizeErrorMessage, identifyUser } from "../lib/analytics/posthog";
+import { captureVoiceEvent, initPostHog, sanitizeErrorMessage, posthog } from "../lib/analytics/posthog";
 
 test("duration calculation with valid timestamps", () => {
   const result = calculateElapsedMs(100.25, 250.75);
@@ -43,7 +43,7 @@ test("complete session reset across multiple sessions (no cumulative data leak)"
   const telemetry = new VoiceTelemetry();
 
   // Session 1: Student conducts an active viva
-  telemetry.onSessionInitStart("models/gemini-2.5-flash", "user_123", "Alice");
+  telemetry.onSessionInitStart("models/gemini-2.5-flash");
   telemetry.onMicrophoneReady();
   telemetry.onAudioPlayerReady();
   telemetry.onGeminiConnected();
@@ -59,8 +59,6 @@ test("complete session reset across multiple sessions (no cumulative data leak)"
   telemetry.onTurnComplete();
 
   const snap1 = telemetry.getSnapshot();
-  assert.equal(snap1.userId, "user_123");
-  assert.equal(snap1.studentName, "Alice");
   assert.equal(snap1.totalInputPackets, 50);
   assert.equal(snap1.totalInputBytes, 12800);
   assert.equal(snap1.totalOutputChunks, 1);
@@ -73,13 +71,11 @@ test("complete session reset across multiple sessions (no cumulative data leak)"
   telemetry.onSessionEnded();
 
   // Session 2: Fresh viva started in the same browser tab
-  telemetry.onSessionInitStart("models/gemini-2.5-pro", "user_456", "Bob");
+  telemetry.onSessionInitStart("models/gemini-2.5-pro");
 
   const snap2 = telemetry.getSnapshot();
   // CRITICAL REGRESSION TEST: All session totals must be completely reset to zero
   assert.notEqual(snap2.telemetrySessionId, snap1.telemetrySessionId);
-  assert.equal(snap2.userId, "user_456");
-  assert.equal(snap2.studentName, "Bob");
   assert.equal(snap2.modelName, "models/gemini-2.5-pro");
   assert.equal(snap2.totalInputPackets, 0);
   assert.equal(snap2.totalInputBytes, 0);
@@ -232,19 +228,16 @@ test("bounded recent event history does not exceed 20 items", () => {
   assert.ok(snap.recentEvents.length <= 20);
 });
 
-test("PostHog adapter safely no-ops without credentials and supports user identification", () => {
+test("PostHog adapter safely no-ops without credentials", () => {
   // Ensure unconfigured environment does not throw
   delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
   const initResult = initPostHog();
   assert.equal(initResult, false);
 
-  // identifyUser and captureVoiceEvent should silently succeed without error
+  // captureVoiceEvent should silently succeed without error
   assert.doesNotThrow(() => {
-    identifyUser("user_789", { name: "Charlie" });
     captureVoiceEvent("voice_session_started", {
       telemetry_session_id: "test-session",
-      user_id: "user_789",
-      student_name: "Charlie",
     });
     captureVoiceEvent("voice_turn_completed", {
       telemetry_session_id: "test-session",
@@ -252,4 +245,93 @@ test("PostHog adapter safely no-ops without credentials and supports user identi
       input_packet_count: 5,
     });
   });
+});
+
+test("privacy guarantees: voice analytics events and snapshots never contain PII, raw errors, audio buffers, or credentials", () => {
+  let capturedEvent: string | null = null;
+  let capturedPayload: Record<string, unknown> | null = null;
+
+  // Ensure test key is present so posthog is active
+  process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_dummy_key";
+
+  // Provide mock window and intercept posthog methods
+  const globalObj = globalThis as unknown as Record<string, unknown>;
+  const originalWindow = globalObj.window;
+  globalObj.window = {};
+  const originalInit = posthog.init;
+  const originalCapture = posthog.capture;
+  const posthogObj = posthog as unknown as Record<string, unknown>;
+  posthogObj.init = () => {};
+  posthogObj.capture = (event: string, properties: Record<string, unknown>) => {
+    capturedEvent = event;
+    capturedPayload = properties;
+  };
+
+  try {
+    // Attempt to pass forbidden fields (PII, raw errors, audio buffers, tokens)
+    captureVoiceEvent("voice_connection_error", {
+      telemetry_session_id: "anon-uuid-555",
+      connection_error_count: 1,
+      error_type: "WebSocketError",
+      error_category: "gemini_connection",
+      model_name: "models/gemini-2.5-flash",
+      // Forbidden PII fields:
+      user_id: "clerk_user_12345",
+      student_name: "Kaushal Kumar",
+      email: "kaushal@example.com",
+      // Forbidden error/credential fields:
+      raw_error: "Connection refused to wss://example.com/socket?key=AIzaSySecret",
+      safe_error_message: "Redacted message with key=[REDACTED]",
+      error_message: "Fatal socket error",
+      token: "secret_ephemeral_token_abc",
+      key: "secret_api_key_xyz",
+      // Forbidden raw audio fields:
+      audio: new Uint8Array([0, 1, 2, 3]),
+      raw_audio: new ArrayBuffer(1024),
+      transcript: "This was a secret student response",
+    } as unknown as Parameters<typeof captureVoiceEvent>[1]);
+
+    assert.equal(capturedEvent, "voice_connection_error");
+    assert.ok(capturedPayload !== null);
+
+    // 1. Assert all PII fields are completely stripped
+    assert.equal(capturedPayload!["user_id"], undefined);
+    assert.equal(capturedPayload!["student_name"], undefined);
+    assert.equal(capturedPayload!["email"], undefined);
+
+    // 2. Assert raw and safe error text are completely stripped from PostHog
+    assert.equal(capturedPayload!["raw_error"], undefined);
+    assert.equal(capturedPayload!["safe_error_message"], undefined);
+    assert.equal(capturedPayload!["error_message"], undefined);
+    assert.equal(capturedPayload!["token"], undefined);
+    assert.equal(capturedPayload!["key"], undefined);
+
+    // 3. Assert raw audio and transcripts are completely stripped
+    assert.equal(capturedPayload!["audio"], undefined);
+    assert.equal(capturedPayload!["raw_audio"], undefined);
+    assert.equal(capturedPayload!["transcript"], undefined);
+
+    // 4. Assert stable technical fields remain intact
+    assert.equal(capturedPayload!["telemetry_session_id"], "anon-uuid-555");
+    assert.equal(capturedPayload!["connection_error_count"], 1);
+    assert.equal(capturedPayload!["error_type"], "WebSocketError");
+    assert.equal(capturedPayload!["error_category"], "gemini_connection");
+    assert.equal(capturedPayload!["model_name"], "models/gemini-2.5-flash");
+
+    // 5. Assert DiagnosticsSnapshot has no identity fields
+    const telemetry = new VoiceTelemetry();
+    telemetry.onSessionInitStart("models/gemini-2.5-flash");
+    const snapshot = telemetry.getSnapshot();
+    const snapshotObj = snapshot as unknown as Record<string, unknown>;
+    assert.equal(snapshotObj.userId, undefined);
+    assert.equal(snapshotObj.studentName, undefined);
+  } finally {
+    posthog.capture = originalCapture;
+    posthog.init = originalInit;
+    if (originalWindow === undefined) {
+      delete globalObj.window;
+    } else {
+      globalObj.window = originalWindow;
+    }
+  }
 });

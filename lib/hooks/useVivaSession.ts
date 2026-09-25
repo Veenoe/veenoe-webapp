@@ -2,21 +2,19 @@
 
 import { useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth, useUser } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import { useVivaStore } from "@/lib/store/viva-store";
 import { GeminiLiveClientSDK } from "@/lib/gemini/live-client-sdk";
 import { AudioRecorder } from "@/lib/gemini/audio-recorder";
 import { AudioPlayer } from "@/lib/gemini/audio-player";
 import { SessionState, AudioState } from "@/types/viva";
 import { voiceTelemetry } from "@/lib/telemetry/voice-telemetry";
-import { identifyUser } from "@/lib/analytics/posthog";
 import { createToolHandler } from "./viva/tool-handlers";
 import { createAudioPipeline } from "./viva/audio-pipeline";
 
 export function useVivaSession() {
   const router = useRouter();
-  const { getToken, userId } = useAuth();
-  const { user } = useUser();
+  const { getToken } = useAuth();
   const store = useVivaStore();
 
   const {
@@ -111,22 +109,9 @@ export function useVivaSession() {
       isConclusionPendingRef.current = false;
 
       const googleModel = useVivaStore.getState().googleModel;
-      const studentName = user?.fullName || user?.firstName || undefined;
 
-      // Identify user in PostHog for production troubleshooting
-      if (userId) {
-        identifyUser(userId, {
-          name: studentName,
-          email: user?.primaryEmailAddress?.emailAddress || undefined,
-        });
-      }
-
-      // Initialize fresh telemetry baseline with user attribution
-      voiceTelemetry.onSessionInitStart(
-        googleModel ?? undefined,
-        userId ?? undefined,
-        studentName
-      );
+      // Initialize fresh anonymous telemetry baseline
+      voiceTelemetry.onSessionInitStart(googleModel ?? undefined);
 
       // Initialize audio recorder (handles microphone input)
       audioHandlerRef.current = new AudioRecorder();
@@ -215,8 +200,6 @@ export function useVivaSession() {
     _startAudioPipeline,
     audioPipeline,
     setAudioState,
-    userId,
-    user
   ]);
 
   // Request conclusion from AI

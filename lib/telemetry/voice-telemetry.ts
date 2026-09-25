@@ -47,8 +47,6 @@ export interface TurnMetricsSnapshot {
 
 export interface DiagnosticsSnapshot {
   telemetrySessionId: string;
-  userId: string | null;
-  studentName: string | null;
   connectionState: "idle" | "starting" | "connected" | "disconnected" | "error";
   connectionSetupMs: number | null;
   currentTurn: number;
@@ -114,8 +112,6 @@ const MAX_RECENT_EVENTS = 20;
 
 export class VoiceTelemetry {
   private sessionId: string;
-  private userId: string | null = null;
-  private studentName: string | null = null;
   private sessionStartTime: number;
   private connectionState: "idle" | "starting" | "connected" | "disconnected" | "error" = "idle";
   private modelName: string | null = null;
@@ -215,14 +211,12 @@ export class VoiceTelemetry {
    * Starts a new viva session telemetry lifecycle.
    * Completely resets all session-scoped counters to guarantee an independent baseline.
    */
-  public onSessionInitStart(modelName?: string, userId?: string, studentName?: string): void {
+  public onSessionInitStart(modelName?: string): void {
     this.sessionId = generateAnonymousSessionId();
     this.sessionStartTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     this.sessionInitStartTime = this.sessionStartTime;
     this.connectionState = "starting";
     this.modelName = modelName || null;
-    this.userId = userId || null;
-    this.studentName = studentName || null;
     this.isSessionActive = true;
     this.isIntentionalDisconnect = false;
 
@@ -249,8 +243,6 @@ export class VoiceTelemetry {
 
     captureVoiceEvent("voice_session_started", {
       telemetry_session_id: this.sessionId,
-      user_id: this.userId,
-      student_name: this.studentName,
       model_name: this.modelName,
     });
   }
@@ -286,8 +278,6 @@ export class VoiceTelemetry {
 
     captureVoiceEvent("voice_connection_ready", {
       telemetry_session_id: this.sessionId,
-      user_id: this.userId,
-      student_name: this.studentName,
       connection_setup_ms: this.connectionSetupMs,
       model_name: this.modelName,
     });
@@ -316,16 +306,15 @@ export class VoiceTelemetry {
     this.connectionErrorCount++;
 
     const sanitized = sanitizeErrorMessage(error);
+    // Developer-local UI timeline may keep sanitized summary
     this.recordDiagnosticEvent("connection_error", sanitized.safe_message);
 
+    // PostHog receives strictly stable technical categorization (no error messages)
     captureVoiceEvent("voice_connection_error", {
       telemetry_session_id: this.sessionId,
-      user_id: this.userId,
-      student_name: this.studentName,
       connection_error_count: this.connectionErrorCount,
       error_type: sanitized.error_type,
       error_category: sanitized.error_category,
-      safe_error_message: sanitized.safe_message,
       model_name: this.modelName,
     });
   }
@@ -359,8 +348,6 @@ export class VoiceTelemetry {
 
     captureVoiceEvent("voice_session_ended", {
       telemetry_session_id: this.sessionId,
-      user_id: this.userId,
-      student_name: this.studentName,
       input_packet_count: this.totalInputPackets,
       input_bytes: this.totalInputBytes,
       output_audio_chunk_count: this.totalOutputChunks,
@@ -477,8 +464,6 @@ export class VoiceTelemetry {
 
     captureVoiceEvent("voice_interruption", {
       telemetry_session_id: this.sessionId,
-      user_id: this.userId,
-      student_name: this.studentName,
       turn_number: this.currentTurn,
       interruption_to_playback_stop_ms: interruptionDuration,
       model_name: this.modelName,
@@ -568,8 +553,6 @@ export class VoiceTelemetry {
     // Emit aggregated turn event to PostHog
     const eventProps: VoiceEventProperties = {
       telemetry_session_id: this.sessionId,
-      user_id: this.userId,
-      student_name: this.studentName,
       turn_number: this.currentTurn,
       model_name: this.modelName,
 
@@ -629,8 +612,6 @@ export class VoiceTelemetry {
   public getSnapshot(): DiagnosticsSnapshot {
     return {
       telemetrySessionId: this.sessionId,
-      userId: this.userId,
-      studentName: this.studentName,
       connectionState: this.connectionState,
       connectionSetupMs: this.connectionSetupMs,
       currentTurn: this.currentTurn,
@@ -653,8 +634,6 @@ export class VoiceTelemetry {
   public sendTestPing(): void {
     captureVoiceEvent("voice_diagnostics_ping", {
       telemetry_session_id: this.sessionId,
-      user_id: this.userId,
-      student_name: this.studentName,
       model_name: this.modelName,
       ping_timestamp: new Date().toISOString(),
     });
