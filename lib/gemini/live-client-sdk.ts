@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality, MediaResolution } from '@google/genai';
+import { GoogleGenAI, Modality, MediaResolution, type LiveConnectConfig, type LiveSendClientContentParameters, type Session, type LiveServerMessage } from '@google/genai';
 import { arrayBufferToBase64 } from './audio-utils';
 import {
     processGeminiMessage,
@@ -25,6 +25,28 @@ export interface GeminiLiveEventHandlers {
     onReconnectAttempt?: (attempt: number) => void;
 }
 
+export const GEMINI_LIVE_MODEL = 'gemini-3.8-live';
+export const GEMINI_LIVE_API_VERSION = 'v1beta';
+
+export function createGeminiLiveConfig(): LiveConnectConfig {
+    return {
+        responseModalities: [Modality.AUDIO],
+        mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
+        speechConfig: {
+            voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: 'Puck' },
+            },
+        },
+    };
+}
+
+export function createGeminiClientContent(text: string): LiveSendClientContentParameters {
+    return {
+        turns: [{ role: 'user', parts: [{ text }] }],
+        turnComplete: true,
+    };
+}
+
 /**
  * Configuration for connection retry behavior.
  */
@@ -47,8 +69,7 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
  * Pure transport layer without third-party analytics coupling.
  */
 export class GeminiLiveClientSDK {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private session: any = null;
+    private session: Session | null = null;
     private eventHandlers: GeminiLiveEventHandlers = {};
     private responseQueue: unknown[] = [];
     private isProcessing = false;
@@ -56,7 +77,7 @@ export class GeminiLiveClientSDK {
     private retryConfig: RetryConfig;
 
     // Default model - can be overridden by backend
-    private static readonly DEFAULT_MODEL = 'models/gemini-2.5-flash-native-audio-preview-09-2025';
+    private static readonly DEFAULT_MODEL = GEMINI_LIVE_MODEL;
 
     constructor(
         private apiKey: string,
@@ -94,22 +115,12 @@ export class GeminiLiveClientSDK {
 
         const ai = new GoogleGenAI({
             apiKey: this.apiKey,
-            httpOptions: { apiVersion: 'v1alpha' }
+            httpOptions: { apiVersion: GEMINI_LIVE_API_VERSION }
         });
 
         const model = this.modelName;
 
-        const config = {
-            responseModalities: [Modality.AUDIO],
-            mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
-            speechConfig: {
-                voiceConfig: {
-                    prebuiltVoiceConfig: {
-                        voiceName: 'Puck',
-                    },
-                },
-            },
-        };
+        const config = createGeminiLiveConfig();
 
         try {
             debug("Connecting to model:", model);
@@ -120,7 +131,7 @@ export class GeminiLiveClientSDK {
                         debug('Connection established');
                         this.eventHandlers.onConnected?.();
                     },
-                    onmessage: (message: unknown) => {
+                    onmessage: (message: LiveServerMessage) => {
                         this.responseQueue.push(message);
                         if (!this.isProcessing) {
                             this.processMessages();
@@ -255,9 +266,7 @@ export class GeminiLiveClientSDK {
         }
 
         console.log(`[GeminiLiveClientSDK] Sending text: ${text}`);
-        this.session.sendClientContent({
-            turns: [text],
-        });
+        this.session.sendClientContent(createGeminiClientContent(text));
     }
 
     /**
