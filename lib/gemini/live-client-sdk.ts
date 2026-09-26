@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality, MediaResolution } from '@google/genai';
+import { GoogleGenAI, Modality, MediaResolution, type Session, type LiveServerMessage } from '@google/genai';
 import { arrayBufferToBase64 } from './audio-utils';
 import {
     processGeminiMessage,
@@ -47,8 +47,7 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
  * Pure transport layer without third-party analytics coupling.
  */
 export class GeminiLiveClientSDK {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private session: any = null;
+    private session: Session | null = null;
     private eventHandlers: GeminiLiveEventHandlers = {};
     private responseQueue: unknown[] = [];
     private isProcessing = false;
@@ -56,7 +55,7 @@ export class GeminiLiveClientSDK {
     private retryConfig: RetryConfig;
 
     // Default model - can be overridden by backend
-    private static readonly DEFAULT_MODEL = 'models/gemini-2.5-flash-native-audio-preview-09-2025';
+    private static readonly DEFAULT_MODEL = 'gemini-3.8-live';
 
     constructor(
         private apiKey: string,
@@ -94,7 +93,7 @@ export class GeminiLiveClientSDK {
 
         const ai = new GoogleGenAI({
             apiKey: this.apiKey,
-            httpOptions: { apiVersion: 'v1alpha' }
+            httpOptions: { apiVersion: 'v1beta' }
         });
 
         const model = this.modelName;
@@ -120,7 +119,7 @@ export class GeminiLiveClientSDK {
                         debug('Connection established');
                         this.eventHandlers.onConnected?.();
                     },
-                    onmessage: (message: unknown) => {
+                    onmessage: (message: LiveServerMessage) => {
                         this.responseQueue.push(message);
                         if (!this.isProcessing) {
                             this.processMessages();
@@ -256,7 +255,8 @@ export class GeminiLiveClientSDK {
 
         console.log(`[GeminiLiveClientSDK] Sending text: ${text}`);
         this.session.sendClientContent({
-            turns: [text],
+            turns: [{ role: 'user', parts: [{ text }] }],
+            turnComplete: true,
         });
     }
 
