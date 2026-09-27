@@ -70,6 +70,27 @@ The developer HUD provides live pipeline metrics and a bounded event timeline:
   - Bounded recent event timeline (last 20 lifecycle events with `+XXXms` session offset).
   - **Copy JSON** button: Copies full anonymous telemetry state to clipboard for debugging.
 
+### VEENOE-20 microphone transport
+
+The browser-selected `AudioContext.sampleRate` is the worklet input rate. Track
+`getSettings().sampleRate` is shown only when available. A stateful windowed-sinc
+low-pass resampler converts that stream to 16 kHz mono; a 16 kHz graph uses a
+pass-through path. The worklet emits 320-sample, 640-byte, 20 ms little-endian
+PCM16 packets. It retains packet remainders across render calls and discards
+them when the recorder node is stopped. The source graph is connected to the
+destination through zero gain so browsers continue rendering it without mic
+feedback.
+
+At most three packets may await main-thread acknowledgement, plus one latest
+unsent packet. When that handoff fills, newer audio replaces the retained
+packet and the replacement is counted as a drop. The main thread also discards
+packets older than 100 ms of AudioContext time. The SDK's
+`sendRealtimeInput` is synchronous and does not expose WebSocket buffer depth;
+these safeguards bound the app's worklet handoff, not the SDK's internal socket
+buffer. Diagnostics shows effective and track rates, output format, packet
+target, and cumulative drops. Input packet and byte metrics count calls actually
+passed to the Gemini SDK, after mute and stale-packet filtering.
+
 ---
 
 ## How to Run Baseline Scenarios

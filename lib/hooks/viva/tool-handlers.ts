@@ -38,6 +38,8 @@ export interface ToolHandlerDependencies {
     isConclusionPendingRef: React.MutableRefObject<boolean>;
     /** Function to get the current auth token - required for API calls */
     getToken: () => Promise<string | null>;
+    /** Allows the conclusion side effect to be exercised without a backend in tests. */
+    saveConclusion?: typeof concludeViva;
 }
 
 /**
@@ -45,6 +47,9 @@ export interface ToolHandlerDependencies {
  */
 export function createToolHandler(deps: ToolHandlerDependencies) {
     const { setError, finishConclusion, isAudioPlayingRef, isConclusionPendingRef, getToken } = deps;
+    const saveConclusion = deps.saveConclusion ?? concludeViva;
+    let conclusionSessionId: string | null = null;
+    let conclusionStatus: 'idle' | 'saving' | 'saved' = 'idle';
 
     return async function handleToolCall(
         toolName: string,
@@ -56,6 +61,14 @@ export function createToolHandler(deps: ToolHandlerDependencies) {
         if (!currentSessionId) return;
 
         if (toolName === "conclude_viva") {
+            if (conclusionSessionId !== currentSessionId) {
+                conclusionSessionId = currentSessionId;
+                conclusionStatus = 'idle';
+            }
+            // Gemini may emit the tool again after an interruption. Only one
+            // backend write should decide the feedback for a given session.
+            if (conclusionStatus !== 'idle') return;
+            conclusionStatus = 'saving';
             try {
                 debug("AI requested conclusion. Saving results...");
 
@@ -64,13 +77,15 @@ export function createToolHandler(deps: ToolHandlerDependencies) {
                 setAuthToken(token);
 
                 // 1. Save data to backend
-                await concludeViva({
+                await saveConclusion({
                     viva_session_id: currentSessionId,
                     score: (args.score as number) ?? 0,
                     summary: (args.summary as string) ?? "",
                     strong_points: (args.strong_points as string[]) ?? [],
                     areas_of_improvement: (args.areas_of_improvement as string[]) ?? [],
                 });
+                if (conclusionSessionId === currentSessionId) conclusionStatus = 'saved';
+                if (useVivaStore.getState().sessionId !== currentSessionId) return;
 
                 // 2. Update Local Store for the Popup UI
                 useVivaStore.getState().setConclusionData({
@@ -82,6 +97,7 @@ export function createToolHandler(deps: ToolHandlerDependencies) {
                 // 3. DECISION POINT: Wait for audio or finish now?
                 // The AI sends audio and tool call together, but audio takes time to decode/queue.
                 await new Promise(resolve => setTimeout(resolve, AUDIO_BUFFER_GRACE_PERIOD_MS));
+                if (useVivaStore.getState().sessionId !== currentSessionId) return;
 
                 debug(`After ${AUDIO_BUFFER_GRACE_PERIOD_MS}ms delay - isAudioPlaying: ${isAudioPlayingRef.current}`);
 
@@ -94,6 +110,8 @@ export function createToolHandler(deps: ToolHandlerDependencies) {
                 }
 
             } catch (error) {
+                if (conclusionSessionId === currentSessionId && conclusionStatus === 'saving') conclusionStatus = 'idle';
+                if (useVivaStore.getState().sessionId !== currentSessionId) return;
                 debug("Failed to conclude session:", error);
                 setError("Failed to save session results.");
                 // In case of error, force finish to avoid getting stuck

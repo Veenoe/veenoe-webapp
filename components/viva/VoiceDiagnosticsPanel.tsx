@@ -81,10 +81,10 @@ export function VoiceDiagnosticsPanel() {
     snapshot.connectionState === "connected"
       ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
       : snapshot.connectionState === "starting"
-      ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
-      : snapshot.connectionState === "error"
-      ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
-      : "bg-muted text-muted-foreground border-border";
+        ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+        : snapshot.connectionState === "error"
+          ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
+          : "bg-muted text-muted-foreground border-border";
 
   return (
     <div className="fixed bottom-4 right-4 z-[60] font-mono text-xs select-none max-w-sm w-full transition-all">
@@ -235,6 +235,27 @@ export function VoiceDiagnosticsPanel() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Input Packets:</span>
                 <span className="font-medium text-foreground">{snapshot.totalInputPackets}</span>
+              </div>
+
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Mic Rate:</span>
+                <span className="font-medium text-foreground">{snapshot.microphoneFormat?.processingSampleRate ?? "—"} Hz</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Track Rate:</span>
+                <span className="font-medium text-foreground">{snapshot.microphoneFormat?.trackSampleRate ?? "—"} Hz</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Gemini PCM:</span>
+                <span className="font-medium text-foreground">{snapshot.microphoneFormat ? `${snapshot.microphoneFormat.outputSampleRate} Hz / ${snapshot.microphoneFormat.packetTargetMs} ms` : "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Resampling:</span>
+                <span className="font-medium text-foreground">{snapshot.microphoneFormat ? (snapshot.microphoneFormat.resamplingActive ? "On" : "Off") : "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Mic Drops:</span>
+                <span className="font-medium text-foreground">{snapshot.inputPacketsDropped}</span>
               </div>
 
               <div className="flex justify-between">

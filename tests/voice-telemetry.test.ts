@@ -164,6 +164,21 @@ test("microphone transport aggregation without per-packet emission", () => {
   assert.equal(snap.currentTurn, 1);
 });
 
+test("microphone format and pressure diagnostics reset per session", () => {
+  const telemetry = new VoiceTelemetry();
+  telemetry.onSessionInitStart();
+  telemetry.onMicrophoneFormat({
+    processingSampleRate: 48000, trackSampleRate: null,
+    outputSampleRate: 16000, packetTargetMs: 20, resamplingActive: true
+  });
+  telemetry.onMicrophonePacketsDropped(3);
+  assert.equal(telemetry.getSnapshot().microphoneFormat?.processingSampleRate, 48000);
+  assert.equal(telemetry.getSnapshot().inputPacketsDropped, 3);
+  telemetry.onSessionInitStart();
+  assert.equal(telemetry.getSnapshot().microphoneFormat, null);
+  assert.equal(telemetry.getSnapshot().inputPacketsDropped, 0);
+});
+
 test("turn isolation and no cross-turn metric leakage", () => {
   const telemetry = new VoiceTelemetry();
   telemetry.onSessionInitStart();
@@ -276,7 +291,7 @@ test("privacy guarantees: voice analytics events and snapshots never contain PII
   const originalInit = posthog.init;
   const originalCapture = posthog.capture;
   const posthogObj = posthog as unknown as Record<string, unknown>;
-  posthogObj.init = () => {};
+  posthogObj.init = () => { };
   posthogObj.capture = (event: string, properties: Record<string, unknown>) => {
     capturedEvent = event;
     capturedPayload = properties;

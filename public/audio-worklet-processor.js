@@ -1,33 +1,45 @@
-/**
- * PCM Processor Worker
- * Runs on the dedicated Audio Thread to prevent UI-blocking audio drops.
- * Converts Float32 Audio to Int16 PCM in real-time.
- */
+/** Audio-thread microphone DSP and bounded worklet-to-main handoff. */
 class PCMProcessor extends AudioWorkletProcessor {
-  constructor() {
+  constructor(options) {
     super();
-    // Internal buffer to accumulate samples if needed, though we usually stream chunks directly
+    const { AudioInputPipeline, OUTPUT_RATE, PACKET_MS } = globalThis.VeenoeAudioInput;
+    this.pending = 0;
+    this.dropped = 0;
+    this.latestUnsentPacket = null;
+    this.pipeline = new AudioInputPipeline(options.processorOptions.sourceRate, (buffer) => {
+      const packet = { buffer, createdAtMs: currentTime * 1000 };
+      if (this.pending >= 3) {
+        if (this.latestUnsentPacket) this.dropped++;
+        this.latestUnsentPacket = packet;
+        return;
+      }
+      this.sendPacket(packet);
+    });
+    this.port.postMessage({ type: 'format', outputSampleRate: OUTPUT_RATE, packetTargetMs: PACKET_MS });
+    this.port.onmessage = (event) => {
+      if (event.data === 'ack') {
+        this.pending = Math.max(0, this.pending - 1);
+        if (this.latestUnsentPacket) {
+          const packet = this.latestUnsentPacket;
+          this.latestUnsentPacket = null;
+          this.sendPacket(packet);
+        }
+      }
+    };
   }
 
-  process(inputs, outputs, parameters) {
-    const input = inputs[0];
-    if (!input || input.length === 0) return true;
+  sendPacket(packet) {
+    this.pending++;
+    this.port.postMessage({ type: 'audio', ...packet, dropped: this.dropped }, [packet.buffer]);
+    this.dropped = 0;
+  }
 
-    const channelData = input[0]; // Mono channel
-    
-    // Convert Float32 (-1.0 to 1.0) to Int16 (-32768 to 32767)
-    // We do this calculation HERE on the worker thread, not the main thread
-    const pcmData = new Int16Array(channelData.length);
-    for (let i = 0; i < channelData.length; i++) {
-      const s = Math.max(-1, Math.min(1, channelData[i]));
-      pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-    }
-
-    // Send data back to the main thread
-    // We use a Transferable Object (the buffer) for zero-copy performance
-    this.port.postMessage(pcmData.buffer, [pcmData.buffer]);
-
-    return true; // Keep processor alive
+  process(inputs) {
+    // getUserMedia requests one channel; Web Audio channel 0 is the capture contract.
+    // Device/channel downmix policy belongs to VEENOE-21.
+    const channel = inputs[0]?.[0];
+    if (channel) this.pipeline.push(channel);
+    return true;
   }
 }
 

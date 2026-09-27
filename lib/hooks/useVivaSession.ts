@@ -72,6 +72,8 @@ export function useVivaSession() {
   }, [cleanupResources, setSessionState]);
 
   // Create audio pipeline controller
+  // Existing controller factory retains refs; it does not read their values during render.
+  // eslint-disable-next-line react-hooks/refs
   const audioPipeline = useMemo(() => createAudioPipeline({
     setConversationState,
     setPlaybackState,
@@ -82,6 +84,7 @@ export function useVivaSession() {
   }), [setConversationState, setPlaybackState, finishConclusion]);
 
   // Create tool handler (with auth token getter for API calls)
+  // eslint-disable-next-line react-hooks/refs
   const handleToolCall = useMemo(() => createToolHandler({
     setError,
     finishConclusion,
@@ -105,8 +108,10 @@ export function useVivaSession() {
           isMuted,
           (data) => client.sendAudio(data),
           (byteLength) => voiceTelemetry.onMicrophonePacketSent(byteLength),
+          () => voiceTelemetry.onMicrophonePacketsDropped(1),
         );
-      });
+      }, (count) => voiceTelemetry.onMicrophonePacketsDropped(count),
+        (format) => voiceTelemetry.onMicrophoneFormat(format));
       setMicrophoneState(MicrophoneState.ACTIVE);
       setConversationState(ConversationState.LISTENING);
     } catch {
@@ -216,14 +221,16 @@ export function useVivaSession() {
   const requestConclusion = useCallback(() => {
     if (geminiClientRef.current && store.sessionState === SessionState.ACTIVE) {
       console.log("[useVivaSession] User requested end. Prompting AI...");
-      geminiClientRef.current.sendText(
+      const accepted = geminiClientRef.current.sendText(
         "The user needs to leave now. Please immediately evaluate the session so far and call the conclude_viva tool with your feedback."
       );
-      setSessionState(SessionState.CONCLUDING);
-    } else {
-      finishConclusion();
-      router.push("/");
+      if (accepted) {
+        setSessionState(SessionState.CONCLUDING);
+        return;
+      }
     }
+    finishConclusion();
+    router.push("/");
   }, [store.sessionState, router, finishConclusion, setSessionState]);
 
   // Toggle mute
