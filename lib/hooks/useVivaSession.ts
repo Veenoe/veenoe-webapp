@@ -17,6 +17,7 @@ import { voiceTelemetry } from "@/lib/telemetry/voice-telemetry";
 import { createToolHandler } from "./viva/tool-handlers";
 import { createAudioPipeline } from "./viva/audio-pipeline";
 import { abandonViva } from "@/lib/api/axios";
+import { applyAbandonOutcome } from "./viva/session-lifecycle";
 
 export function useVivaSession() {
   const router = useRouter();
@@ -80,11 +81,13 @@ export function useVivaSession() {
       return abandonmentRef.current ?? Promise.resolve();
     }
     const pending = abandonViva(sessionId)
-      .then(() => {
+      .then((response) => {
         if (useVivaStore.getState().sessionId === sessionId) {
-          setSessionState(SessionState.IDLE);
-          cleanupResources();
-          router.push("/");
+          applyAbandonOutcome(response, sessionId, {
+            setSessionState,
+            cleanupResources,
+            navigate: (path) => router.push(path),
+          });
         }
       })
       .catch(() => {
