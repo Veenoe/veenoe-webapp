@@ -1,17 +1,17 @@
 "use client";
 
 import { motion } from "motion/react";
-import { AudioState } from "@/types/viva";
+import { MicrophoneState, PlaybackState } from "@/types/viva";
 
 interface VoiceVisualizerProps {
-    audioState: AudioState;
-    isMuted: boolean;
+    microphoneState: MicrophoneState;
+    playbackState: PlaybackState;
 }
 
-export function VoiceVisualizer({ audioState, isMuted }: VoiceVisualizerProps) {
+export function VoiceVisualizer({ microphoneState, playbackState }: VoiceVisualizerProps) {
     // Determine the color and animation based on state
-    const isUserSpeaking = audioState === AudioState.RECORDING && !isMuted;
-    const isAISpeaking = audioState === AudioState.PLAYING;
+    const isUserSpeaking = microphoneState === MicrophoneState.ACTIVE;
+    const isAISpeaking = playbackState === PlaybackState.PLAYING;
 
     // Base bars configuration
     const bars = Array.from({ length: 5 });

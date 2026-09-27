@@ -1,98 +1,68 @@
-/**
- * Audio Pipeline Controller for Viva Session
- * Manages audio recording state transitions - easily testable
- */
-
-import { AudioState } from "@/types/viva";
+/** Coordinates playback completion with conversation state and session conclusion. */
+import { ConversationState, MicrophoneState, PlaybackState } from "@/types/viva";
 import type { AudioPlayerCallbacks } from "@/lib/gemini/audio-player";
 
 export interface AudioPipelineDependencies {
-    setAudioState: (state: AudioState) => void;
+    setConversationState: (state: ConversationState) => void;
+    setPlaybackState: (state: PlaybackState) => void;
     isConclusionPendingRef: React.MutableRefObject<boolean>;
     isTurnCompleteRef: React.MutableRefObject<boolean>;
     isAudioPlayingRef: React.MutableRefObject<boolean>;
     finishConclusion: () => void;
 }
 
-export interface AudioPipelineController {
-    scheduleSwitchToRecording: () => void;
-    cancelSwitchToRecording: () => void;
-    createPlaybackCallbacks: (extraCallbacks?: Partial<AudioPlayerCallbacks>) => AudioPlayerCallbacks;
-    cleanup: () => void;
+export function shouldForwardMicrophoneAudio(state: MicrophoneState): boolean {
+    return state === MicrophoneState.ACTIVE;
 }
 
-/**
- * Creates an audio pipeline controller with the provided dependencies
- */
-export function createAudioPipeline(deps: AudioPipelineDependencies): AudioPipelineController {
+export function createAudioPipeline(deps: AudioPipelineDependencies) {
     const {
-        setAudioState,
+        setConversationState,
+        setPlaybackState,
         isConclusionPendingRef,
         isTurnCompleteRef,
         isAudioPlayingRef,
         finishConclusion,
     } = deps;
 
-    let recordingSwitchTimeout: NodeJS.Timeout | null = null;
-
-    const cancelSwitchToRecording = () => {
-        if (recordingSwitchTimeout) {
-            clearTimeout(recordingSwitchTimeout);
-            recordingSwitchTimeout = null;
-        }
-    };
-
-    const scheduleSwitchToRecording = () => {
-        cancelSwitchToRecording();
-
-        // Only switch to recording if we aren't about to end
-        if (isConclusionPendingRef.current) return;
-
-        recordingSwitchTimeout = setTimeout(() => {
-            setAudioState(AudioState.RECORDING);
-            recordingSwitchTimeout = null;
-        }, 500);
-    };
-
     const createPlaybackCallbacks = (extraCallbacks?: Partial<AudioPlayerCallbacks>): AudioPlayerCallbacks => ({
         onPlayStart: () => {
             isAudioPlayingRef.current = true;
-            setAudioState(AudioState.PLAYING);
-            cancelSwitchToRecording();
+            setPlaybackState(PlaybackState.PLAYING);
+            setConversationState(ConversationState.SPEAKING);
             extraCallbacks?.onPlayStart?.();
         },
         onPlayEnd: () => {
-            console.log("[AudioPipeline] Audio Playback Ended");
             isAudioPlayingRef.current = false;
+            setPlaybackState(PlaybackState.IDLE);
             extraCallbacks?.onPlayEnd?.();
-
-            // CRITICAL: Check if we were waiting to conclude
             if (isConclusionPendingRef.current) {
                 finishConclusion();
-                return;
-            }
-
-            // Otherwise, normal turn logic
-            if (isTurnCompleteRef.current) {
-                scheduleSwitchToRecording();
+            } else if (isTurnCompleteRef.current) {
+                setConversationState(ConversationState.LISTENING);
+            } else {
+                setConversationState(ConversationState.THINKING);
             }
         },
         onAudioScheduled: (queueDurationMs) => {
             extraCallbacks?.onAudioScheduled?.(queueDurationMs);
         },
-        onUnderrun: () => {
-            extraCallbacks?.onUnderrun?.();
-        },
+        onUnderrun: () => extraCallbacks?.onUnderrun?.(),
     });
 
-    const cleanup = () => {
-        cancelSwitchToRecording();
+    const interruptPlayback = (
+        stop: () => void,
+        signalReceived: () => void,
+        playbackStopped: () => void
+    ) => {
+        signalReceived();
+        stop();
+        playbackStopped();
+        isAudioPlayingRef.current = false;
+        isTurnCompleteRef.current = true;
+        setPlaybackState(PlaybackState.IDLE);
+        setConversationState(ConversationState.LISTENING);
     };
 
-    return {
-        scheduleSwitchToRecording,
-        cancelSwitchToRecording,
-        createPlaybackCallbacks,
-        cleanup,
-    };
+    return { createPlaybackCallbacks, interruptPlayback };
 }

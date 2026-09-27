@@ -30,6 +30,7 @@ export class AudioPlayer {
     private sources = new Set<AudioBufferSourceNode>();
     private isPlaying = false;
     private isDestroyed = false;  // Guard flag to prevent stale callbacks
+    private playbackGeneration = 0;
 
     constructor(callbacks?: AudioPlayerCallbacks) {
         this.onPlayStart = callbacks?.onPlayStart;
@@ -49,6 +50,7 @@ export class AudioPlayer {
             debug("Ignoring play request - player is destroyed");
             return;
         }
+        const generation = this.playbackGeneration;
 
         try {
             if (!this.audioContext || this.audioContext.state === "closed") {
@@ -60,6 +62,7 @@ export class AudioPlayer {
             if (this.audioContext.state === "suspended") {
                 await this.audioContext.resume();
             }
+            if (generation !== this.playbackGeneration || this.isDestroyed) return;
         } catch (error) {
             debug("Failed to create/resume AudioContext:", error);
             throw new Error("Audio playback is not supported in this browser");
@@ -127,6 +130,7 @@ export class AudioPlayer {
 
     stop(): void {
         debug("Stopping all audio sources");
+        this.playbackGeneration++;
 
         // Clear all sources
         this.sources.forEach(source => {

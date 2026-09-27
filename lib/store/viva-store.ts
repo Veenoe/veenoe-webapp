@@ -3,7 +3,12 @@
  */
 
 import { create } from "zustand";
-import { SessionState, AudioState } from "@/types/viva";
+import {
+    SessionState,
+    MicrophoneState,
+    ConversationState,
+    PlaybackState,
+} from "@/types/viva";
 import type { VivaStartResponse } from "@/types/viva";
 
 export interface Transcript {
@@ -31,7 +36,9 @@ interface VivaSessionStore {
     sessionState: SessionState;
 
     // Audio state
-    audioState: AudioState;
+    microphoneState: MicrophoneState;
+    conversationState: ConversationState;
+    playbackState: PlaybackState;
     isMuted: boolean;
 
     // Transcripts
@@ -50,7 +57,9 @@ interface VivaSessionStore {
     // Actions
     setSessionData: (data: VivaStartResponse) => void;
     setSessionState: (state: SessionState) => void;
-    setAudioState: (state: AudioState) => void;
+    setMicrophoneState: (state: MicrophoneState) => void;
+    setConversationState: (state: ConversationState) => void;
+    setPlaybackState: (state: PlaybackState) => void;
     toggleMute: () => void;
     addTranscript: (transcript: Omit<Transcript, "id" | "timestamp">) => void;
     updateTranscript: (id: string, updates: Partial<Transcript>) => void;
@@ -71,7 +80,9 @@ const initialState = {
     voiceName: "Kore",
     sessionDurationMinutes: 5,
     sessionState: SessionState.IDLE,
-    audioState: AudioState.IDLE,
+    microphoneState: MicrophoneState.IDLE,
+    conversationState: ConversationState.LISTENING,
+    playbackState: PlaybackState.IDLE,
     isMuted: false,
     transcripts: [],
     timeRemaining: 300,
@@ -95,9 +106,18 @@ export const useVivaStore = create<VivaSessionStore>((set) => ({
 
     setSessionState: (state) => set({ sessionState: state }),
 
-    setAudioState: (state) => set({ audioState: state }),
+    setMicrophoneState: (state) => set({ microphoneState: state }),
+    setConversationState: (state) => set({ conversationState: state }),
+    setPlaybackState: (state) => set({ playbackState: state }),
 
-    toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
+    toggleMute: () => set((state) => ({
+        isMuted: !state.isMuted,
+        microphoneState: !state.isMuted
+            ? MicrophoneState.MUTED
+            : state.microphoneState === MicrophoneState.IDLE
+                ? MicrophoneState.IDLE
+                : MicrophoneState.ACTIVE,
+    })),
 
     addTranscript: (transcript) =>
         set((state) => ({

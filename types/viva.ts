@@ -66,11 +66,21 @@ export enum SessionState {
     ERROR = "error",
 }
 
-export enum AudioState {
+export enum MicrophoneState {
     IDLE = "idle",
-    RECORDING = "recording",
+    ACTIVE = "active",
+    MUTED = "muted",
+}
+
+export enum ConversationState {
+    LISTENING = "listening",
+    THINKING = "thinking",
+    SPEAKING = "speaking",
+}
+
+export enum PlaybackState {
+    IDLE = "idle",
     PLAYING = "playing",
-    PROCESSING = "processing",
 }
 
 export const AVAILABLE_VOICES = [
