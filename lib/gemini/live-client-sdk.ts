@@ -66,6 +66,7 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
  */
 export class GeminiLiveClientSDK {
     private session: Session | null = null;
+    private transportOpen = false;
     private eventHandlers: GeminiLiveEventHandlers = {};
     private responseQueue: unknown[] = [];
     private isProcessing = false;
@@ -98,6 +99,7 @@ export class GeminiLiveClientSDK {
      * Internal connection logic with retry support.
      */
     private async connectWithRetry(attempt = 0): Promise<void> {
+        this.transportOpen = false;
         debug(`Initiating connection (attempt ${attempt + 1}/${this.retryConfig.maxRetries + 1})...`);
 
         const isApiKey = this.apiKey.startsWith('AIza');
@@ -124,6 +126,7 @@ export class GeminiLiveClientSDK {
                 model,
                 callbacks: {
                     onopen: () => {
+                        this.transportOpen = true;
                         debug('Connection established');
                         this.eventHandlers.onConnected?.();
                     },
@@ -134,10 +137,12 @@ export class GeminiLiveClientSDK {
                         }
                     },
                     onerror: (e: unknown) => {
+                        this.transportOpen = false;
                         debug('Connection error:', e);
                         this.eventHandlers.onError?.(new Error(String(e)));
                     },
                     onclose: () => {
+                        this.transportOpen = false;
                         debug('Connection closed');
                         this.eventHandlers.onDisconnected?.();
                     },
@@ -233,24 +238,27 @@ export class GeminiLiveClientSDK {
         }
     }
 
-    /**
-     * Sends audio data to the Gemini Live API.
-     */
+    /** True means the open SDK session accepted the synchronous call, not network delivery. */
     sendAudio(audioData: ArrayBuffer): boolean {
-        if (!this.session) {
+        if (!this.session || !this.transportOpen) {
             console.warn("[GeminiLiveClientSDK] Cannot send audio: Session not active");
             return false;
         }
 
-        const base64Audio = arrayBufferToBase64(audioData);
-
-        this.session.sendRealtimeInput({
-            audio: {
-                data: base64Audio,
-                mimeType: 'audio/pcm;rate=16000',
-            },
-        });
-        return true;
+        try {
+            const base64Audio = arrayBufferToBase64(audioData);
+            this.session.sendRealtimeInput({
+                audio: {
+                    data: base64Audio,
+                    mimeType: 'audio/pcm;rate=16000',
+                },
+            });
+            return true;
+        } catch (error) {
+            this.transportOpen = false;
+            this.eventHandlers.onError?.(error instanceof Error ? error : new Error('Gemini audio send failed'));
+            return false;
+        }
     }
 
     /**
@@ -271,6 +279,7 @@ export class GeminiLiveClientSDK {
      */
     disconnect(): void {
         console.log("[GeminiLiveClientSDK] Disconnecting...");
+        this.transportOpen = false;
         if (this.session) {
             try {
                 if (typeof this.session.close === 'function') this.session.close();

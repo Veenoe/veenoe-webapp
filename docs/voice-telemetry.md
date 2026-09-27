@@ -81,9 +81,10 @@ them when the recorder node is stopped. The source graph is connected to the
 destination through zero gain so browsers continue rendering it without mic
 feedback.
 
-At most three packets may await main-thread acknowledgement. When that handoff
-fills, the worklet discards new packets and reports a drop count. The main
-thread also discards packets older than 100 ms of AudioContext time. The SDK's
+At most three packets may await main-thread acknowledgement, plus one latest
+unsent packet. When that handoff fills, newer audio replaces the retained
+packet and the replacement is counted as a drop. The main thread also discards
+packets older than 100 ms of AudioContext time. The SDK's
 `sendRealtimeInput` is synchronous and does not expose WebSocket buffer depth;
 these safeguards bound the app's worklet handoff, not the SDK's internal socket
 buffer. Diagnostics shows effective and track rates, output format, packet

@@ -51,6 +51,15 @@ test('the production forwarding path sends mic packets throughout playback, exce
   useVivaStore.getState().resetSession();
 });
 
+test('a rejected SDK send is not recorded as a transmitted packet', () => {
+  const { pipeline } = setup();
+  let counted = 0;
+  pipeline.forwardMicrophoneAudio(new ArrayBuffer(640), MicrophoneState.ACTIVE, false,
+    () => false, () => { counted++; });
+  assert.equal(counted, 0);
+  useVivaStore.getState().resetSession();
+});
+
 test('mute never turns an idle or failed recorder into an active microphone', () => {
   useVivaStore.getState().resetSession();
   useVivaStore.getState().toggleMute();

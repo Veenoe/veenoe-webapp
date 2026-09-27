@@ -109,7 +109,8 @@ export function useVivaSession() {
           (data) => client.sendAudio(data),
           (byteLength) => voiceTelemetry.onMicrophonePacketSent(byteLength),
         );
-      }, (count) => voiceTelemetry.onMicrophonePacketsDropped(count));
+      }, (count) => voiceTelemetry.onMicrophonePacketsDropped(count),
+        (format) => voiceTelemetry.onMicrophoneFormat(format));
       setMicrophoneState(MicrophoneState.ACTIVE);
       setConversationState(ConversationState.LISTENING);
     } catch {
@@ -137,7 +138,6 @@ export function useVivaSession() {
       // Initialize audio recorder (handles microphone input)
       audioHandlerRef.current = new AudioRecorder();
       await audioHandlerRef.current.initialize();
-      voiceTelemetry.onMicrophoneFormat(audioHandlerRef.current.getFormat());
       voiceTelemetry.onMicrophoneReady();
 
       // Initialize audio player with pipeline callbacks and telemetry hooks

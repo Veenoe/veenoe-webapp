@@ -83,21 +83,28 @@ test('downsampling attenuates speech-band aliases and reset clears resampler sta
     return Math.sqrt(Array.from({ length: 320 }, (_, i) => (view.getInt16(i * 2, true) / 32768) ** 2)
       .reduce((a, b) => a + b, 0) / 320);
   };
-  assert.ok(rms(12000) < rms(1000) * 0.1);
+  const reference = rms(1000);
+  const attenuationDb = (frequency: number) => 20 * Math.log10(rms(frequency) / reference);
+  for (const frequency of [4000, 6000]) assert.ok(attenuationDb(frequency) > -1);
+  assert.ok(attenuationDb(7000) > -4);
+  assert.ok(attenuationDb(8200) < -20);
+  assert.ok(attenuationDb(9000) < -35);
+  assert.ok(attenuationDb(10000) < -55);
+  assert.ok(attenuationDb(12000) < -55);
   const packets: ArrayBuffer[] = [];
   const pipeline = new audio.AudioInputPipeline(44100, (packet) => packets.push(packet));
   pipeline.push(new Float32Array(1000).fill(0.75));
   pipeline.reset();
-  pipeline.push(new Float32Array(900));
+  pipeline.push(new Float32Array(1000));
   assert.ok(packets.length >= 1);
   assert.ok(Array.from(new Uint8Array(packets.at(-1)!)).every((byte) => byte === 0));
 });
 
-test('worklet handoff caps unacknowledged packets at three and reports drops', () => {
-  const sent: Array<{ buffer?: ArrayBuffer; dropped: number }> = [];
+test('worklet handoff retains the freshest packet while keeping three in flight', () => {
+  const sent: Array<{ type: string; buffer?: ArrayBuffer; dropped?: number; outputSampleRate?: number; packetTargetMs?: number }> = [];
   let processor: { pipeline: { push(input: Float32Array): void }; port: { onmessage: (e: { data: string }) => void } } | null = null;
   class Base {
-    port = { postMessage: (value: { buffer?: ArrayBuffer; dropped: number }) => sent.push(value), onmessage: () => { } };
+    port = { postMessage: (value: { type: string; buffer?: ArrayBuffer; dropped?: number }) => sent.push(value), onmessage: () => { } };
   }
   const scope: Record<string, unknown> = {
     ...root, AudioWorkletProcessor: Base, currentTime: 0,
@@ -108,15 +115,19 @@ test('worklet handoff caps unacknowledged packets at three and reports drops', (
   scope.globalThis = scope;
   runInNewContext(readFileSync(new URL('../public/audio-worklet-processor.js', import.meta.url), 'utf8'), scope);
   const worklet = processor!;
-  worklet.pipeline.push(new Float32Array(320 * 6));
-  assert.equal(sent.length, 3);
+  assert.equal(sent[0].type, 'format');
+  assert.equal(sent[0].outputSampleRate, 16000);
+  assert.equal(sent[0].packetTargetMs, 20);
+  for (let i = 1; i <= 6; i++) worklet.pipeline.push(new Float32Array(320).fill(i / 10));
+  assert.equal(sent.filter((message) => message.type === 'audio').length, 3);
+  assert.ok(sent.slice(1, 4).every((message) => message.dropped === 0));
   worklet.port.onmessage({ data: 'ack' });
-  assert.equal(sent[3].dropped, 3);
-  assert.equal(sent[3].buffer, undefined);
-  worklet.pipeline.push(new Float32Array(320));
+  assert.equal(sent[4].type, 'audio');
+  assert.equal(sent[4].dropped, 2);
+  assert.equal(new DataView(sent[4].buffer!).getInt16(0, true), Math.round(0.6 * 32767));
+  worklet.pipeline.push(new Float32Array(320).fill(0.7));
   assert.equal(sent.length, 5);
-  assert.equal(sent[4].dropped, 0);
   worklet.port.onmessage({ data: 'ack' });
-  worklet.pipeline.push(new Float32Array(320));
   assert.equal(sent[5].dropped, 0);
+  assert.equal(new DataView(sent[5].buffer!).getInt16(0, true), Math.round(0.7 * 32767));
 });

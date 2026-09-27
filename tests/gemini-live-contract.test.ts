@@ -7,6 +7,7 @@ import {
   createGeminiLiveConfig,
   GEMINI_LIVE_API_VERSION,
   GEMINI_LIVE_MODEL,
+  GeminiLiveClientSDK,
 } from '../lib/gemini/live-client-sdk';
 import { processGeminiMessage } from '../lib/gemini/message-processor';
 
@@ -14,6 +15,27 @@ test('selects the current Live model and ephemeral-token API version', () => {
   assert.equal(GEMINI_LIVE_MODEL, 'gemini-3.8-live');
   assert.equal(/preview|gemini-2\.5/.test(GEMINI_LIVE_MODEL), false);
   assert.equal(GEMINI_LIVE_API_VERSION, 'v1beta');
+});
+
+test('audio send only counts calls accepted by an open SDK transport', () => {
+  let errors = 0;
+  const client = new GeminiLiveClientSDK('auth_tokens/test', { onError: () => { errors++; } });
+  const internal = client as unknown as {
+    session: { sendRealtimeInput: (value: unknown) => void };
+    transportOpen: boolean;
+  };
+  let calls = 0;
+  internal.session = { sendRealtimeInput: () => { calls++; } };
+  internal.transportOpen = false;
+  assert.equal(client.sendAudio(new ArrayBuffer(640)), false);
+  assert.equal(calls, 0);
+  internal.transportOpen = true;
+  assert.equal(client.sendAudio(new ArrayBuffer(640)), true);
+  assert.equal(calls, 1);
+  internal.session.sendRealtimeInput = () => { throw new Error('socket closed'); };
+  assert.equal(client.sendAudio(new ArrayBuffer(640)), false);
+  assert.equal(errors, 1);
+  assert.equal(internal.transportOpen, false);
 });
 
 test('uses audio response without duplicating backend VAD or voice', () => {

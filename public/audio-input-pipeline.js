@@ -3,7 +3,9 @@
   const OUTPUT_RATE = 16000;
   const PACKET_MS = 20;
   const PACKET_SAMPLES = OUTPUT_RATE * PACKET_MS / 1000;
-  const FILTER_RADIUS = 16;
+  // 64-tap Hann-windowed sinc: flat through 6 kHz, with useful rejection
+  // immediately above the 8 kHz output Nyquist boundary.
+  const FILTER_RADIUS = 32;
   const PHASES = 256;
 
   function pcm16(sample) {
@@ -46,7 +48,7 @@
     reset() {
       this.inputCount = 0;
       this.outputCount = 0;
-      this.ring = new Float32Array(64);
+      this.ring = new Float32Array(128);
       this.packet = new Float32Array(PACKET_SAMPLES);
       this.packetLength = 0;
     }
