@@ -56,7 +56,7 @@ export function processGeminiMessage(message: unknown): ProcessedMessage[] {
 
         // Process model turn parts
         const modelTurn = serverContent.modelTurn as Record<string, unknown> | undefined;
-        if (modelTurn?.parts) {
+        if (!serverContent.interrupted && modelTurn?.parts) {
             const parts = modelTurn.parts as Array<Record<string, unknown>>;
 
             for (const part of parts) {

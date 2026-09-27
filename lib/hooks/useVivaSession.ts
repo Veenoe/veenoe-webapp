@@ -7,7 +7,12 @@ import { useVivaStore } from "@/lib/store/viva-store";
 import { GeminiLiveClientSDK } from "@/lib/gemini/live-client-sdk";
 import { AudioRecorder } from "@/lib/gemini/audio-recorder";
 import { AudioPlayer } from "@/lib/gemini/audio-player";
-import { SessionState, AudioState } from "@/types/viva";
+import {
+  SessionState,
+  MicrophoneState,
+  ConversationState,
+  PlaybackState,
+} from "@/types/viva";
 import { voiceTelemetry } from "@/lib/telemetry/voice-telemetry";
 import { createToolHandler } from "./viva/tool-handlers";
 import { createAudioPipeline } from "./viva/audio-pipeline";
@@ -21,7 +26,9 @@ export function useVivaSession() {
     setSessionState,
     setError,
     addTranscript,
-    setAudioState
+    setMicrophoneState,
+    setConversationState,
+    setPlaybackState,
   } = store;
 
   // Refs for managing resources
@@ -40,6 +47,8 @@ export function useVivaSession() {
     voiceTelemetry.setIntentionalDisconnect(true);
     voiceTelemetry.onSessionEnded();
 
+    setMicrophoneState(MicrophoneState.IDLE);
+    setPlaybackState(PlaybackState.IDLE);
     if (geminiClientRef.current) {
       geminiClientRef.current.disconnect();
       geminiClientRef.current = null;
@@ -52,7 +61,7 @@ export function useVivaSession() {
       audioPlayerRef.current.cleanup();
       audioPlayerRef.current = null;
     }
-  }, []);
+  }, [setMicrophoneState, setPlaybackState]);
 
   // Finalize session state (show popup)
   const finishConclusion = useCallback(() => {
@@ -64,12 +73,13 @@ export function useVivaSession() {
 
   // Create audio pipeline controller
   const audioPipeline = useMemo(() => createAudioPipeline({
-    setAudioState,
+    setConversationState,
+    setPlaybackState,
     isConclusionPendingRef,
     isTurnCompleteRef,
     isAudioPlayingRef,
     finishConclusion,
-  }), [setAudioState, finishConclusion]);
+  }), [setConversationState, setPlaybackState, finishConclusion]);
 
   // Create tool handler (with auth token getter for API calls)
   const handleToolCall = useMemo(() => createToolHandler({
@@ -85,19 +95,25 @@ export function useVivaSession() {
     if (!audioHandlerRef.current || !geminiClientRef.current) return;
 
     try {
-      setAudioState(AudioState.RECORDING);
       await audioHandlerRef.current.startRecording((audioData: ArrayBuffer) => {
-        const { isMuted, audioState } = useVivaStore.getState();
-        if (geminiClientRef.current && !isMuted && audioState === AudioState.RECORDING) {
-          voiceTelemetry.onMicrophonePacketSent(audioData.byteLength);
-          geminiClientRef.current.sendAudio(audioData);
-        }
+        const client = geminiClientRef.current;
+        if (!client) return;
+        const { microphoneState, isMuted } = useVivaStore.getState();
+        audioPipeline.forwardMicrophoneAudio(
+          audioData,
+          microphoneState,
+          isMuted,
+          (data) => client.sendAudio(data),
+          (byteLength) => voiceTelemetry.onMicrophonePacketSent(byteLength),
+        );
       });
+      setMicrophoneState(MicrophoneState.ACTIVE);
+      setConversationState(ConversationState.LISTENING);
     } catch {
       setError("Failed to start recording");
-      setAudioState(AudioState.IDLE);
+      setMicrophoneState(MicrophoneState.IDLE);
     }
-  }, [setAudioState, setError]);
+  }, [audioPipeline, setMicrophoneState, setConversationState, setError]);
 
   // Initialize session
   const initializeSession = useCallback(async () => {
@@ -107,6 +123,7 @@ export function useVivaSession() {
     try {
       setSessionState(SessionState.STARTING);
       isConclusionPendingRef.current = false;
+      audioPipeline.reset();
 
       const googleModel = useVivaStore.getState().googleModel;
 
@@ -154,31 +171,24 @@ export function useVivaSession() {
             voiceTelemetry.onConnectionRetry(attempt);
           },
           onAudioData: async (base64) => {
-            voiceTelemetry.onGeminiAudioChunkReceived();
-            isTurnCompleteRef.current = false;
-            audioPipeline.cancelSwitchToRecording();
-
-            if (!isAudioPlayingRef.current) {
-              isAudioPlayingRef.current = true;
-              setAudioState(AudioState.PLAYING);
-            }
-            await audioPlayerRef.current?.playAudio(base64);
+            const player = audioPlayerRef.current;
+            if (!player) return;
+            await audioPipeline.receiveGeminiAudio(
+              base64,
+              (audio) => player.playAudio(audio),
+              () => voiceTelemetry.onGeminiAudioChunkReceived(),
+            );
           },
           onTurnComplete: () => {
-            voiceTelemetry.onTurnComplete();
-            isTurnCompleteRef.current = true;
-            if (!isAudioPlayingRef.current && !isConclusionPendingRef.current) {
-              audioPipeline.scheduleSwitchToRecording();
-            }
+            audioPipeline.completeTurn(() => voiceTelemetry.onTurnComplete());
           },
           onInterrupted: () => {
-            voiceTelemetry.onInterruptionSignalReceived();
-            audioPlayerRef.current?.stop();
-            voiceTelemetry.onPlaybackStoppedDueToInterruption();
-            audioPipeline.cancelSwitchToRecording();
-            isAudioPlayingRef.current = false;
-            isTurnCompleteRef.current = true;
-            setAudioState(AudioState.RECORDING);
+            audioPipeline.interruptPlayback(
+              () => audioPlayerRef.current?.stop(),
+              () => voiceTelemetry.onInterruptionSignalReceived(),
+              () => voiceTelemetry.onPlaybackStoppedDueToInterruption(),
+              () => voiceTelemetry.onInterruptionWithoutPlayback(),
+            );
           },
           onTranscript: (text, isFinal) => addTranscript({ role: "assistant", text, isFinal }),
           onToolCall: handleToolCall,
@@ -199,7 +209,6 @@ export function useVivaSession() {
     handleToolCall,
     _startAudioPipeline,
     audioPipeline,
-    setAudioState,
   ]);
 
   // Request conclusion from AI
@@ -224,16 +233,15 @@ export function useVivaSession() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      audioPipeline.cleanup();
       cleanupResources();
     };
-  }, [audioPipeline, cleanupResources]);
+  }, [cleanupResources]);
 
   return {
     ...store,
     telemetry: voiceTelemetry,
     initializeSession,
     requestConclusion,
-    toggleMute
+    toggleMute,
   };
 }

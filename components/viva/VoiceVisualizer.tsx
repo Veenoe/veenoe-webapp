@@ -1,17 +1,18 @@
 "use client";
 
 import { motion } from "motion/react";
-import { AudioState } from "@/types/viva";
+import { MicrophoneState, PlaybackState } from "@/types/viva";
 
 interface VoiceVisualizerProps {
-    audioState: AudioState;
+    microphoneState: MicrophoneState;
+    playbackState: PlaybackState;
     isMuted: boolean;
 }
 
-export function VoiceVisualizer({ audioState, isMuted }: VoiceVisualizerProps) {
+export function VoiceVisualizer({ microphoneState, playbackState, isMuted }: VoiceVisualizerProps) {
     // Determine the color and animation based on state
-    const isUserSpeaking = audioState === AudioState.RECORDING && !isMuted;
-    const isAISpeaking = audioState === AudioState.PLAYING;
+    const isListening = microphoneState === MicrophoneState.ACTIVE && !isMuted;
+    const isAISpeaking = playbackState === PlaybackState.PLAYING;
 
     // Base bars configuration
     const bars = Array.from({ length: 5 });
@@ -24,12 +25,12 @@ export function VoiceVisualizer({ audioState, isMuted }: VoiceVisualizerProps) {
                         key={i}
                         className={`w-3 rounded-full ${isAISpeaking
                                 ? "bg-blue-500"
-                                : isUserSpeaking
+                                : isListening
                                     ? "bg-pumpkin"
                                     : "bg-muted"
                             }`}
                         animate={{
-                            height: (isUserSpeaking || isAISpeaking)
+                            height: (isListening || isAISpeaking)
                                 ? [20, Math.random() * 60 + 20, 20]
                                 : 10,
                         }}
@@ -48,7 +49,7 @@ export function VoiceVisualizer({ audioState, isMuted }: VoiceVisualizerProps) {
             <div className="absolute mt-40 text-sm font-medium text-muted-foreground">
                 {isAISpeaking ? (
                     <span className="text-blue-500 animate-pulse">AI is speaking...</span>
-                ) : isUserSpeaking ? (
+                ) : isListening ? (
                     <span className="text-pumpkin animate-pulse">Listening...</span>
                 ) : (
                     <span>Waiting...</span>
