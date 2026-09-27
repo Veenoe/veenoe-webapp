@@ -19,6 +19,7 @@ export interface VivaStartResponse {
     google_model: string;
     session_duration_minutes: number;
     voice_name: string;
+    vad_profile?: string | null;
 }
 
 // Structured Feedback

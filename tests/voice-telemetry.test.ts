@@ -43,7 +43,8 @@ test("complete session reset across multiple sessions (no cumulative data leak)"
   const telemetry = new VoiceTelemetry();
 
   // Session 1: Student conducts an active viva
-  telemetry.onSessionInitStart("models/gemini-2.5-flash");
+  telemetry.onSessionInitStart("models/gemini-2.5-flash", "balanced-v1");
+  assert.equal(telemetry.getSnapshot().vadProfile, "balanced-v1");
   telemetry.onMicrophoneReady();
   telemetry.onAudioPlayerReady();
   telemetry.onGeminiConnected();
@@ -77,6 +78,7 @@ test("complete session reset across multiple sessions (no cumulative data leak)"
   // CRITICAL REGRESSION TEST: All session totals must be completely reset to zero
   assert.notEqual(snap2.telemetrySessionId, snap1.telemetrySessionId);
   assert.equal(snap2.modelName, "models/gemini-2.5-pro");
+  assert.equal(snap2.vadProfile, null);
   assert.equal(snap2.totalInputPackets, 0);
   assert.equal(snap2.totalInputBytes, 0);
   assert.equal(snap2.totalOutputChunks, 0);

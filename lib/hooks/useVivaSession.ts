@@ -126,9 +126,10 @@ export function useVivaSession() {
       audioPipeline.reset();
 
       const googleModel = useVivaStore.getState().googleModel;
+      const vadProfile = useVivaStore.getState().vadProfile;
 
       // Initialize fresh anonymous telemetry baseline
-      voiceTelemetry.onSessionInitStart(googleModel ?? undefined);
+      voiceTelemetry.onSessionInitStart(googleModel ?? undefined, vadProfile ?? undefined);
 
       // Initialize audio recorder (handles microphone input)
       audioHandlerRef.current = new AudioRecorder();

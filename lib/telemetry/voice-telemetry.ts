@@ -27,7 +27,7 @@ export interface DiagnosticEventItem {
 
 export interface TurnMetricsSnapshot {
   turnNumber: number;
-  speechEndToFirstGeminiAudioMs: number | null; // Currently unavailable (requires client VAD - VEENOE-19)
+  speechEndToFirstGeminiAudioMs: number | null; // Currently unavailable without client speech-end detection
   lastInputPacketToFirstGeminiAudioMs: number | null; // Raw transport turnaround (last packet -> first audio)
   firstGeminiAudioToPlaybackMs: number | null; // Audio received to playback start delay
   speechEndToFirstPlaybackMs: number | null; // Currently unavailable
@@ -51,6 +51,7 @@ export interface DiagnosticsSnapshot {
   connectionSetupMs: number | null;
   currentTurn: number;
   modelName: string | null;
+  vadProfile: string | null;
   lastTurnMetrics: TurnMetricsSnapshot | null;
   // Session totals
   totalInputPackets: number;
@@ -115,6 +116,7 @@ export class VoiceTelemetry {
   private sessionStartTime: number;
   private connectionState: "idle" | "starting" | "connected" | "disconnected" | "error" = "idle";
   private modelName: string | null = null;
+  private vadProfile: string | null = null;
 
   // Session lifecycle flags
   private isSessionActive = false;
@@ -211,12 +213,13 @@ export class VoiceTelemetry {
    * Starts a new viva session telemetry lifecycle.
    * Completely resets all session-scoped counters to guarantee an independent baseline.
    */
-  public onSessionInitStart(modelName?: string): void {
+  public onSessionInitStart(modelName?: string, vadProfile?: string): void {
     this.sessionId = generateAnonymousSessionId();
     this.sessionStartTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     this.sessionInitStartTime = this.sessionStartTime;
     this.connectionState = "starting";
     this.modelName = modelName || null;
+    this.vadProfile = vadProfile || null;
     this.isSessionActive = true;
     this.isIntentionalDisconnect = false;
 
@@ -244,6 +247,7 @@ export class VoiceTelemetry {
     captureVoiceEvent("voice_session_started", {
       telemetry_session_id: this.sessionId,
       model_name: this.modelName,
+      vad_profile: this.vadProfile,
     });
   }
 
@@ -475,6 +479,7 @@ export class VoiceTelemetry {
       turn_number: this.currentTurn,
       interruption_to_playback_stop_ms: interruptionDuration,
       model_name: this.modelName,
+      vad_profile: this.vadProfile,
     });
 
     this.finalizeTurn(true);
@@ -562,6 +567,7 @@ export class VoiceTelemetry {
       telemetry_session_id: this.sessionId,
       turn_number: this.currentTurn,
       model_name: this.modelName,
+      vad_profile: this.vadProfile,
 
       connection_setup_ms: this.connectionSetupMs,
 
@@ -623,6 +629,7 @@ export class VoiceTelemetry {
       connectionSetupMs: this.connectionSetupMs,
       currentTurn: this.currentTurn,
       modelName: this.modelName,
+      vadProfile: this.vadProfile,
       lastTurnMetrics: this.lastCompletedTurnMetrics,
       totalInputPackets: this.totalInputPackets,
       totalInputBytes: this.totalInputBytes,

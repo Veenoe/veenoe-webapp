@@ -65,6 +65,7 @@ export interface VoiceEventProperties {
   telemetry_session_id: string;
   turn_number?: number | null;
   model_name?: string | null;
+  vad_profile?: string | null;
 
   // Connection
   connection_setup_ms?: number | null;
