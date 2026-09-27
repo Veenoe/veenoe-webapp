@@ -108,6 +108,7 @@ export function useVivaSession() {
           isMuted,
           (data) => client.sendAudio(data),
           (byteLength) => voiceTelemetry.onMicrophonePacketSent(byteLength),
+          () => voiceTelemetry.onMicrophonePacketsDropped(1),
         );
       }, (count) => voiceTelemetry.onMicrophonePacketsDropped(count),
         (format) => voiceTelemetry.onMicrophoneFormat(format));
@@ -220,14 +221,16 @@ export function useVivaSession() {
   const requestConclusion = useCallback(() => {
     if (geminiClientRef.current && store.sessionState === SessionState.ACTIVE) {
       console.log("[useVivaSession] User requested end. Prompting AI...");
-      geminiClientRef.current.sendText(
+      const accepted = geminiClientRef.current.sendText(
         "The user needs to leave now. Please immediately evaluate the session so far and call the conclude_viva tool with your feedback."
       );
-      setSessionState(SessionState.CONCLUDING);
-    } else {
-      finishConclusion();
-      router.push("/");
+      if (accepted) {
+        setSessionState(SessionState.CONCLUDING);
+        return;
+      }
     }
+    finishConclusion();
+    router.push("/");
   }, [store.sessionState, router, finishConclusion, setSessionState]);
 
   // Toggle mute

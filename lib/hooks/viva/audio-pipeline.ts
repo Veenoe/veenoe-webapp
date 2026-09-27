@@ -27,10 +27,12 @@ export function createAudioPipeline(deps: AudioPipelineDependencies) {
         microphoneState: MicrophoneState,
         isMuted: boolean,
         sendAudio: (data: ArrayBuffer) => boolean,
-        onPacketSent: (byteLength: number) => void
+        onPacketSent: (byteLength: number) => void,
+        onPacketRejected: () => void
     ) => {
         if (microphoneState !== MicrophoneState.ACTIVE || isMuted) return;
         if (sendAudio(data)) onPacketSent(data.byteLength);
+        else onPacketRejected();
     };
 
     const receiveGeminiAudio = async (

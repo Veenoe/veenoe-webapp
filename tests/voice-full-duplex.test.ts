@@ -29,7 +29,7 @@ test('the production forwarding path sends mic packets throughout playback, exce
   const forward = () => {
     const { microphoneState, isMuted } = useVivaStore.getState();
     pipeline.forwardMicrophoneAudio(packet, microphoneState, isMuted,
-      data => { sent.push(data); return true; }, bytes => { measured.push(bytes); });
+      data => { sent.push(data); return true; }, bytes => { measured.push(bytes); }, () => {});
   };
 
   useVivaStore.getState().setMicrophoneState(MicrophoneState.ACTIVE);
@@ -51,12 +51,21 @@ test('the production forwarding path sends mic packets throughout playback, exce
   useVivaStore.getState().resetSession();
 });
 
-test('a rejected SDK send is not recorded as a transmitted packet', () => {
+test('transport acceptance and rejection account for active, unmuted packets exactly once', () => {
   const { pipeline } = setup();
-  let counted = 0;
-  pipeline.forwardMicrophoneAudio(new ArrayBuffer(640), MicrophoneState.ACTIVE, false,
-    () => false, () => { counted++; });
-  assert.equal(counted, 0);
+  let sent = 0;
+  let dropped = 0;
+  let calls = 0;
+  const forward = (state: MicrophoneState, muted: boolean, accepted: boolean) =>
+    pipeline.forwardMicrophoneAudio(new ArrayBuffer(640), state, muted,
+      () => { calls++; return accepted; }, () => { sent++; }, () => { dropped++; });
+  forward(MicrophoneState.ACTIVE, false, false);
+  assert.deepEqual([sent, dropped, calls], [0, 1, 1]);
+  forward(MicrophoneState.ACTIVE, false, true);
+  assert.deepEqual([sent, dropped, calls], [1, 1, 2]);
+  forward(MicrophoneState.ACTIVE, true, false);
+  forward(MicrophoneState.IDLE, false, false);
+  assert.deepEqual([sent, dropped, calls], [1, 1, 2]);
   useVivaStore.getState().resetSession();
 });
 

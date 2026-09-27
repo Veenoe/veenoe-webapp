@@ -38,6 +38,37 @@ test('audio send only counts calls accepted by an open SDK transport', () => {
   assert.equal(internal.transportOpen, false);
 });
 
+test('text send and connection state both require an open transport', () => {
+  let errors = 0;
+  const client = new GeminiLiveClientSDK('auth_tokens/test', { onError: () => { errors++; } });
+  const internal = client as unknown as {
+    session: { sendClientContent: (value: unknown) => void } | null;
+    transportOpen: boolean;
+  };
+  let calls = 0;
+  internal.session = { sendClientContent: () => { calls++; } };
+  internal.transportOpen = false;
+  assert.equal(client.sendText('conclude'), false);
+  assert.equal(calls, 0);
+  assert.equal(client.getConnectionState(), 'disconnected');
+
+  internal.transportOpen = true;
+  assert.equal(client.sendText('conclude'), true);
+  assert.equal(calls, 1);
+  assert.equal(client.getConnectionState(), 'connected');
+
+  internal.session.sendClientContent = () => { throw new Error('socket closed'); };
+  assert.equal(client.sendText('conclude'), false);
+  assert.equal(errors, 1);
+  assert.equal(internal.transportOpen, false);
+  assert.equal(client.getConnectionState(), 'disconnected');
+
+  internal.session = null;
+  internal.transportOpen = true;
+  assert.equal(client.sendText('conclude'), false);
+  assert.equal(client.getConnectionState(), 'disconnected');
+});
+
 test('uses audio response without duplicating backend VAD or voice', () => {
   const config = createGeminiLiveConfig();
   assert.equal(config.realtimeInputConfig, undefined);

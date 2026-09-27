@@ -261,17 +261,22 @@ export class GeminiLiveClientSDK {
         }
     }
 
-    /**
-     * Sends text input to the Gemini Live API.
-     */
-    sendText(text: string): void {
-        if (!this.session) {
+    /** True means the open SDK session accepted the synchronous call, not network delivery. */
+    sendText(text: string): boolean {
+        if (!this.session || !this.transportOpen) {
             console.warn("[GeminiLiveClientSDK] Cannot send text: Session not active");
-            return;
+            return false;
         }
 
-        console.log(`[GeminiLiveClientSDK] Sending text: ${text}`);
-        this.session.sendClientContent(createGeminiClientContent(text));
+        try {
+            console.log(`[GeminiLiveClientSDK] Sending text: ${text}`);
+            this.session.sendClientContent(createGeminiClientContent(text));
+            return true;
+        } catch (error) {
+            this.transportOpen = false;
+            this.eventHandlers.onError?.(error instanceof Error ? error : new Error('Gemini text send failed'));
+            return false;
+        }
     }
 
     /**
@@ -290,7 +295,7 @@ export class GeminiLiveClientSDK {
         }
     }
 
-    getConnectionState(): string {
-        return this.session ? 'connected' : 'disconnected';
+    getConnectionState(): 'connected' | 'disconnected' {
+        return this.session && this.transportOpen ? 'connected' : 'disconnected';
     }
 }
