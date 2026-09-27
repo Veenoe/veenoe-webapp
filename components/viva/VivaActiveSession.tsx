@@ -32,9 +32,10 @@ export function VivaActiveSession({ vivaSession }: VivaActiveSessionProps) {
         sessionState,
         conclusionData,
         sessionId,
+        error,
     } = vivaSession;
 
-    const [isResultOpen, setIsResultOpen] = useState(false);
+    const [dismissedResultSessionId, setDismissedResultSessionId] = useState<string | null>(null);
     const isConcluding = sessionState === SessionState.CONCLUDING;
     const isCompleted = sessionState === SessionState.COMPLETED;
 
@@ -42,7 +43,6 @@ export function VivaActiveSession({ vivaSession }: VivaActiveSessionProps) {
     // Also refresh the sidebar history so new session appears
     useEffect(() => {
         if (isCompleted) {
-            setIsResultOpen(true);
             // Invalidate history query so sidebar updates with new session
             if (user?.id) {
                 queryClient.invalidateQueries({ queryKey: ['history', user.id] });
@@ -84,6 +84,9 @@ export function VivaActiveSession({ vivaSession }: VivaActiveSessionProps) {
                     onToggleMute={toggleMute}
                     onEndSession={requestConclusion}
                 />
+                {error && (
+                    <p role="alert" className="text-sm text-destructive">{error}</p>
+                )}
 
                 {/* Transcript / Status */}
                 <TranscriptDisplay
@@ -96,8 +99,10 @@ export function VivaActiveSession({ vivaSession }: VivaActiveSessionProps) {
 
             {/* Completion Dialog */}
             <CompletionDialog
-                open={isResultOpen}
-                onOpenChange={setIsResultOpen}
+                open={isCompleted && dismissedResultSessionId !== sessionId}
+                onOpenChange={(open) => {
+                    if (!open) setDismissedResultSessionId(sessionId);
+                }}
                 score={conclusionData?.score ?? 0}
                 onViewReport={handleViewReport}
             />
