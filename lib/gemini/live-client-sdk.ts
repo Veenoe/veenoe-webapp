@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality, MediaResolution, type LiveConnectConfig, type LiveSendClientContentParameters, type Session, type LiveServerMessage } from '@google/genai';
+import { GoogleGenAI, Modality, type LiveConnectConfig, type LiveSendClientContentParameters, type Session, type LiveServerMessage } from '@google/genai';
 import { arrayBufferToBase64 } from './audio-utils';
 import {
     processGeminiMessage,
@@ -33,7 +33,6 @@ export function createGeminiLiveConfig(): LiveConnectConfig {
     // Keep this transport config free of a second policy.
     return {
         responseModalities: [Modality.AUDIO],
-        mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
     };
 }
 

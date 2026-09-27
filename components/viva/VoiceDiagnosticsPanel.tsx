@@ -192,7 +192,7 @@ export function VoiceDiagnosticsPanel() {
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">True Speech End -&gt; Audio:</span>
                 <span className="text-muted-foreground italic text-[10px]">
-                  unavailable (no VAD)
+                  not measured client-side
                 </span>
               </div>
 
