@@ -31,6 +31,7 @@ interface VivaSessionStore {
     sessionId: string | null;
     ephemeralToken: string | null;
     googleModel: string | null;
+    vadProfile: string | null;
     voiceName: string;
     sessionDurationMinutes: number;
     sessionState: SessionState;
@@ -77,6 +78,7 @@ const initialState = {
     sessionId: null,
     ephemeralToken: null,
     googleModel: null,
+    vadProfile: null,
     voiceName: "Kore",
     sessionDurationMinutes: 5,
     sessionState: SessionState.IDLE,
@@ -99,6 +101,7 @@ export const useVivaStore = create<VivaSessionStore>((set) => ({
             sessionId: data.viva_session_id,
             ephemeralToken: data.ephemeral_token,
             googleModel: data.google_model,
+            vadProfile: data.vad_profile ?? null,
             voiceName: data.voice_name,
             sessionDurationMinutes: data.session_duration_minutes,
             timeRemaining: data.session_duration_minutes * 60,

@@ -29,14 +29,11 @@ export const GEMINI_LIVE_MODEL = 'gemini-3.8-live';
 export const GEMINI_LIVE_API_VERSION = 'v1beta';
 
 export function createGeminiLiveConfig(): LiveConnectConfig {
+    // The backend's unmasked ephemeral-token constraints own server VAD and voice.
+    // Keep this transport config free of a second policy.
     return {
         responseModalities: [Modality.AUDIO],
         mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
-        speechConfig: {
-            voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: 'Puck' },
-            },
-        },
     };
 }
 

@@ -156,6 +156,9 @@ export function VoiceDiagnosticsPanel() {
               <span className="font-semibold text-foreground truncate block text-[10px]" title={snapshot.modelName || "Default"}>
                 {snapshot.modelName ? snapshot.modelName.replace("models/", "") : "Gemini Live"}
               </span>
+              <span className="text-muted-foreground block text-[10px]">
+                VAD: {snapshot.vadProfile ?? "implicit/default"}
+              </span>
             </div>
           </div>
 
@@ -167,7 +170,7 @@ export function VoiceDiagnosticsPanel() {
 
             <div className="space-y-1 text-[11px]">
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground" title="Elapsed ms from last microphone PCM packet sent to first audio chunk received. True speech-end latency pending client VAD in VEENOE-19.">
+                <span className="text-muted-foreground" title="Elapsed ms from the last microphone PCM packet sent to the first audio chunk received. The microphone streams continuously, so this is not speech-end latency.">
                   Transport turnaround:
                 </span>
                 <span className="font-bold text-foreground">

@@ -16,15 +16,13 @@ test('selects the current Live model and ephemeral-token API version', () => {
   assert.equal(GEMINI_LIVE_API_VERSION, 'v1beta');
 });
 
-test('uses the supported audio response, media resolution, and voice configuration', () => {
-  assert.deepEqual(createGeminiLiveConfig(), {
+test('uses the supported audio response and media resolution without duplicating backend VAD or voice', () => {
+  const config = createGeminiLiveConfig();
+  assert.equal(config.realtimeInputConfig, undefined);
+  assert.equal(config.speechConfig, undefined);
+  assert.deepEqual(config, {
     responseModalities: [Modality.AUDIO],
     mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
-    speechConfig: {
-      voiceConfig: {
-        prebuiltVoiceConfig: { voiceName: 'Puck' },
-      },
-    },
   });
 });
 
