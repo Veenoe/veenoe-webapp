@@ -72,7 +72,7 @@ export function VivaActiveSession({ vivaSession }: VivaActiveSessionProps) {
                 {/* Visualizer */}
                 <Card className="w-full border-none shadow-none bg-transparent">
                     <CardContent className="flex flex-col items-center justify-center py-12">
-                        <VoiceVisualizer microphoneState={microphoneState} playbackState={playbackState} />
+                        <VoiceVisualizer microphoneState={microphoneState} playbackState={playbackState} isMuted={isMuted} />
                     </CardContent>
                 </Card>
 

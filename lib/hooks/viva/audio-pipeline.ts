@@ -11,10 +11,6 @@ export interface AudioPipelineDependencies {
     finishConclusion: () => void;
 }
 
-export function shouldForwardMicrophoneAudio(state: MicrophoneState): boolean {
-    return state === MicrophoneState.ACTIVE;
-}
-
 export function createAudioPipeline(deps: AudioPipelineDependencies) {
     const {
         setConversationState,
@@ -24,6 +20,46 @@ export function createAudioPipeline(deps: AudioPipelineDependencies) {
         isAudioPlayingRef,
         finishConclusion,
     } = deps;
+    let interruptedResponse = false;
+
+    const forwardMicrophoneAudio = (
+        data: ArrayBuffer,
+        microphoneState: MicrophoneState,
+        isMuted: boolean,
+        sendAudio: (data: ArrayBuffer) => void,
+        onPacketSent: (byteLength: number) => void
+    ) => {
+        if (microphoneState !== MicrophoneState.ACTIVE || isMuted) return;
+        onPacketSent(data.byteLength);
+        sendAudio(data);
+    };
+
+    const receiveGeminiAudio = async (
+        audio: string,
+        playAudio: (audio: string) => Promise<void>,
+        onAudioReceived: () => void
+    ) => {
+        if (interruptedResponse) return;
+        onAudioReceived();
+        isTurnCompleteRef.current = false;
+        setConversationState(ConversationState.SPEAKING);
+        await playAudio(audio);
+    };
+
+    const completeTurn = (onTurnComplete: () => void) => {
+        if (!interruptedResponse) onTurnComplete();
+        interruptedResponse = false;
+        isTurnCompleteRef.current = true;
+        if (!isAudioPlayingRef.current && !isConclusionPendingRef.current) {
+            setConversationState(ConversationState.LISTENING);
+        }
+    };
+
+    const reset = () => {
+        interruptedResponse = false;
+        isAudioPlayingRef.current = false;
+        isTurnCompleteRef.current = true;
+    };
 
     const createPlaybackCallbacks = (extraCallbacks?: Partial<AudioPlayerCallbacks>): AudioPlayerCallbacks => ({
         onPlayStart: () => {
@@ -53,16 +89,27 @@ export function createAudioPipeline(deps: AudioPipelineDependencies) {
     const interruptPlayback = (
         stop: () => void,
         signalReceived: () => void,
-        playbackStopped: () => void
+        playbackStopped: () => void,
+        noPlaybackToStop: () => void
     ) => {
+        interruptedResponse = true;
+        const hadPlayback = isAudioPlayingRef.current;
         signalReceived();
         stop();
-        playbackStopped();
+        if (hadPlayback) playbackStopped();
+        else noPlaybackToStop();
         isAudioPlayingRef.current = false;
         isTurnCompleteRef.current = true;
         setPlaybackState(PlaybackState.IDLE);
         setConversationState(ConversationState.LISTENING);
     };
 
-    return { createPlaybackCallbacks, interruptPlayback };
+    return {
+        forwardMicrophoneAudio,
+        receiveGeminiAudio,
+        completeTurn,
+        reset,
+        createPlaybackCallbacks,
+        interruptPlayback,
+    };
 }

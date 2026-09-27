@@ -6,11 +6,12 @@ import { MicrophoneState, PlaybackState } from "@/types/viva";
 interface VoiceVisualizerProps {
     microphoneState: MicrophoneState;
     playbackState: PlaybackState;
+    isMuted: boolean;
 }
 
-export function VoiceVisualizer({ microphoneState, playbackState }: VoiceVisualizerProps) {
+export function VoiceVisualizer({ microphoneState, playbackState, isMuted }: VoiceVisualizerProps) {
     // Determine the color and animation based on state
-    const isUserSpeaking = microphoneState === MicrophoneState.ACTIVE;
+    const isListening = microphoneState === MicrophoneState.ACTIVE && !isMuted;
     const isAISpeaking = playbackState === PlaybackState.PLAYING;
 
     // Base bars configuration
@@ -24,12 +25,12 @@ export function VoiceVisualizer({ microphoneState, playbackState }: VoiceVisuali
                         key={i}
                         className={`w-3 rounded-full ${isAISpeaking
                                 ? "bg-blue-500"
-                                : isUserSpeaking
+                                : isListening
                                     ? "bg-pumpkin"
                                     : "bg-muted"
                             }`}
                         animate={{
-                            height: (isUserSpeaking || isAISpeaking)
+                            height: (isListening || isAISpeaking)
                                 ? [20, Math.random() * 60 + 20, 20]
                                 : 10,
                         }}
@@ -48,7 +49,7 @@ export function VoiceVisualizer({ microphoneState, playbackState }: VoiceVisuali
             <div className="absolute mt-40 text-sm font-medium text-muted-foreground">
                 {isAISpeaking ? (
                     <span className="text-blue-500 animate-pulse">AI is speaking...</span>
-                ) : isUserSpeaking ? (
+                ) : isListening ? (
                     <span className="text-pumpkin animate-pulse">Listening...</span>
                 ) : (
                     <span>Waiting...</span>

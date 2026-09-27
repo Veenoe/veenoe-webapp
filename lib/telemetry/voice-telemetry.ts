@@ -462,6 +462,14 @@ export class VoiceTelemetry {
       interruptionDuration !== null ? `${interruptionDuration}ms` : undefined
     );
 
+    this.finalizeInterruption(interruptionDuration);
+  }
+
+  public onInterruptionWithoutPlayback(): void {
+    this.finalizeInterruption(null);
+  }
+
+  private finalizeInterruption(interruptionDuration: number | null): void {
     captureVoiceEvent("voice_interruption", {
       telemetry_session_id: this.sessionId,
       turn_number: this.currentTurn,
@@ -469,7 +477,6 @@ export class VoiceTelemetry {
       model_name: this.modelName,
     });
 
-    // Finalize the interrupted turn
     this.finalizeTurn(true);
   }
 

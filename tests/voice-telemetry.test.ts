@@ -213,6 +213,19 @@ test("interrupted turn calculates interruption latency and flags turn", () => {
   assert.ok(snap.lastTurnMetrics!.interruptionToPlaybackStopMs! >= 0);
 });
 
+test("interruption without playback leaves playback-stop latency unavailable", () => {
+  const telemetry = new VoiceTelemetry();
+  telemetry.onSessionInitStart();
+  telemetry.onMicrophonePacketSent(256);
+  telemetry.onInterruptionSignalReceived();
+  telemetry.onInterruptionWithoutPlayback();
+
+  const snap = telemetry.getSnapshot();
+  assert.equal(snap.lastTurnMetrics?.interrupted, true);
+  assert.equal(snap.lastTurnMetrics?.interruptionToPlaybackStopMs, null);
+  assert.equal(snap.recentEvents.some(event => event.name === "playback_stopped_interruption"), false);
+});
+
 test("bounded recent event history does not exceed 20 items", () => {
   const telemetry = new VoiceTelemetry();
   telemetry.onSessionInitStart();

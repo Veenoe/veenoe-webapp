@@ -69,7 +69,6 @@ export enum SessionState {
 export enum MicrophoneState {
     IDLE = "idle",
     ACTIVE = "active",
-    MUTED = "muted",
 }
 
 export enum ConversationState {

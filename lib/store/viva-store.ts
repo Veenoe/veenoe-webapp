@@ -110,14 +110,7 @@ export const useVivaStore = create<VivaSessionStore>((set) => ({
     setConversationState: (state) => set({ conversationState: state }),
     setPlaybackState: (state) => set({ playbackState: state }),
 
-    toggleMute: () => set((state) => ({
-        isMuted: !state.isMuted,
-        microphoneState: !state.isMuted
-            ? MicrophoneState.MUTED
-            : state.microphoneState === MicrophoneState.IDLE
-                ? MicrophoneState.IDLE
-                : MicrophoneState.ACTIVE,
-    })),
+    toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
 
     addTranscript: (transcript) =>
         set((state) => ({
