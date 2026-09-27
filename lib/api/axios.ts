@@ -147,6 +147,17 @@ export async function concludeViva(request: ConcludeVivaRequest): Promise<Conclu
     }
 }
 
+export type AbandonVivaResponse = { status: "abandoned" | "completed" };
+
+export async function abandonViva(sessionId: string): Promise<AbandonVivaResponse> {
+    try {
+        const response = await api.post<AbandonVivaResponse>(`/api/v1/viva/${sessionId}/abandon`);
+        return response.data;
+    } catch (error) {
+        handleAxiosError(error);
+    }
+}
+
 // --- Data Fetching ---
 
 export async function getVivaSession(sessionId: string): Promise<VivaSession> {

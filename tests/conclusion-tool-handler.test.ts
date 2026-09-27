@@ -29,3 +29,35 @@ test('repeated Gemini conclusion calls save once per session', async () => {
     useVivaStore.getState().resetSession();
   }
 });
+
+test('failed feedback save requests abandonment instead of reporting completion', async () => {
+  useVivaStore.getState().resetSession();
+  useVivaStore.setState({ sessionId: 'session-one' });
+  let completed = 0;
+  let abandoned = 0;
+  const saving = { current: false };
+  const handler = createToolHandler({
+    setError: () => {},
+    finishConclusion: () => {
+      completed++;
+    },
+    isAudioPlayingRef: { current: false },
+    isConclusionPendingRef: { current: false },
+    isConclusionSavingRef: saving,
+    getToken: async () => null,
+    saveConclusion: async () => {
+      throw new Error('offline');
+    },
+    abandonSession: async () => {
+      abandoned++;
+    },
+  });
+  try {
+    await handler('conclude_viva', { score: 2 });
+    assert.equal(completed, 0);
+    assert.equal(abandoned, 1);
+    assert.equal(saving.current, false);
+  } finally {
+    useVivaStore.getState().resetSession();
+  }
+});

@@ -40,6 +40,8 @@ export interface ToolHandlerDependencies {
     getToken: () => Promise<string | null>;
     /** Allows the conclusion side effect to be exercised without a backend in tests. */
     saveConclusion?: typeof concludeViva;
+    abandonSession?: () => Promise<void>;
+    isConclusionSavingRef?: React.MutableRefObject<boolean>;
 }
 
 /**
@@ -69,6 +71,7 @@ export function createToolHandler(deps: ToolHandlerDependencies) {
             // backend write should decide the feedback for a given session.
             if (conclusionStatus !== 'idle') return;
             conclusionStatus = 'saving';
+            if (deps.isConclusionSavingRef) deps.isConclusionSavingRef.current = true;
             try {
                 debug("AI requested conclusion. Saving results...");
 
@@ -84,6 +87,7 @@ export function createToolHandler(deps: ToolHandlerDependencies) {
                     strong_points: (args.strong_points as string[]) ?? [],
                     areas_of_improvement: (args.areas_of_improvement as string[]) ?? [],
                 });
+                if (deps.isConclusionSavingRef) deps.isConclusionSavingRef.current = false;
                 if (conclusionSessionId === currentSessionId) conclusionStatus = 'saved';
                 if (useVivaStore.getState().sessionId !== currentSessionId) return;
 
@@ -110,12 +114,12 @@ export function createToolHandler(deps: ToolHandlerDependencies) {
                 }
 
             } catch (error) {
+                if (deps.isConclusionSavingRef) deps.isConclusionSavingRef.current = false;
                 if (conclusionSessionId === currentSessionId && conclusionStatus === 'saving') conclusionStatus = 'idle';
                 if (useVivaStore.getState().sessionId !== currentSessionId) return;
                 debug("Failed to conclude session:", error);
                 setError("Failed to save session results.");
-                // In case of error, force finish to avoid getting stuck
-                finishConclusion();
+                await deps.abandonSession?.().catch(() => {});
             }
         }
     };

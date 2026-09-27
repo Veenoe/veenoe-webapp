@@ -16,6 +16,8 @@ import {
 import { voiceTelemetry } from "@/lib/telemetry/voice-telemetry";
 import { createToolHandler } from "./viva/tool-handlers";
 import { createAudioPipeline } from "./viva/audio-pipeline";
+import { abandonViva } from "@/lib/api/axios";
+import { applyAbandonOutcome } from "./viva/session-lifecycle";
 
 export function useVivaSession() {
   const router = useRouter();
@@ -40,6 +42,8 @@ export function useVivaSession() {
   const isAudioPlayingRef = useRef(false);
   const isTurnCompleteRef = useRef(true);
   const isConclusionPendingRef = useRef(false);
+  const isConclusionSavingRef = useRef(false);
+  const abandonmentRef = useRef<Promise<void> | null>(null);
 
   // Cleanup all resources
   const cleanupResources = useCallback(() => {
@@ -66,10 +70,39 @@ export function useVivaSession() {
   // Finalize session state (show popup)
   const finishConclusion = useCallback(() => {
     console.log("[useVivaSession] Finalizing session...");
-    cleanupResources();
     setSessionState(SessionState.COMPLETED);
+    cleanupResources();
     isConclusionPendingRef.current = false;
   }, [cleanupResources, setSessionState]);
+
+  const abandonSession = useCallback(() => {
+    const sessionId = useVivaStore.getState().sessionId;
+    if (!sessionId || abandonmentRef.current) {
+      return abandonmentRef.current ?? Promise.resolve();
+    }
+    const pending = abandonViva(sessionId)
+      .then((response) => {
+        if (useVivaStore.getState().sessionId === sessionId) {
+          applyAbandonOutcome(response, sessionId, {
+            setSessionState,
+            cleanupResources,
+            navigate: (path) => router.push(path),
+          });
+        }
+      })
+      .catch(() => {
+        if (useVivaStore.getState().sessionId === sessionId) {
+          setError("Could not end the session. Please try again.");
+          setSessionState(SessionState.ERROR);
+        }
+        throw new Error("Session abandonment failed");
+      })
+      .finally(() => {
+        abandonmentRef.current = null;
+      });
+    abandonmentRef.current = pending;
+    return pending;
+  }, [cleanupResources, router, setError, setSessionState]);
 
   // Create audio pipeline controller
   // Existing controller factory retains refs; it does not read their values during render.
@@ -91,7 +124,9 @@ export function useVivaSession() {
     isAudioPlayingRef,
     isConclusionPendingRef,
     getToken,
-  }), [setError, finishConclusion, getToken]);
+    abandonSession,
+    isConclusionSavingRef,
+  }), [setError, finishConclusion, getToken, abandonSession]);
 
   // Start audio pipeline
   const _startAudioPipeline = useCallback(async () => {
@@ -167,11 +202,31 @@ export function useVivaSession() {
           },
           onDisconnected: () => {
             voiceTelemetry.onGeminiDisconnected();
+            const state = useVivaStore.getState().sessionState;
+            if (
+              state === SessionState.ACTIVE ||
+              state === SessionState.STARTING ||
+              (state === SessionState.CONCLUDING &&
+                !isConclusionSavingRef.current &&
+                !useVivaStore.getState().conclusionData)
+            ) {
+              void abandonSession().catch(() => {});
+            }
           },
           onError: (e) => {
             voiceTelemetry.onGeminiError(e);
             setError(e.message);
+            const state = useVivaStore.getState().sessionState;
             setSessionState(SessionState.ERROR);
+            if (
+              state === SessionState.ACTIVE ||
+              state === SessionState.STARTING ||
+              (state === SessionState.CONCLUDING &&
+                !isConclusionSavingRef.current &&
+                !useVivaStore.getState().conclusionData)
+            ) {
+              void abandonSession().catch(() => {});
+            }
           },
           onReconnectAttempt: (attempt) => {
             voiceTelemetry.onConnectionRetry(attempt);
@@ -207,6 +262,7 @@ export function useVivaSession() {
       voiceTelemetry.onGeminiError(err);
       setError(err instanceof Error ? err.message : "Connection failed");
       setSessionState(SessionState.ERROR);
+      void abandonSession().catch(() => {});
     }
   }, [
     setSessionState,
@@ -215,10 +271,11 @@ export function useVivaSession() {
     handleToolCall,
     _startAudioPipeline,
     audioPipeline,
+    abandonSession,
   ]);
 
   // Request conclusion from AI
-  const requestConclusion = useCallback(() => {
+  const requestConclusion = useCallback(async () => {
     if (geminiClientRef.current && store.sessionState === SessionState.ACTIVE) {
       console.log("[useVivaSession] User requested end. Prompting AI...");
       const accepted = geminiClientRef.current.sendText(
@@ -229,9 +286,12 @@ export function useVivaSession() {
         return;
       }
     }
-    finishConclusion();
-    router.push("/");
-  }, [store.sessionState, router, finishConclusion, setSessionState]);
+    try {
+      await abandonSession();
+    } catch {
+      // Keep the page available for a retry; expiry reconciliation is the fallback.
+    }
+  }, [store.sessionState, abandonSession, setSessionState]);
 
   // Toggle mute
   const toggleMute = useCallback(() => {
