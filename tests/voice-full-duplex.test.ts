@@ -29,7 +29,7 @@ test('the production forwarding path sends mic packets throughout playback, exce
   const forward = () => {
     const { microphoneState, isMuted } = useVivaStore.getState();
     pipeline.forwardMicrophoneAudio(packet, microphoneState, isMuted,
-      data => sent.push(data), bytes => measured.push(bytes));
+      data => { sent.push(data); return true; }, bytes => { measured.push(bytes); });
   };
 
   useVivaStore.getState().setMicrophoneState(MicrophoneState.ACTIVE);
@@ -117,8 +117,10 @@ test('normal playback ends into listening once turn completes', () => {
 });
 
 test('interrupted Gemini message does not dispatch stale audio from the same response', () => {
-  assert.deepEqual(processGeminiMessage({ serverContent: {
-    interrupted: true,
-    modelTurn: { parts: [{ inlineData: { data: 'stale' } }] },
-  } }), [{ type: 'interrupted', payload: null }]);
+  assert.deepEqual(processGeminiMessage({
+    serverContent: {
+      interrupted: true,
+      modelTurn: { parts: [{ inlineData: { data: 'stale' } }] },
+    }
+  }), [{ type: 'interrupted', payload: null }]);
 });

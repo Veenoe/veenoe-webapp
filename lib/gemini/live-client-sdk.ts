@@ -236,10 +236,10 @@ export class GeminiLiveClientSDK {
     /**
      * Sends audio data to the Gemini Live API.
      */
-    sendAudio(audioData: ArrayBuffer): void {
+    sendAudio(audioData: ArrayBuffer): boolean {
         if (!this.session) {
             console.warn("[GeminiLiveClientSDK] Cannot send audio: Session not active");
-            return;
+            return false;
         }
 
         const base64Audio = arrayBufferToBase64(audioData);
@@ -250,6 +250,7 @@ export class GeminiLiveClientSDK {
                 mimeType: 'audio/pcm;rate=16000',
             },
         });
+        return true;
     }
 
     /**

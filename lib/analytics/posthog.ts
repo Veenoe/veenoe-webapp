@@ -81,6 +81,7 @@ export interface VoiceEventProperties {
 
   // Audio Input Transport Aggregates
   input_packet_count?: number | null;
+  input_packets_dropped?: number | null;
   input_bytes?: number | null;
   average_packet_bytes?: number | null;
   average_packet_interval_ms?: number | null;

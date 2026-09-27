@@ -16,6 +16,7 @@ import {
   sanitizeErrorMessage,
   VoiceEventProperties,
 } from "../analytics/posthog";
+import type { MicrophoneFormat } from "../gemini/audio-recorder";
 
 export interface DiagnosticEventItem {
   id: string;
@@ -52,6 +53,8 @@ export interface DiagnosticsSnapshot {
   currentTurn: number;
   modelName: string | null;
   vadProfile: string | null;
+  microphoneFormat: MicrophoneFormat | null;
+  inputPacketsDropped: number;
   lastTurnMetrics: TurnMetricsSnapshot | null;
   // Session totals
   totalInputPackets: number;
@@ -117,6 +120,8 @@ export class VoiceTelemetry {
   private connectionState: "idle" | "starting" | "connected" | "disconnected" | "error" = "idle";
   private modelName: string | null = null;
   private vadProfile: string | null = null;
+  private microphoneFormat: MicrophoneFormat | null = null;
+  private inputPacketsDropped = 0;
 
   // Session lifecycle flags
   private isSessionActive = false;
@@ -225,6 +230,8 @@ export class VoiceTelemetry {
 
     // Reset ALL session counters (prevents cross-session contamination)
     this.totalInputPackets = 0;
+    this.inputPacketsDropped = 0;
+    this.microphoneFormat = null;
     this.totalInputBytes = 0;
     this.totalOutputChunks = 0;
     this.disconnectCount = 0;
@@ -254,6 +261,14 @@ export class VoiceTelemetry {
   public onMicrophoneReady(): void {
     this.micInitTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     this.recordDiagnosticEvent("microphone_ready");
+  }
+
+  public onMicrophoneFormat(format: MicrophoneFormat): void {
+    this.microphoneFormat = { ...format };
+  }
+
+  public onMicrophonePacketsDropped(count: number): void {
+    this.inputPacketsDropped += count;
   }
 
   public onAudioPlayerReady(): void {
@@ -354,6 +369,7 @@ export class VoiceTelemetry {
       telemetry_session_id: this.sessionId,
       input_packet_count: this.totalInputPackets,
       input_bytes: this.totalInputBytes,
+      input_packets_dropped: this.inputPacketsDropped,
       output_audio_chunk_count: this.totalOutputChunks,
       disconnect_count: this.disconnectCount,
       connection_error_count: this.connectionErrorCount,
@@ -630,6 +646,8 @@ export class VoiceTelemetry {
       currentTurn: this.currentTurn,
       modelName: this.modelName,
       vadProfile: this.vadProfile,
+      microphoneFormat: this.microphoneFormat && { ...this.microphoneFormat },
+      inputPacketsDropped: this.inputPacketsDropped,
       lastTurnMetrics: this.lastCompletedTurnMetrics,
       totalInputPackets: this.totalInputPackets,
       totalInputBytes: this.totalInputBytes,

@@ -72,6 +72,8 @@ export function useVivaSession() {
   }, [cleanupResources, setSessionState]);
 
   // Create audio pipeline controller
+  // Existing controller factory retains refs; it does not read their values during render.
+  // eslint-disable-next-line react-hooks/refs
   const audioPipeline = useMemo(() => createAudioPipeline({
     setConversationState,
     setPlaybackState,
@@ -82,6 +84,7 @@ export function useVivaSession() {
   }), [setConversationState, setPlaybackState, finishConclusion]);
 
   // Create tool handler (with auth token getter for API calls)
+  // eslint-disable-next-line react-hooks/refs
   const handleToolCall = useMemo(() => createToolHandler({
     setError,
     finishConclusion,
@@ -106,7 +109,7 @@ export function useVivaSession() {
           (data) => client.sendAudio(data),
           (byteLength) => voiceTelemetry.onMicrophonePacketSent(byteLength),
         );
-      });
+      }, (count) => voiceTelemetry.onMicrophonePacketsDropped(count));
       setMicrophoneState(MicrophoneState.ACTIVE);
       setConversationState(ConversationState.LISTENING);
     } catch {
@@ -134,6 +137,7 @@ export function useVivaSession() {
       // Initialize audio recorder (handles microphone input)
       audioHandlerRef.current = new AudioRecorder();
       await audioHandlerRef.current.initialize();
+      voiceTelemetry.onMicrophoneFormat(audioHandlerRef.current.getFormat());
       voiceTelemetry.onMicrophoneReady();
 
       // Initialize audio player with pipeline callbacks and telemetry hooks
