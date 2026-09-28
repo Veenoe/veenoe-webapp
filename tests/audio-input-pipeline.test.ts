@@ -12,7 +12,18 @@ const audio = root.VeenoeAudioInput as {
     push(input: Float32Array): void; reset(): void;
   };
   pcm16: (sample: number) => number;
+  inputLevel: (sumSquares: number, peak: number, clipped: number, count: number) => { rmsDbfs: number; peakDbfs: number; clippedSampleRatio: number };
 };
+
+test('input levels report silence, moderate and near-clipping input without infinities', () => {
+  const silence = audio.inputLevel(0, 0, 0, 160);
+  assert.deepEqual(Object.values(silence), [-120, -120, 0]);
+  const moderate = audio.inputLevel(40, 0.5, 0, 160);
+  assert.ok(Math.abs(moderate.rmsDbfs + 6.02) < 0.1);
+  const loud = audio.inputLevel(160, 1, 24, 160);
+  assert.ok(loud.peakDbfs >= -0.1);
+  assert.equal(loud.clippedSampleRatio, 0.15);
+});
 
 function stream(rate: number, length: number, blocks: number[]) {
   const packets: ArrayBuffer[] = [];

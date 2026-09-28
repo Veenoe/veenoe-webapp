@@ -13,6 +13,11 @@
     return clipped < 0 ? Math.round(clipped * 32768) : Math.round(clipped * 32767);
   }
 
+  function inputLevel(sumSquares, peak, clipped, count) {
+    const db = (amplitude) => amplitude > 0 ? Math.max(-120, 20 * Math.log10(amplitude)) : -120;
+    return { rmsDbfs: db(Math.sqrt(sumSquares / count)), peakDbfs: db(peak), clippedSampleRatio: clipped / count };
+  }
+
   class AudioInputPipeline {
     constructor(sourceRate, emit) {
       if (!Number.isFinite(sourceRate) || sourceRate <= 0) throw new Error('Invalid source rate');
@@ -89,5 +94,5 @@
     }
   }
 
-  root.VeenoeAudioInput = { AudioInputPipeline, OUTPUT_RATE, PACKET_MS, PACKET_SAMPLES, pcm16 };
+  root.VeenoeAudioInput = { AudioInputPipeline, OUTPUT_RATE, PACKET_MS, PACKET_SAMPLES, pcm16, inputLevel };
 })(globalThis);

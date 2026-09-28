@@ -16,7 +16,7 @@ import {
   sanitizeErrorMessage,
   VoiceEventProperties,
 } from "../analytics/posthog";
-import type { MicrophoneFormat } from "../gemini/audio-recorder";
+import type { MicrophoneDiagnostics, MicrophoneFormat, MicrophoneLevel, MicrophoneErrorCode } from "../gemini/audio-recorder";
 
 export interface DiagnosticEventItem {
   id: string;
@@ -54,6 +54,9 @@ export interface DiagnosticsSnapshot {
   modelName: string | null;
   vadProfile: string | null;
   microphoneFormat: MicrophoneFormat | null;
+  microphoneDiagnostics: MicrophoneDiagnostics | null;
+  microphoneLevel: MicrophoneLevel | null;
+  microphoneErrorCode: MicrophoneErrorCode | null;
   inputPacketsDropped: number;
   lastTurnMetrics: TurnMetricsSnapshot | null;
   // Session totals
@@ -121,6 +124,9 @@ export class VoiceTelemetry {
   private modelName: string | null = null;
   private vadProfile: string | null = null;
   private microphoneFormat: MicrophoneFormat | null = null;
+  private microphoneDiagnostics: MicrophoneDiagnostics | null = null;
+  private microphoneLevel: MicrophoneLevel | null = null;
+  private microphoneErrorCode: MicrophoneErrorCode | null = null;
   private inputPacketsDropped = 0;
 
   // Session lifecycle flags
@@ -232,6 +238,9 @@ export class VoiceTelemetry {
     this.totalInputPackets = 0;
     this.inputPacketsDropped = 0;
     this.microphoneFormat = null;
+    this.microphoneDiagnostics = null;
+    this.microphoneLevel = null;
+    this.microphoneErrorCode = null;
     this.totalInputBytes = 0;
     this.totalOutputChunks = 0;
     this.disconnectCount = 0;
@@ -265,6 +274,20 @@ export class VoiceTelemetry {
 
   public onMicrophoneFormat(format: MicrophoneFormat): void {
     this.microphoneFormat = { ...format };
+  }
+
+  public onMicrophoneDiagnostics(diagnostics: MicrophoneDiagnostics): void {
+    this.microphoneDiagnostics = diagnostics;
+    this.recordDiagnosticEvent("microphone_settings");
+  }
+
+  public onMicrophoneLevel(level: MicrophoneLevel): void {
+    this.microphoneLevel = level; // Local only; the panel polls while open.
+  }
+
+  public onMicrophoneError(code: MicrophoneErrorCode): void {
+    this.microphoneErrorCode = code;
+    this.recordDiagnosticEvent("microphone_error", code);
   }
 
   public onMicrophonePacketsDropped(count: number): void {
@@ -647,6 +670,9 @@ export class VoiceTelemetry {
       modelName: this.modelName,
       vadProfile: this.vadProfile,
       microphoneFormat: this.microphoneFormat && { ...this.microphoneFormat },
+      microphoneDiagnostics: this.microphoneDiagnostics && { ...this.microphoneDiagnostics },
+      microphoneLevel: this.microphoneLevel && { ...this.microphoneLevel },
+      microphoneErrorCode: this.microphoneErrorCode,
       inputPacketsDropped: this.inputPacketsDropped,
       lastTurnMetrics: this.lastCompletedTurnMetrics,
       totalInputPackets: this.totalInputPackets,
