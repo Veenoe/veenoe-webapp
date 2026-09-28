@@ -35,8 +35,8 @@ export class MicrophoneError extends Error {
 
 const REQUESTED_AUDIO = { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } as const;
 const AUDIO_FIELDS: AudioFeature[] = ['channelCount', 'echoCancellation', 'noiseSuppression', 'autoGainControl', 'sampleRate', 'sampleSize'];
-function audioFields<T extends object>(source: T): T {
-    return Object.fromEntries(AUDIO_FIELDS.filter(key => key in source).map(key => [key, source[key as keyof T]])) as T;
+function audioFields<T extends object>(source: T): Partial<Pick<T, Extract<AudioFeature, keyof T>>> {
+    return Object.fromEntries(AUDIO_FIELDS.filter(key => key in source).map(key => [key, source[key as keyof T]])) as Partial<Pick<T, Extract<AudioFeature, keyof T>>>;
 }
 export function captureMicrophoneDiagnostics(track: MediaStreamTrack, devices: MediaDevices): MicrophoneDiagnostics {
     let capabilities: MicrophoneDiagnostics['capabilities'] = null;
@@ -52,7 +52,8 @@ export function captureMicrophoneDiagnostics(track: MediaStreamTrack, devices: M
 }
 export function classifyMicrophoneError(error: unknown): MicrophoneError {
     const name = error instanceof Error ? error.name : '';
-    const code: MicrophoneErrorCode = name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError' ? 'permission_denied'
+    const code: MicrophoneErrorCode = name === 'NotAllowedError' || name === 'PermissionDeniedError' ? 'permission_denied'
+        : name === 'SecurityError' ? 'unsupported'
         : name === 'NotFoundError' || name === 'DevicesNotFoundError' ? 'not_found'
         : name === 'NotReadableError' || name === 'TrackStartError' || name === 'AbortError' ? 'unavailable'
         : name === 'OverconstrainedError' ? 'constraint' : 'unexpected';
@@ -70,8 +71,12 @@ export function handleWorkletAudioMessage(
     onAudioData: (buffer: ArrayBuffer) => void,
     onPacketsDropped: (count: number) => void,
     acknowledge: () => void,
+    onLevel: (level: MicrophoneLevel) => void = () => {},
 ): void {
     try {
+        try {
+            if (message.level) onLevel(message.level);
+        } catch { /* Optional diagnostics must not block audio delivery. */ }
         if (message.dropped > 0) onPacketsDropped(message.dropped);
         if (nowMs - message.createdAtMs > 100) {
             onPacketsDropped(1);
@@ -164,9 +169,8 @@ export class AudioRecorder {
                     onFormat(this.getFormat(event.data.outputSampleRate, event.data.packetTargetMs));
                     return;
                 }
-                if (event.data.level) onLevel(event.data.level);
                 handleWorkletAudioMessage(event.data, this.audioContext!.currentTime * 1000,
-                    onAudioData, onPacketsDropped, () => node.port.postMessage('ack'));
+                    onAudioData, onPacketsDropped, () => node.port.postMessage('ack'), onLevel);
             };
             this.sourceNode.connect(node);
             // Keep the processing graph pulled, while outputting silence to speakers.

@@ -51,7 +51,7 @@ test('microphone initialization classifies browser failures and cleans partial r
     assert.equal(stopped, 1);
     assert.equal(closed, 1);
 
-    for (const [name, code] of [['NotAllowedError', 'permission_denied'], ['NotFoundError', 'not_found'],
+    for (const [name, code] of [['NotAllowedError', 'permission_denied'], ['SecurityError', 'unsupported'], ['NotFoundError', 'not_found'],
       ['NotReadableError', 'unavailable'], ['OverconstrainedError', 'constraint']] as const) {
       devices.getUserMedia = async () => { throw Object.assign(new Error('private browser details'), { name }); };
       await assert.rejects(new AudioRecorder().initialize(), { code });
@@ -105,6 +105,9 @@ test('stale packets are dropped, fresh packets forward, and all are acknowledged
   handleWorkletAudioMessage({ ...packet, dropped: 2 }, 199,
     () => { throw new Error('SDK send failed'); }, drop, ack);
   assert.deepEqual([sent, dropped, acknowledged], [1, 4, 3]);
+  handleWorkletAudioMessage({ ...packet, level: { rmsDbfs: -30, peakDbfs: -10, clippedSampleRatio: 0 } }, 199,
+    forward, drop, ack, () => { throw new Error('diagnostics failed'); });
+  assert.deepEqual([sent, dropped, acknowledged], [2, 4, 4]);
 });
 
 test('recorder rolls back a partially connected graph', async () => {
