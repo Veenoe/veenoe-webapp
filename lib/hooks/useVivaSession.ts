@@ -45,6 +45,7 @@ export function useVivaSession() {
   const isConclusionSavingRef = useRef(false);
   const abandonmentRef = useRef<Promise<void> | null>(null);
   const fatalMicrophoneHandledRef = useRef(false);
+  const fatalPlaybackHandledRef = useRef(false);
 
   // Cleanup all resources
   const cleanupResources = useCallback(() => {
@@ -117,6 +118,15 @@ export function useVivaSession() {
     });
   }, [abandonSession, cleanupResources, setError, setSessionState]);
 
+  const handleFatalPlaybackError = useCallback(() => {
+    if (fatalPlaybackHandledRef.current) return;
+    fatalPlaybackHandledRef.current = true;
+    setError("Audio playback could not continue. Please try again.");
+    setSessionState(SessionState.ERROR);
+    cleanupResources();
+    void abandonSession(true).catch(() => {});
+  }, [abandonSession, cleanupResources, setError, setSessionState]);
+
   // Create audio pipeline controller
   // Existing controller factory retains refs; it does not read their values during render.
   const audioPipeline = useMemo(() => createAudioPipeline({
@@ -175,6 +185,7 @@ export function useVivaSession() {
     try {
       setSessionState(SessionState.STARTING);
       fatalMicrophoneHandledRef.current = false;
+      fatalPlaybackHandledRef.current = false;
       isConclusionPendingRef.current = false;
       audioPipeline.reset();
 
@@ -202,6 +213,7 @@ export function useVivaSession() {
           onPlayEnd: () => voiceTelemetry.onPlaybackEnded(),
           onAudioScheduled: (queueDurationMs) => voiceTelemetry.onAudioScheduled(queueDurationMs),
           onUnderrun: () => voiceTelemetry.onPlaybackUnderrun(),
+          onPlaybackError: handleFatalPlaybackError,
         })
       );
       await audioPlayerRef.current.initialize();
@@ -255,14 +267,21 @@ export function useVivaSession() {
           onAudioData: async (base64) => {
             const player = audioPlayerRef.current;
             if (!player) return;
-            await audioPipeline.receiveGeminiAudio(
-              base64,
-              (audio) => player.playAudio(audio),
-              () => voiceTelemetry.onGeminiAudioChunkReceived(),
-            );
+            try {
+              await audioPipeline.receiveGeminiAudio(
+                base64,
+                (audio) => player.playAudio(audio),
+                () => voiceTelemetry.onGeminiAudioChunkReceived(),
+              );
+            } catch {
+              handleFatalPlaybackError();
+            }
           },
           onTurnComplete: () => {
-            audioPipeline.completeTurn(() => voiceTelemetry.onTurnComplete());
+            audioPipeline.completeTurn(() => {
+              audioPlayerRef.current?.completeTurn();
+              voiceTelemetry.onTurnComplete();
+            });
           },
           onInterrupted: () => {
             audioPipeline.interruptPlayback(
@@ -301,6 +320,7 @@ export function useVivaSession() {
     audioPipeline,
     abandonSession,
     handleFatalMicrophoneError,
+    handleFatalPlaybackError,
   ]);
 
   // Request conclusion from AI
