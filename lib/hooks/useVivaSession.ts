@@ -154,21 +154,28 @@ export function useVivaSession() {
     if (!audioHandlerRef.current || !geminiClientRef.current) return;
 
     try {
-      await audioHandlerRef.current.startRecording((audioData: ArrayBuffer) => {
+      const inputState = () => {
+        const { microphoneState, playbackState } = useVivaStore.getState();
+        return { microphoneState, playbackState };
+      };
+      await audioHandlerRef.current.startRecording((audioData, timing) => {
         const client = geminiClientRef.current;
-        if (!client) return;
         const { microphoneState, isMuted } = useVivaStore.getState();
+        let sendFailed = false;
         audioPipeline.forwardMicrophoneAudio(
           audioData,
           microphoneState,
           isMuted,
-          (data) => client.sendAudio(data),
+          (data) => client?.sendAudio(data, () => { sendFailed = true; }) ?? false,
           (byteLength) => voiceTelemetry.onMicrophonePacketSent(byteLength),
-          () => voiceTelemetry.onMicrophonePacketsDropped(1),
+          () => voiceTelemetry.onMicrophoneDrop(
+            sendFailed ? 'send_failure' : 'transport_unready', 1, inputState(), timing.sequence),
+          (reason) => voiceTelemetry.onMicrophoneForwardingPaused(reason),
         );
-      }, (count) => voiceTelemetry.onMicrophonePacketsDropped(count),
+      }, (count, reason, sequence) => voiceTelemetry.onMicrophoneDrop(reason, count, inputState(), sequence),
         (format) => voiceTelemetry.onMicrophoneFormat(format),
-        (level) => voiceTelemetry.onMicrophoneLevel(level));
+        (level) => voiceTelemetry.onMicrophoneLevel(level),
+        (timing) => voiceTelemetry.onMicrophonePacketObserved(timing));
       if (fatalMicrophoneHandledRef.current) return;
       setMicrophoneState(MicrophoneState.ACTIVE);
       setConversationState(ConversationState.LISTENING);

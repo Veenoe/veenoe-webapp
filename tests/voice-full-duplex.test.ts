@@ -69,6 +69,27 @@ test('transport acceptance and rejection account for active, unmuted packets exa
   useVivaStore.getState().resetSession();
 });
 
+test('playback lifecycle and temporary underrun never gate active microphone forwarding', () => {
+  const { pipeline } = setup();
+  useVivaStore.getState().setMicrophoneState(MicrophoneState.ACTIVE);
+  const playback = pipeline.createPlaybackCallbacks();
+  let sent = 0;
+  const forward = () => {
+    const { microphoneState, isMuted } = useVivaStore.getState();
+    pipeline.forwardMicrophoneAudio(new ArrayBuffer(640), microphoneState, isMuted,
+      () => { sent++; return true; }, () => {}, () => assert.fail('active packet rejected'));
+  };
+  playback.onPlayStart?.();
+  for (let index = 0; index < 100; index++) forward();
+  playback.onUnderrun?.();
+  for (let index = 0; index < 100; index++) forward();
+  pipeline.completeTurn(() => {});
+  for (let index = 0; index < 100; index++) forward();
+  playback.onPlayEnd?.();
+  assert.equal(sent, 300);
+  useVivaStore.getState().resetSession();
+});
+
 test('mute never turns an idle or failed recorder into an active microphone', () => {
   useVivaStore.getState().resetSession();
   useVivaStore.getState().toggleMute();

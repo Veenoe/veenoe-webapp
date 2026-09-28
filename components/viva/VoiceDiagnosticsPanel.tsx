@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { voiceTelemetry, DiagnosticsSnapshot } from "@/lib/telemetry/voice-telemetry";
+import { useVivaStore } from "@/lib/store/viva-store";
 import { Activity, ChevronDown, ChevronUp, Copy, Check, Terminal, Wifi } from "lucide-react";
 
 /**
@@ -73,6 +74,12 @@ export function VoiceDiagnosticsPanel() {
     voiceTelemetry.sendTestPing();
     setPinged(true);
     setTimeout(() => setPinged(false), 2000);
+  };
+
+  const markObservation = (reason: 'replied_too_early' | 'missed_or_delayed_words') => {
+    const { microphoneState, playbackState } = useVivaStore.getState();
+    voiceTelemetry.markTurnTakingObservation(reason, { microphoneState, playbackState });
+    setSnapshot(voiceTelemetry.getSnapshot());
   };
 
   const lastTurn = snapshot.lastTurnMetrics;
@@ -326,7 +333,26 @@ export function VoiceDiagnosticsPanel() {
               <div className="text-[10px] text-muted-foreground">
                 Copy JSON includes the last {snapshot.playbackBuffer.recentEvents.length} playback buffer events.
               </div>
+              <div className="text-[10px] text-muted-foreground">
+                Max admission → transfer: {snapshot.playbackBuffer.maxAdmissionToTransferMs?.toFixed(1) ?? '—'} ms · capacity wait: {snapshot.playbackBuffer.maxCapacityWaitMs?.toFixed(1) ?? '—'} ms
+              </div>
+              <div className="text-[10px] text-muted-foreground">
+                Setup: {snapshot.playbackBuffer.lastSetupWaitMs?.toFixed(1) ?? '—'} ms · resume: {snapshot.playbackBuffer.lastResumeWaitMs?.toFixed(1) ?? '—'} ms · first render: {snapshot.playbackBuffer.lastAdmissionToFirstRenderMs?.toFixed(1) ?? '—'} ms
+              </div>
             </div>
+          </div>
+
+          <div className="space-y-1 bg-muted/20 p-2 rounded-md border border-border/40 text-[11px]">
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Input continuity (local)</div>
+            <div>Capture → main: {snapshot.inputContinuity.recentCaptureToMainAgeMs?.toFixed(1) ?? '—'} ms recent / {snapshot.inputContinuity.maxCaptureToMainAgeMs?.toFixed(1) ?? '—'} ms max</div>
+            <div>Accepted send interval: {snapshot.inputContinuity.recentAcceptedSendIntervalMs?.toFixed(1) ?? '—'} ms recent / {snapshot.inputContinuity.maxAcceptedSendIntervalMs?.toFixed(1) ?? '—'} ms max</div>
+            <div>Max sequence gap: {snapshot.inputContinuity.maxSequenceGap} · Max worklet burst: {snapshot.inputContinuity.maxWorkletDropBurst}</div>
+            <div>Drop reasons: {Object.entries(snapshot.inputContinuity.dropCounts).filter(([, count]) => count > 0).map(([reason, count]) => `${reason} ${count}`).join(' · ') || 'none'}</div>
+            <div className="flex gap-2 pt-1">
+              <button className="underline" onClick={() => markObservation('replied_too_early')}>Mark early reply</button>
+              <button className="underline" onClick={() => markObservation('missed_or_delayed_words')}>Mark missed words</button>
+            </div>
+            <div className="text-[10px] text-muted-foreground">{snapshot.inputContinuity.recentAnomalies.length} recent input anomalies/markers in Copy JSON. SDK acceptance is not server receipt.</div>
           </div>
 
           {/* Reliability Row */}

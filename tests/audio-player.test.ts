@@ -20,6 +20,8 @@ function deferred() {
 function harness(options: {
   pauseModule?: number; failModule?: number; pauseResume?: boolean;
   observer?: (event: PlaybackBufferEvent) => void;
+  onEnd?: (player: AudioPlayer) => void;
+  failAudioPost?: boolean;
 } = {}) {
   const oldContext = globalThis.AudioContext;
   const oldNode = globalThis.AudioWorkletNode;
@@ -67,7 +69,10 @@ function harness(options: {
     disconnects = 0;
     port = {
       onmessage: null as null | ((event: { data: unknown }) => void),
-      postMessage: (message: Message) => { toWorklet.push(message); },
+      postMessage: (message: Message) => {
+        if (message.type === 'audio' && options.failAudioPost) throw new Error('port failed');
+        toWorklet.push(message);
+      },
       close: () => { this.closes++; },
     };
     onprocessorerror: (() => void) | null = null;
@@ -83,7 +88,7 @@ function harness(options: {
   globalThis.AudioWorkletNode = FakeNode as unknown as typeof AudioWorkletNode;
   const player = new AudioPlayer({
     onPlayStart: () => callbacks.push('start'),
-    onPlayEnd: () => callbacks.push('end'),
+    onPlayEnd: () => { callbacks.push('end'); options.onEnd?.(player); },
     onPlaybackError: () => callbacks.push('error'),
     onBufferEvent: event => { events.push(event); options.observer?.(event); },
   });
@@ -136,6 +141,97 @@ test('stop before lazy initialization preserves the next generation and rejects 
     assert.ok(rendered[0] > 0 && rendered[1] > rendered[0]);
     assert.deepEqual(h.callbacks, ['start', 'end']);
     assert.equal(h.events.some(event => event.type === 'stale'), false);
+  } finally { h.restore(); }
+});
+
+test('idle completion after clear does not finish the next response', async () => {
+  const h = harness();
+  try {
+    h.player.stop();
+    h.player.completeTurn();
+    h.player.completeTurn();
+    await h.player.playAudio(pcm(Array(2400).fill(1000)));
+    h.deliverWorklet();
+    h.deliverPlayer();
+    for (let i = 0; i < 20; i++) h.render();
+    h.deliverPlayer();
+    assert.deepEqual(h.callbacks, ['start']);
+    h.player.completeTurn();
+    h.deliverWorklet();
+    h.render();
+    h.deliverPlayer();
+    assert.deepEqual(h.callbacks, ['start', 'end']);
+  } finally { h.restore(); }
+});
+
+test('repeated completion after a drained response does not finish fresh audio', async () => {
+  const h = harness();
+  try {
+    await h.player.playAudio(pcm([1000]));
+    h.deliverWorklet();
+    h.deliverPlayer();
+    h.player.completeTurn();
+    h.deliverWorklet();
+    h.render();
+    h.deliverPlayer();
+    h.player.completeTurn();
+    h.player.completeTurn();
+    await h.player.playAudio(pcm(Array(2400).fill(2000)));
+    h.deliverWorklet();
+    h.deliverPlayer();
+    for (let i = 0; i < 20; i++) h.render();
+    h.deliverPlayer();
+    assert.deepEqual(h.callbacks, ['start', 'end', 'start']);
+  } finally { h.restore(); }
+});
+
+test('final render accounting is published before onPlayEnd disposes the player', async () => {
+  const h = harness({ onEnd: player => player.cleanup() });
+  try {
+    await h.player.playAudio(pcm([1000, 2000]));
+    h.deliverWorklet();
+    h.deliverPlayer();
+    h.player.completeTurn();
+    h.deliverWorklet();
+    h.render();
+    h.deliverPlayer();
+    const ended = h.events.find(event => event.type === 'ended');
+    assert.equal(ended?.stats?.storedSamples, 2);
+    assert.equal(ended?.stats?.playedSamples, 2);
+    assert.equal(ended?.queueDepthMs, 0);
+  } finally { h.restore(); }
+});
+
+test('playback trace separates admission, setup, transfer, and first render timing', async () => {
+  const h = harness();
+  try {
+    await h.player.playAudio(pcm(Array(2400).fill(1000)));
+    const transfer = h.events.find(event => event.type === 'transferred');
+    assert.ok(transfer && transfer.admissionToTransferMs! >= 0);
+    assert.ok(transfer.setupWaitMs! >= 0);
+    assert.ok(transfer.resumeWaitMs! >= 0);
+    assert.ok(transfer.conversionTransferMs! >= 0);
+    assert.equal(transfer.capacityWaitMs, 0);
+    h.deliverWorklet();
+    h.deliverPlayer();
+    h.render();
+    h.deliverPlayer();
+    const started = h.events.find(event => event.type === 'started');
+    assert.ok(started?.admissionToFirstRenderMs !== undefined);
+    assert.ok(started.admissionToFirstRenderMs >= 0);
+  } finally { h.restore(); }
+});
+
+test('an admitted chunk settles when MessagePort transfer throws', async () => {
+  const h = harness({ failAudioPost: true });
+  try {
+    let settled = false;
+    void h.player.playAudio(pcm([1000])).then(() => { settled = true; });
+    await tick();
+    await tick();
+    assert.equal(settled, true);
+    assert.deepEqual(h.callbacks, ['error']);
+    assert.equal(h.player.hasPendingAudio(), false);
   } finally { h.restore(); }
 });
 

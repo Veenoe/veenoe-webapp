@@ -28,9 +28,13 @@ export function createAudioPipeline(deps: AudioPipelineDependencies) {
         isMuted: boolean,
         sendAudio: (data: ArrayBuffer) => boolean,
         onPacketSent: (byteLength: number) => void,
-        onPacketRejected: () => void
+        onPacketRejected: () => void,
+        onIntentionalSkip: (reason: 'muted' | 'inactive') => void = () => {}
     ) => {
-        if (microphoneState !== MicrophoneState.ACTIVE || isMuted) return;
+        if (microphoneState !== MicrophoneState.ACTIVE || isMuted) {
+            onIntentionalSkip(isMuted ? 'muted' : 'inactive');
+            return;
+        }
         if (sendAudio(data)) onPacketSent(data.byteLength);
         else onPacketRejected();
     };

@@ -23,6 +23,12 @@ export interface PlaybackBufferEvent {
     clearAcknowledgmentMs?: number;
     reason?: string;
     stats?: PlaybackBufferStats;
+    admissionToTransferMs?: number;
+    capacityWaitMs?: number;
+    conversionTransferMs?: number;
+    setupWaitMs?: number;
+    resumeWaitMs?: number;
+    admissionToFirstRenderMs?: number;
 }
 
 type Command =
@@ -57,6 +63,8 @@ interface PendingChunk {
     chunkId: number;
     encodedBytes: number;
     resolve: () => void;
+    admittedAtMs: number;
+    capacityWaitStartedAtMs?: number;
 }
 
 /** Owns browser resources, pending encoded audio, and transport reservations. */
@@ -77,6 +85,7 @@ export class AudioPlayer {
     private failed = false;
     private destroyed = false;
     private clearRequestedAt = new Map<number, number>();
+    private firstAdmissionAtMs: number | null = null;
 
     constructor(private callbacks: AudioPlayerCallbacks = {}) {}
 
@@ -157,7 +166,8 @@ export class AudioPlayer {
         }
         return new Promise(resolve => {
             const chunk: PendingChunk = { base64, generation: this.generation,
-                chunkId: ++this.nextChunkId, encodedBytes, resolve };
+                chunkId: ++this.nextChunkId, encodedBytes, resolve, admittedAtMs: performance.now() };
+            if (this.firstAdmissionAtMs === null) this.firstAdmissionAtMs = chunk.admittedAtMs;
             this.pending.push(chunk);
             this.pendingEncodedBytes += encodedBytes;
             this.notify({ type: 'pending', generation: chunk.generation, chunkId: chunk.chunkId,
@@ -174,19 +184,28 @@ export class AudioPlayer {
             while (this.pending.length && !this.destroyed && !this.failed) {
                 const owner = this.generation;
                 try {
+                    const setupStartedAtMs = performance.now();
                     await this.prepare();
+                    const setupWaitMs = performance.now() - setupStartedAtMs;
                     if (this.destroyed || owner !== this.generation) continue;
                     const context = this.audioContext;
                     if (!context || !this.node) throw new Error('Playback context unavailable');
+                    const resumeStartedAtMs = performance.now();
                     if (context.state === 'suspended') await context.resume();
+                    const resumeWaitMs = performance.now() - resumeStartedAtMs;
                     if (this.destroyed || owner !== this.generation) continue;
+                    let firstTransfer = true;
                     while (this.pending.length && this.pending[0].generation === owner) {
                         const chunk = this.pending[0];
                         // Let the worklet acknowledge transfers before spending more transport budget.
                         if (this.inFlightBytes + Math.floor(chunk.encodedBytes * 3 / 4) > MAX_IN_FLIGHT_BYTES) {
+                            chunk.capacityWaitStartedAtMs ??= performance.now();
                             waitingForAck = true;
                             break;
                         }
+                        const capacityWaitMs = chunk.capacityWaitStartedAtMs === undefined
+                            ? 0 : performance.now() - chunk.capacityWaitStartedAtMs;
+                        const conversionStartedAtMs = performance.now();
                         const binary = atob(chunk.base64);
                         if (!binary.length || binary.length % 2 || binary.length > MAX_IN_FLIGHT_BYTES) {
                             this.failPlayback();
@@ -199,11 +218,19 @@ export class AudioPlayer {
                         this.pendingEncodedBytes -= chunk.encodedBytes;
                         this.inFlight.set(chunk.chunkId, { generation: owner, bytes: pcm.byteLength });
                         this.inFlightBytes += pcm.byteLength;
-                        this.send({ type: 'audio', generation: owner, chunkId: chunk.chunkId, buffer: pcm.buffer }, [pcm.buffer]);
-                        chunk.resolve();
+                        try {
+                            this.send({ type: 'audio', generation: owner, chunkId: chunk.chunkId, buffer: pcm.buffer }, [pcm.buffer]);
+                        } finally {
+                            // The chunk left the FIFO; failure handling cannot find it there.
+                            chunk.resolve();
+                        }
                         this.notify({ type: 'transferred', generation: owner, chunkId: chunk.chunkId,
                             samples: binary.length / 2, pendingEncodedBytes: this.pendingEncodedBytes,
-                            inFlightBytes: this.inFlightBytes });
+                            inFlightBytes: this.inFlightBytes,
+                            admissionToTransferMs: performance.now() - chunk.admittedAtMs,
+                            capacityWaitMs, conversionTransferMs: performance.now() - conversionStartedAtMs,
+                            ...(firstTransfer ? { setupWaitMs, resumeWaitMs } : {}) });
+                        firstTransfer = false;
                     }
                     this.flushCompletion();
                     if (waitingForAck) return;
@@ -241,24 +268,32 @@ export class AudioPlayer {
             if (requestedAt !== undefined && event.reason === 'interruption')
                 event.clearAcknowledgmentMs = performance.now() - requestedAt;
         }
-        // Required state changes precede the optional diagnostic observer.
-        if (event.type === 'started') { this.isPlaying = true; this.callbacks.onPlayStart?.(); }
-        if (event.type === 'ended') {
-            const wasPlaying = this.isPlaying;
-            this.isPlaying = false;
-            if (wasPlaying) this.callbacks.onPlayEnd?.();
+        // Publish the final worklet counters before a lifecycle callback can dispose us.
+        if (event.type === 'started') {
+            this.isPlaying = true;
+            if (this.firstAdmissionAtMs !== null)
+                event.admissionToFirstRenderMs = performance.now() - this.firstAdmissionAtMs;
         }
+        let wasPlaying = false;
+        if (event.type === 'ended') {
+            wasPlaying = this.isPlaying;
+            this.isPlaying = false;
+            this.firstAdmissionAtMs = null;
+        }
+        this.notify(event as PlaybackBufferEvent);
         if (this.destroyed) return;
+        if (event.type === 'started') this.callbacks.onPlayStart?.();
+        if (event.type === 'ended' && wasPlaying) this.callbacks.onPlayEnd?.();
         if (event.type === 'underrun') this.notifyMetric(this.callbacks.onUnderrun);
         if (event.type === 'accepted' && typeof event.queueDepthMs === 'number' &&
             Number.isFinite(event.queueDepthMs) && event.queueDepthMs >= 0)
             this.notifyMetric(() => this.callbacks.onAudioScheduled?.(event.queueDepthMs!));
         if (event.type === 'overflow' || event.type === 'rejected') this.failPlayback();
-        this.notify(event as PlaybackBufferEvent);
     }
 
     completeTurn(): void {
         if (this.destroyed || this.failed) return;
+        if (!this.hasPendingAudio()) return;
         this.completionRequested = true;
         this.flushCompletion();
     }
@@ -293,6 +328,7 @@ export class AudioPlayer {
         this.queueDepthMs = 0;
         this.completionRequested = false;
         this.isPlaying = false;
+        this.firstAdmissionAtMs = null;
         this.clearRequestedAt.clear();
         if (this.node) {
             if (reason === 'interruption') this.clearRequestedAt.set(this.generation, performance.now());

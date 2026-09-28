@@ -11,9 +11,10 @@ class PCMProcessor extends AudioWorkletProcessor {
     this.recentLevel = null;
     this.pending = 0;
     this.dropped = 0;
+    this.nextPacketSequence = 0;
     this.latestUnsentPacket = null;
     this.pipeline = new AudioInputPipeline(options.processorOptions.sourceRate, (buffer) => {
-      const packet = { buffer, createdAtMs: currentTime * 1000 };
+      const packet = { buffer, createdAtMs: currentTime * 1000, sequence: ++this.nextPacketSequence };
       if (this.pending >= 3) {
         if (this.latestUnsentPacket) this.dropped++;
         this.latestUnsentPacket = packet;

@@ -78,6 +78,16 @@ test('completion drains a short final chunk and clear prevents stale replay', ()
   assert.ok(output[0] > 0);
 });
 
+test('completion of an empty or finished response does not carry into later audio', () => {
+  const queue = new AudioOutputPipeline();
+  queue.completeTurn();
+  queue.completeTurn();
+  queue.enqueue(pcm(Array(2400).fill(1000)));
+  const output = new Float32Array(128);
+  assert.equal(queue.render(output), 'started');
+  assert.equal(queue.complete, false);
+});
+
 test('capacity rejects overflow without overwriting queued PCM', () => {
   const queue = new AudioOutputPipeline();
   assert.equal(queue.enqueue(pcm(Array(720000).fill(1234))), true);

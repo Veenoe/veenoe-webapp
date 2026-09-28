@@ -36,7 +36,11 @@
       return true;
     }
 
-    completeTurn() { this.complete = true; }
+    completeTurn() {
+      // An idle completion has no response to own; a started underrun still does.
+      if ((!this.started && this.length === 0) || this.ended) return;
+      this.complete = true;
+    }
 
     render(output) {
       let event = null;

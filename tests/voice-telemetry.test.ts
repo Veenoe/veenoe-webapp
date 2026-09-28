@@ -171,7 +171,7 @@ test("microphone format and pressure diagnostics reset per session", () => {
     processingSampleRate: 48000, trackSampleRate: null,
     outputSampleRate: 16000, packetTargetMs: 20, resamplingActive: true
   });
-  telemetry.onMicrophonePacketsDropped(3);
+  telemetry.onMicrophoneDrop('worklet_backpressure', 3, { microphoneState: 'active', playbackState: 'idle' }, 4);
   telemetry.onMicrophoneDiagnostics({ requested: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }, supported: {}, applied: { echoCancellation: false }, capabilities: null });
   telemetry.onMicrophoneLevel({ rmsDbfs: -30, peakDbfs: -10, clippedSampleRatio: 0 });
   telemetry.onMicrophoneError('unavailable');
@@ -188,6 +188,35 @@ test("microphone format and pressure diagnostics reset per session", () => {
   assert.equal(telemetry.getSnapshot().microphoneLevel, null);
   assert.equal(telemetry.getSnapshot().microphoneErrorCode, null);
   assert.equal(telemetry.getSnapshot().inputPacketsDropped, 0);
+  assert.equal(telemetry.getSnapshot().inputContinuity.dropCounts.worklet_backpressure, 0);
+  assert.equal(telemetry.getSnapshot().inputContinuity.recentAnomalies.length, 0);
+});
+
+test('input continuity separates drop reasons, intentional mute, and user markers', () => {
+  const telemetry = new VoiceTelemetry();
+  telemetry.onSessionInitStart();
+  const context = { microphoneState: 'active', playbackState: 'playing' };
+  telemetry.onMicrophonePacketObserved({ sequence: 1, captureToMainAgeMs: 5 });
+  telemetry.onMicrophonePacketObserved({ sequence: 4, captureToMainAgeMs: 12 });
+  telemetry.onMicrophoneDrop('worklet_backpressure', 2, context, 4);
+  telemetry.onMicrophoneDrop('stale_main', 1, context, 4);
+  telemetry.onMicrophoneDrop('transport_unready', 1, context, 5);
+  telemetry.onMicrophoneForwardingPaused('muted');
+  telemetry.markTurnTakingObservation('replied_too_early', context);
+  const snapshot = telemetry.getSnapshot();
+  assert.equal(snapshot.inputPacketsDropped, 4);
+  assert.equal(snapshot.inputContinuity.maxSequenceGap, 2);
+  assert.equal(snapshot.inputContinuity.maxWorkletDropBurst, 2);
+  assert.equal(snapshot.inputContinuity.maxCaptureToMainAgeMs, 12);
+  assert.deepEqual(snapshot.inputContinuity.dropCounts, {
+    worklet_backpressure: 2, stale_main: 1, forwarding_failure: 0,
+    transport_unready: 1, send_failure: 0,
+  });
+  assert.equal(snapshot.inputContinuity.recentAnomalies.at(-1)?.reason, 'replied_too_early');
+  assert.equal(snapshot.connectionErrorCount, 0);
+  assert.doesNotMatch(JSON.stringify(snapshot), /deviceId|groupId|raw_audio|transcript/);
+  for (let index = 0; index < 30; index++) telemetry.onMicrophoneDrop('send_failure', 1, context, index + 6);
+  assert.equal(telemetry.getSnapshot().inputContinuity.recentAnomalies.length, 24);
 });
 
 test("turn isolation and no cross-turn metric leakage", () => {
@@ -293,10 +322,17 @@ test("playback accounting remains local and resets for the next session", () => 
   const snapshot = telemetry.getSnapshot();
   assert.equal(snapshot.playbackBuffer.stats?.storedSamples, 2400);
   assert.equal(snapshot.playbackBuffer.recentEvents.length, 1);
+  telemetry.onPlaybackBufferEvent({ type: 'transferred', generation: 0,
+    admissionToTransferMs: 18, capacityWaitMs: 4, conversionTransferMs: 2,
+    setupWaitMs: 10, resumeWaitMs: 3 });
+  telemetry.onPlaybackBufferEvent({ type: 'started', generation: 0, admissionToFirstRenderMs: 120 });
+  assert.equal(telemetry.getSnapshot().playbackBuffer.maxAdmissionToTransferMs, 18);
+  assert.equal(telemetry.getSnapshot().playbackBuffer.lastAdmissionToFirstRenderMs, 120);
   assert.equal(JSON.stringify(snapshot.playbackBuffer).includes('deviceId'), false);
   telemetry.onSessionInitStart();
   assert.equal(telemetry.getSnapshot().playbackBuffer.stats, null);
   assert.deepEqual(telemetry.getSnapshot().playbackBuffer.recentEvents, []);
+  assert.equal(telemetry.getSnapshot().playbackBuffer.maxAdmissionToTransferMs, null);
 });
 
 test("PostHog adapter safely no-ops without credentials", () => {

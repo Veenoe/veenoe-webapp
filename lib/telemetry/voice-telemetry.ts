@@ -16,7 +16,7 @@ import {
   sanitizeErrorMessage,
   VoiceEventProperties,
 } from "../analytics/posthog";
-import type { MicrophoneDiagnostics, MicrophoneFormat, MicrophoneLevel, MicrophoneErrorCode } from "../gemini/audio-recorder";
+import type { MicrophoneDiagnostics, MicrophoneFormat, MicrophoneLevel, MicrophoneErrorCode, MicrophoneDropReason, MicrophonePacketTiming } from "../gemini/audio-recorder";
 import type { PlaybackBufferEvent, PlaybackBufferStats } from "../gemini/audio-player";
 
 export interface PlaybackTraceEvent extends PlaybackBufferEvent {
@@ -29,6 +29,33 @@ export interface PlaybackBufferSnapshot {
   inFlightBytes: number;
   stats: PlaybackBufferStats | null;
   recentEvents: PlaybackTraceEvent[];
+  maxAdmissionToTransferMs: number | null;
+  maxCapacityWaitMs: number | null;
+  maxConversionTransferMs: number | null;
+  lastSetupWaitMs: number | null;
+  lastResumeWaitMs: number | null;
+  lastAdmissionToFirstRenderMs: number | null;
+}
+
+export interface InputAnomaly {
+  relTimeMs: number;
+  reason: MicrophoneDropReason | 'replied_too_early' | 'missed_or_delayed_words';
+  count: number;
+  sequence: number | null;
+  captureToMainAgeMs: number | null;
+  microphoneState: string;
+  playbackState: string;
+}
+
+export interface InputContinuitySnapshot {
+  recentCaptureToMainAgeMs: number | null;
+  maxCaptureToMainAgeMs: number | null;
+  recentAcceptedSendIntervalMs: number | null;
+  maxAcceptedSendIntervalMs: number | null;
+  maxSequenceGap: number;
+  maxWorkletDropBurst: number;
+  dropCounts: Record<MicrophoneDropReason, number>;
+  recentAnomalies: InputAnomaly[];
 }
 
 export interface DiagnosticEventItem {
@@ -71,6 +98,7 @@ export interface DiagnosticsSnapshot {
   microphoneLevel: MicrophoneLevel | null;
   microphoneErrorCode: MicrophoneErrorCode | null;
   inputPacketsDropped: number;
+  inputContinuity: InputContinuitySnapshot;
   sessionPlaybackUnderrunCount: number;
   playbackBuffer: PlaybackBufferSnapshot;
   lastTurnMetrics: TurnMetricsSnapshot | null;
@@ -132,6 +160,11 @@ export function generateAnonymousSessionId(): string {
 
 const MAX_RECENT_EVENTS = 20;
 const MAX_PLAYBACK_TRACE_EVENTS = 80;
+const MAX_INPUT_ANOMALIES = 24;
+const emptyDropCounts = (): Record<MicrophoneDropReason, number> => ({
+  worklet_backpressure: 0, stale_main: 0, forwarding_failure: 0,
+  transport_unready: 0, send_failure: 0,
+});
 
 export class VoiceTelemetry {
   private sessionId: string;
@@ -144,6 +177,24 @@ export class VoiceTelemetry {
   private microphoneLevel: MicrophoneLevel | null = null;
   private microphoneErrorCode: MicrophoneErrorCode | null = null;
   private inputPacketsDropped = 0;
+  private playbackDelay = {
+    maxAdmissionToTransferMs: null as number | null,
+    maxCapacityWaitMs: null as number | null,
+    maxConversionTransferMs: null as number | null,
+    lastSetupWaitMs: null as number | null,
+    lastResumeWaitMs: null as number | null,
+    lastAdmissionToFirstRenderMs: null as number | null,
+  };
+  private inputContinuity: InputContinuitySnapshot = {
+    recentCaptureToMainAgeMs: null, maxCaptureToMainAgeMs: null,
+    recentAcceptedSendIntervalMs: null, maxAcceptedSendIntervalMs: null,
+    maxSequenceGap: 0, maxWorkletDropBurst: 0,
+    dropCounts: emptyDropCounts(), recentAnomalies: [],
+  };
+  private lastObservedInputSequence: number | null = null;
+  private lastAcceptedSendTime: number | null = null;
+  private forwardingPause: 'muted' | 'inactive' | null = null;
+  private lastObservedInputAgeMs: number | null = null;
   private sessionPlaybackUnderruns = 0;
   private pendingClear: { generation: number; turn: number; sessionId: string } | null = null;
   private playbackQueueDepthMs: number | null = null;
@@ -259,6 +310,16 @@ export class VoiceTelemetry {
     // Reset ALL session counters (prevents cross-session contamination)
     this.totalInputPackets = 0;
     this.inputPacketsDropped = 0;
+    this.inputContinuity = {
+      recentCaptureToMainAgeMs: null, maxCaptureToMainAgeMs: null,
+      recentAcceptedSendIntervalMs: null, maxAcceptedSendIntervalMs: null,
+      maxSequenceGap: 0, maxWorkletDropBurst: 0,
+      dropCounts: emptyDropCounts(), recentAnomalies: [],
+    };
+    this.lastObservedInputSequence = null;
+    this.lastAcceptedSendTime = null;
+    this.forwardingPause = null;
+    this.lastObservedInputAgeMs = null;
     this.sessionPlaybackUnderruns = 0;
     this.pendingClear = null;
     this.playbackQueueDepthMs = null;
@@ -266,6 +327,8 @@ export class VoiceTelemetry {
     this.playbackInFlightBytes = 0;
     this.playbackStats = null;
     this.playbackTrace = [];
+    for (const key of Object.keys(this.playbackDelay) as Array<keyof typeof this.playbackDelay>)
+      this.playbackDelay[key] = null;
     this.microphoneFormat = null;
     this.microphoneDiagnostics = null;
     this.microphoneLevel = null;
@@ -319,12 +382,76 @@ export class VoiceTelemetry {
     this.recordDiagnosticEvent("microphone_error", code);
   }
 
-  public onMicrophonePacketsDropped(count: number): void {
+  /** Packet age uses one AudioContext clock; send intervals use performance.now(). */
+  public onMicrophonePacketObserved(timing: MicrophonePacketTiming): void {
+    if (Number.isFinite(timing.captureToMainAgeMs) && timing.captureToMainAgeMs >= 0) {
+      this.lastObservedInputAgeMs = timing.captureToMainAgeMs;
+      this.inputContinuity.recentCaptureToMainAgeMs = timing.captureToMainAgeMs;
+      this.inputContinuity.maxCaptureToMainAgeMs = Math.max(
+        this.inputContinuity.maxCaptureToMainAgeMs ?? 0, timing.captureToMainAgeMs);
+    }
+    if (Number.isSafeInteger(timing.sequence) && timing.sequence > 0) {
+      if (this.lastObservedInputSequence !== null && timing.sequence > this.lastObservedInputSequence)
+        this.inputContinuity.maxSequenceGap = Math.max(
+          this.inputContinuity.maxSequenceGap, timing.sequence - this.lastObservedInputSequence - 1);
+      this.lastObservedInputSequence = timing.sequence;
+    }
+  }
+
+  public onMicrophoneDrop(
+    reason: MicrophoneDropReason,
+    count: number,
+    context: { microphoneState: string; playbackState: string },
+    sequence: number | null = null,
+  ): void {
+    if (!Number.isSafeInteger(count) || count <= 0) return;
     this.inputPacketsDropped += count;
+    this.inputContinuity.dropCounts[reason] += count;
+    if (reason === 'worklet_backpressure')
+      this.inputContinuity.maxWorkletDropBurst = Math.max(this.inputContinuity.maxWorkletDropBurst, count);
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    this.inputContinuity.recentAnomalies.push({
+      relTimeMs: Math.round(now - this.sessionStartTime), reason, count, sequence,
+      captureToMainAgeMs: this.lastObservedInputAgeMs, ...context,
+    });
+    if (this.inputContinuity.recentAnomalies.length > MAX_INPUT_ANOMALIES)
+      this.inputContinuity.recentAnomalies.shift();
+  }
+
+  public onMicrophoneForwardingPaused(reason: 'muted' | 'inactive'): void {
+    this.lastAcceptedSendTime = null;
+    if (this.forwardingPause !== reason) this.recordDiagnosticEvent('microphone_forwarding_paused', reason);
+    this.forwardingPause = reason;
+  }
+
+  /** QA markers share the input anomaly timeline; they never carry speech content. */
+  public markTurnTakingObservation(
+    reason: 'replied_too_early' | 'missed_or_delayed_words',
+    context: { microphoneState: string; playbackState: string },
+  ): void {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    this.inputContinuity.recentAnomalies.push({
+      relTimeMs: Math.round(now - this.sessionStartTime), reason, count: 0,
+      sequence: this.lastObservedInputSequence,
+      captureToMainAgeMs: this.lastObservedInputAgeMs, ...context,
+    });
+    if (this.inputContinuity.recentAnomalies.length > MAX_INPUT_ANOMALIES)
+      this.inputContinuity.recentAnomalies.shift();
   }
 
   /** Local-only playback accounting. The diagnostics panel polls this state. */
   public onPlaybackBufferEvent(event: PlaybackBufferEvent): void {
+    const maximum = (previous: number | null, current: number | undefined) =>
+      current === undefined ? previous : Math.max(previous ?? 0, current);
+    this.playbackDelay.maxAdmissionToTransferMs = maximum(
+      this.playbackDelay.maxAdmissionToTransferMs, event.admissionToTransferMs);
+    this.playbackDelay.maxCapacityWaitMs = maximum(this.playbackDelay.maxCapacityWaitMs, event.capacityWaitMs);
+    this.playbackDelay.maxConversionTransferMs = maximum(
+      this.playbackDelay.maxConversionTransferMs, event.conversionTransferMs);
+    if (event.setupWaitMs !== undefined) this.playbackDelay.lastSetupWaitMs = event.setupWaitMs;
+    if (event.resumeWaitMs !== undefined) this.playbackDelay.lastResumeWaitMs = event.resumeWaitMs;
+    if (event.admissionToFirstRenderMs !== undefined)
+      this.playbackDelay.lastAdmissionToFirstRenderMs = event.admissionToFirstRenderMs;
     if (event.type === 'clear_requested' && event.reason === 'interruption') {
       this.pendingClear = { generation: event.generation, turn: this.currentTurn, sessionId: this.sessionId };
     }
@@ -357,6 +484,12 @@ export class VoiceTelemetry {
       ...(event.clearAcknowledgmentMs !== undefined ? { clearAcknowledgmentMs: event.clearAcknowledgmentMs } : {}),
       ...(event.pendingEncodedBytes !== undefined ? { pendingEncodedBytes: event.pendingEncodedBytes } : {}),
       ...(event.inFlightBytes !== undefined ? { inFlightBytes: event.inFlightBytes } : {}),
+      ...(event.admissionToTransferMs !== undefined ? { admissionToTransferMs: event.admissionToTransferMs } : {}),
+      ...(event.capacityWaitMs !== undefined ? { capacityWaitMs: event.capacityWaitMs } : {}),
+      ...(event.conversionTransferMs !== undefined ? { conversionTransferMs: event.conversionTransferMs } : {}),
+      ...(event.setupWaitMs !== undefined ? { setupWaitMs: event.setupWaitMs } : {}),
+      ...(event.resumeWaitMs !== undefined ? { resumeWaitMs: event.resumeWaitMs } : {}),
+      ...(event.admissionToFirstRenderMs !== undefined ? { admissionToFirstRenderMs: event.admissionToFirstRenderMs } : {}),
       relTimeMs: Math.round(now - this.sessionStartTime),
     });
     if (this.playbackTrace.length > MAX_PLAYBACK_TRACE_EVENTS) this.playbackTrace.shift();
@@ -474,6 +607,14 @@ export class VoiceTelemetry {
 
   public onMicrophonePacketSent(byteLength: number): void {
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (this.lastAcceptedSendTime !== null) {
+      const intervalMs = now - this.lastAcceptedSendTime;
+      this.inputContinuity.recentAcceptedSendIntervalMs = intervalMs;
+      this.inputContinuity.maxAcceptedSendIntervalMs = Math.max(
+        this.inputContinuity.maxAcceptedSendIntervalMs ?? 0, intervalMs);
+    }
+    this.lastAcceptedSendTime = now;
+    this.forwardingPause = null;
 
     // Start a new turn if none is active or previous completed
     if (this.currentTurn === 0) {
@@ -725,6 +866,11 @@ export class VoiceTelemetry {
       microphoneLevel: this.microphoneLevel && { ...this.microphoneLevel },
       microphoneErrorCode: this.microphoneErrorCode,
       inputPacketsDropped: this.inputPacketsDropped,
+      inputContinuity: {
+        ...this.inputContinuity,
+        dropCounts: { ...this.inputContinuity.dropCounts },
+        recentAnomalies: [...this.inputContinuity.recentAnomalies],
+      },
       sessionPlaybackUnderrunCount: this.sessionPlaybackUnderruns,
       playbackBuffer: {
         queueDepthMs: this.playbackQueueDepthMs,
@@ -732,6 +878,7 @@ export class VoiceTelemetry {
         inFlightBytes: this.playbackInFlightBytes,
         stats: this.playbackStats && { ...this.playbackStats },
         recentEvents: [...this.playbackTrace],
+        ...this.playbackDelay,
       },
       lastTurnMetrics: this.lastCompletedTurnMetrics,
       totalInputPackets: this.totalInputPackets,
