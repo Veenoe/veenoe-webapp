@@ -67,6 +67,7 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
 export class GeminiLiveClientSDK {
     private session: Session | null = null;
     private transportOpen = false;
+    private connectionGeneration = 0;
     private eventHandlers: GeminiLiveEventHandlers = {};
     private responseQueue: unknown[] = [];
     private isProcessing = false;
@@ -92,13 +93,15 @@ export class GeminiLiveClientSDK {
      * This is the primary method to call for connecting.
      */
     async connect(): Promise<void> {
-        await this.connectWithRetry();
+        const generation = ++this.connectionGeneration;
+        await this.connectWithRetry(0, generation);
     }
 
     /**
      * Internal connection logic with retry support.
      */
-    private async connectWithRetry(attempt = 0): Promise<void> {
+    private async connectWithRetry(attempt: number, generation: number): Promise<void> {
+        if (generation !== this.connectionGeneration) return;
         this.transportOpen = false;
         debug(`Initiating connection (attempt ${attempt + 1}/${this.retryConfig.maxRetries + 1})...`);
 
@@ -122,26 +125,30 @@ export class GeminiLiveClientSDK {
 
         try {
             debug("Connecting to model:", model);
-            this.session = await ai.live.connect({
+            const session = await ai.live.connect({
                 model,
                 callbacks: {
                     onopen: () => {
+                        if (generation !== this.connectionGeneration) return;
                         this.transportOpen = true;
                         debug('Connection established');
                         this.eventHandlers.onConnected?.();
                     },
                     onmessage: (message: LiveServerMessage) => {
+                        if (generation !== this.connectionGeneration) return;
                         this.responseQueue.push(message);
                         if (!this.isProcessing) {
                             this.processMessages();
                         }
                     },
                     onerror: (e: unknown) => {
+                        if (generation !== this.connectionGeneration) return;
                         this.transportOpen = false;
                         debug('Connection error:', e);
                         this.eventHandlers.onError?.(new Error(String(e)));
                     },
                     onclose: () => {
+                        if (generation !== this.connectionGeneration) return;
                         this.transportOpen = false;
                         debug('Connection closed');
                         this.eventHandlers.onDisconnected?.();
@@ -149,7 +156,13 @@ export class GeminiLiveClientSDK {
                 },
                 config,
             });
+            if (generation !== this.connectionGeneration) {
+                session.close();
+                return;
+            }
+            this.session = session;
         } catch (error) {
+            if (generation !== this.connectionGeneration) return;
             debug("Connection failed:", error);
 
             // Check if we should retry
@@ -160,8 +173,9 @@ export class GeminiLiveClientSDK {
                 );
                 debug(`Retrying in ${delay}ms...`);
                 this.eventHandlers.onReconnectAttempt?.(attempt + 1);
+                if (generation !== this.connectionGeneration) return;
                 await this.delay(delay);
-                return this.connectWithRetry(attempt + 1);
+                return this.connectWithRetry(attempt + 1, generation);
             }
 
             // Max retries exceeded - notify error
@@ -284,7 +298,9 @@ export class GeminiLiveClientSDK {
      */
     disconnect(): void {
         console.log("[GeminiLiveClientSDK] Disconnecting...");
+        this.connectionGeneration++;
         this.transportOpen = false;
+        this.responseQueue = [];
         if (this.session) {
             try {
                 if (typeof this.session.close === 'function') this.session.close();

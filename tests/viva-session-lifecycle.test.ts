@@ -23,7 +23,7 @@ for (const [status, expectedState, expectedPath] of [
   });
 }
 
-test("active microphone loss stops realtime resources before one abandonment attempt, without a Gemini error", async () => {
+test("track end invokes fatal microphone orchestration once before abandonment", async () => {
   const globals = globalThis as Record<string, unknown>;
   const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
   const previousContext = globals.AudioContext;
@@ -47,7 +47,7 @@ test("active microphone loss stops realtime resources before one abandonment att
       recordError: (code: string) => effects.push(`mic:${code}`),
       setError: (message: string) => effects.push(`error:${message}`),
       setSessionState: (state: SessionState) => effects.push(`state:${state}`),
-      cleanupResources: () => { effects.push("gemini_stopped", "player_stopped"); recorder.cleanup(); },
+      cleanupResources: () => { effects.push("cleanup"); recorder.cleanup(); },
       abandonSession: async () => { effects.push("abandon_attempt"); throw new Error("offline"); },
     };
     await recorder.initialize(() => endSessionForMicrophoneFailure(new MicrophoneError("ended"), handled, actions));
@@ -56,10 +56,9 @@ test("active microphone loss stops realtime resources before one abandonment att
     await Promise.resolve();
     assert.deepEqual(effects, [
       "mic:ended", "error:The microphone disconnected. Check the device and start a new session.",
-      "state:error", "gemini_stopped", "player_stopped", "abandon_attempt",
+      "state:error", "cleanup", "abandon_attempt",
     ]);
     assert.deepEqual([stopped, closed], [1, 1]);
-    assert.equal(effects.some(event => event.startsWith("gemini_error")), false);
   } finally {
     if (previousNavigator === undefined) delete globals.navigator; else Object.defineProperty(globalThis, "navigator", previousNavigator);
     if (previousContext === undefined) delete globals.AudioContext; else globals.AudioContext = previousContext;
