@@ -199,10 +199,10 @@ export function VoiceDiagnosticsPanel() {
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Interruption -&gt; Stop:</span>
+                <span className="text-muted-foreground">Clear acknowledgment:</span>
                 <span className="font-bold text-foreground">
-                  {lastTurn?.interruptionToPlaybackStopMs !== null && lastTurn?.interruptionToPlaybackStopMs !== undefined
-                    ? `${lastTurn.interruptionToPlaybackStopMs} ms`
+                  {lastTurn?.clearRequestToAcknowledgmentMs !== null && lastTurn?.clearRequestToAcknowledgmentMs !== undefined
+                    ? `${lastTurn.clearRequestToAcknowledgmentMs} ms`
                     : "—"}
                 </span>
               </div>
@@ -292,7 +292,7 @@ export function VoiceDiagnosticsPanel() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Underruns:</span>
                 <span className="font-medium text-foreground">
-                  {lastTurn?.playbackUnderrunCount || 0}
+                  {lastTurn?.playbackUnderrunCount ?? "—"} last turn / {snapshot.sessionPlaybackUnderrunCount} session
                 </span>
               </div>
               <div className="flex justify-between">
@@ -302,7 +302,13 @@ export function VoiceDiagnosticsPanel() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Stored / played samples:</span>
+                <span className="text-muted-foreground">Pending / unacked:</span>
+                <span className="font-medium text-foreground">
+                  {snapshot.playbackBuffer.pendingEncodedBytes} / {snapshot.playbackBuffer.inFlightBytes} bytes
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Stored / rendered samples:</span>
                 <span className="font-medium text-foreground">
                   {snapshot.playbackBuffer.stats
                     ? `${snapshot.playbackBuffer.stats.storedSamples} / ${snapshot.playbackBuffer.stats.playedSamples}`

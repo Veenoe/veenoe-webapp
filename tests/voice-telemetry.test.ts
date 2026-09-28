@@ -222,7 +222,7 @@ test("turn isolation and no cross-turn metric leakage", () => {
   assert.equal(snap2.lastTurnMetrics?.outputAudioChunkCount, 2);
 });
 
-test("interrupted turn calculates interruption latency and flags turn", () => {
+test("interrupted turn waits for a correlated clear acknowledgment", () => {
   const telemetry = new VoiceTelemetry();
   telemetry.onSessionInitStart();
 
@@ -232,13 +232,26 @@ test("interrupted turn calculates interruption latency and flags turn", () => {
 
   // Gemini sends interruption signal
   telemetry.onInterruptionSignalReceived();
-  // Playback is stopped
-  telemetry.onPlaybackStoppedDueToInterruption();
+  telemetry.onPlaybackBufferEvent({ type: "clear_requested", generation: 1, reason: "interruption" });
+  telemetry.onInterruptionClearRequested();
 
   const snap = telemetry.getSnapshot();
   assert.equal(snap.lastTurnMetrics?.interrupted, true);
-  assert.ok(snap.lastTurnMetrics?.interruptionToPlaybackStopMs !== null);
-  assert.ok(snap.lastTurnMetrics!.interruptionToPlaybackStopMs! >= 0);
+  assert.equal(snap.lastTurnMetrics?.clearRequestToAcknowledgmentMs, null);
+  telemetry.onMicrophonePacketSent(256);
+  telemetry.onPlaybackBufferEvent({ type: "cleared", generation: 1, reason: "interruption", clearAcknowledgmentMs: 12 });
+  assert.equal(telemetry.getSnapshot().lastTurnMetrics?.clearRequestToAcknowledgmentMs, 12);
+});
+
+test("first-audio transport turnaround is frozen while the microphone keeps streaming", () => {
+  const telemetry = new VoiceTelemetry();
+  telemetry.onSessionInitStart();
+  telemetry.onMicrophonePacketSent(256);
+  telemetry.onGeminiAudioChunkReceived();
+  telemetry.onMicrophonePacketSent(256);
+  telemetry.onTurnComplete();
+  assert.notEqual(telemetry.getSnapshot().lastTurnMetrics?.lastInputPacketToFirstGeminiAudioMs, null);
+  assert.equal(telemetry.getSnapshot().lastTurnMetrics?.speechEndToFirstGeminiAudioMs, null);
 });
 
 test("interruption without playback leaves playback-stop latency unavailable", () => {
@@ -250,7 +263,7 @@ test("interruption without playback leaves playback-stop latency unavailable", (
 
   const snap = telemetry.getSnapshot();
   assert.equal(snap.lastTurnMetrics?.interrupted, true);
-  assert.equal(snap.lastTurnMetrics?.interruptionToPlaybackStopMs, null);
+  assert.equal(snap.lastTurnMetrics?.clearRequestToAcknowledgmentMs, null);
   assert.equal(snap.recentEvents.some(event => event.name === "playback_stopped_interruption"), false);
 });
 
@@ -273,7 +286,7 @@ test("playback accounting remains local and resets for the next session", () => 
   const telemetry = new VoiceTelemetry();
   telemetry.onSessionInitStart();
   telemetry.onPlaybackBufferEvent({
-    type: 'depth', generation: 0, chunkId: 1, samples: 2400, queueDepthMs: 100,
+    type: 'accepted', generation: 0, chunkId: 1, samples: 2400, queueDepthMs: 100,
     stats: { receivedSamples: 2400, storedSamples: 2400, playedSamples: 0,
       clearedSamples: 0, rejectedSamples: 0, waitingSilenceSamples: 0 },
   });

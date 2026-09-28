@@ -94,3 +94,22 @@ test('saved conclusion waits for queued audio even before playback starts', asyn
     useVivaStore.getState().resetSession();
   }
 });
+
+test('throwing playback diagnostic does not prevent final conclusion', () => {
+  const pending = { current: true };
+  let finishes = 0;
+  const pipeline = createAudioPipeline({
+    setConversationState: () => {}, setPlaybackState: () => {},
+    isConclusionPendingRef: pending, isTurnCompleteRef: { current: true },
+    isAudioPlayingRef: { current: true }, finishConclusion: () => { finishes++; },
+  });
+  const oldError = console.error;
+  console.error = () => {};
+  try {
+    const callbacks = pipeline.createPlaybackCallbacks({
+      onPlayEnd: () => { throw new Error('diagnostics'); },
+    });
+    callbacks.onPlayEnd?.();
+    assert.equal(finishes, 1);
+  } finally { console.error = oldError; }
+});

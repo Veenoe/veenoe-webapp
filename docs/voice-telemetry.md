@@ -49,7 +49,8 @@ PostHog is integrated via `posthog-js` with strict privacy constraints:
 | `voice_session_started` | Viva session initialized | `telemetry_session_id`, `model_name` |
 | `voice_connection_ready` | Gemini `setup_complete` received | `telemetry_session_id`, `connection_setup_ms`, `model_name` |
 | `voice_turn_completed` | Model turn completed or finished | `turn_number`, `last_input_packet_to_first_gemini_audio_ms`, `first_gemini_audio_to_playback_ms`, `input_packet_count`, `input_bytes`, `packets_per_second`, `output_audio_chunk_count`, `max_playback_queue_ms`, `playback_underrun_count`, `interrupted` |
-| `voice_interruption` | Gemini interruption detected & playback stopped | `turn_number`, `interruption_to_playback_stop_ms` |
+| `voice_interruption` | Gemini interruption detected; clear requested without waiting | `turn_number` |
+| `voice_playback_clear_acknowledged` | Matching worklet clear acknowledged | `turn_number`, `clear_request_to_acknowledgment_ms` |
 | `voice_connection_error` | WebSocket / setup error | `telemetry_session_id`, `error_type`, `error_category`, `connection_error_count`, `model_name` |
 | `voice_session_ended` | Session teardown / concluded | `total_input_packets`, `total_input_bytes`, `total_output_chunks`, `disconnect_count`, `connection_error_count` |
 
@@ -107,7 +108,7 @@ To record baseline measurements before Voice v2 improvements:
 ### Scenario 2: User Interruption (Barge-In)
 1. While the AI examiner is speaking, speak clearly into the microphone.
 2. Note when Gemini triggers interruption and local audio stops.
-3. Observe `interruption_to_playback_stop_ms` in the Diagnostics panel.
+3. Observe clear acknowledgment latency in the Diagnostics panel. It measures main-thread request to worklet acknowledgment, not physical speaker latency.
 
 ### Scenario 3: Noisy Environment
 1. Introduce background noise (e.g. ambient cafe sound or typing).
@@ -123,4 +124,4 @@ To record baseline measurements before Voice v2 improvements:
 3. Create Insights:
    - **Median Response Latency:** Trend of `p50(last_input_packet_to_first_gemini_audio_ms)`
    - **Playback Pipeline Delay:** Trend of `p50(first_gemini_audio_to_playback_ms)`
-   - **Interruption Cease Time:** Trend of `p50(interruption_to_playback_stop_ms)`
+   - **Worklet Clear Acknowledgment:** Trend of `p50(clear_request_to_acknowledgment_ms)` on `voice_playback_clear_acknowledged`

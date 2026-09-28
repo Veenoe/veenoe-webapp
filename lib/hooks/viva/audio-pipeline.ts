@@ -62,17 +62,22 @@ export function createAudioPipeline(deps: AudioPipelineDependencies) {
         isTurnCompleteRef.current = true;
     };
 
+    const notifyDiagnostic = (callback: (() => void) | undefined) => {
+        try { callback?.(); }
+        catch (error) { console.error('[AudioPipeline] Diagnostic observer failed', error); }
+    };
+
     const createPlaybackCallbacks = (extraCallbacks?: Partial<AudioPlayerCallbacks>): AudioPlayerCallbacks => ({
         onPlayStart: () => {
             isAudioPlayingRef.current = true;
             setPlaybackState(PlaybackState.PLAYING);
             setConversationState(ConversationState.SPEAKING);
-            extraCallbacks?.onPlayStart?.();
+            notifyDiagnostic(extraCallbacks?.onPlayStart);
         },
         onPlayEnd: () => {
             isAudioPlayingRef.current = false;
             setPlaybackState(PlaybackState.IDLE);
-            extraCallbacks?.onPlayEnd?.();
+            notifyDiagnostic(extraCallbacks?.onPlayEnd);
             if (isConclusionPendingRef.current) {
                 finishConclusion();
             } else if (isTurnCompleteRef.current) {
@@ -82,11 +87,11 @@ export function createAudioPipeline(deps: AudioPipelineDependencies) {
             }
         },
         onAudioScheduled: (queueDurationMs) => {
-            extraCallbacks?.onAudioScheduled?.(queueDurationMs);
+            notifyDiagnostic(() => extraCallbacks?.onAudioScheduled?.(queueDurationMs));
         },
-        onUnderrun: () => extraCallbacks?.onUnderrun?.(),
+        onUnderrun: () => notifyDiagnostic(extraCallbacks?.onUnderrun),
         onPlaybackError: () => extraCallbacks?.onPlaybackError?.(),
-        onBufferEvent: (event) => extraCallbacks?.onBufferEvent?.(event),
+        onBufferEvent: (event) => notifyDiagnostic(() => extraCallbacks?.onBufferEvent?.(event)),
     });
 
     const interruptPlayback = (

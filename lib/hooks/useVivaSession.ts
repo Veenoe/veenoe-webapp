@@ -299,7 +299,7 @@ export function useVivaSession() {
             audioPipeline.interruptPlayback(
               () => audioPlayerRef.current?.stop(),
               () => voiceTelemetry.onInterruptionSignalReceived(),
-              () => voiceTelemetry.onPlaybackStoppedDueToInterruption(),
+              () => voiceTelemetry.onInterruptionClearRequested(),
               () => voiceTelemetry.onInterruptionWithoutPlayback(),
             );
           },

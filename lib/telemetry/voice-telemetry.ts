@@ -25,6 +25,8 @@ export interface PlaybackTraceEvent extends PlaybackBufferEvent {
 
 export interface PlaybackBufferSnapshot {
   queueDepthMs: number | null;
+  pendingEncodedBytes: number;
+  inFlightBytes: number;
   stats: PlaybackBufferStats | null;
   recentEvents: PlaybackTraceEvent[];
 }
@@ -43,7 +45,7 @@ export interface TurnMetricsSnapshot {
   lastInputPacketToFirstGeminiAudioMs: number | null; // Raw transport turnaround (last packet -> first audio)
   firstGeminiAudioToPlaybackMs: number | null; // Audio received to playback start delay
   speechEndToFirstPlaybackMs: number | null; // Currently unavailable
-  interruptionToPlaybackStopMs: number | null; // Interruption signal to playback stopped
+  clearRequestToAcknowledgmentMs: number | null; // Main-thread clear request to worklet acknowledgment
   inputPacketCount: number;
   inputBytes: number;
   averagePacketBytes: number | null;
@@ -69,6 +71,7 @@ export interface DiagnosticsSnapshot {
   microphoneLevel: MicrophoneLevel | null;
   microphoneErrorCode: MicrophoneErrorCode | null;
   inputPacketsDropped: number;
+  sessionPlaybackUnderrunCount: number;
   playbackBuffer: PlaybackBufferSnapshot;
   lastTurnMetrics: TurnMetricsSnapshot | null;
   // Session totals
@@ -141,7 +144,11 @@ export class VoiceTelemetry {
   private microphoneLevel: MicrophoneLevel | null = null;
   private microphoneErrorCode: MicrophoneErrorCode | null = null;
   private inputPacketsDropped = 0;
+  private sessionPlaybackUnderruns = 0;
+  private pendingClear: { generation: number; turn: number; sessionId: string } | null = null;
   private playbackQueueDepthMs: number | null = null;
+  private playbackPendingEncodedBytes = 0;
+  private playbackInFlightBytes = 0;
   private playbackStats: PlaybackBufferStats | null = null;
   private playbackTrace: PlaybackTraceEvent[] = [];
 
@@ -174,14 +181,13 @@ export class VoiceTelemetry {
   private turnPacketIntervalSum = 0;
   private turnPacketIntervalCount = 0;
   private turnFirstGeminiAudioTime: number | null = null;
+  private turnInputToFirstAudioMs: number | null = null;
   private turnFirstPlaybackScheduledTime: number | null = null;
   private turnFirstPlaybackStartTime: number | null = null;
   private turnOutputChunkCount = 0;
-  private turnInterruptedTime: number | null = null;
-  private turnPlaybackStoppedTime: number | null = null;
+  private turnClearAcknowledgmentMs: number | null = null;
   private turnPlaybackUnderruns = 0;
   private turnMaxPlaybackQueueMs: number | null = null;
-  private turnIsInterrupted = false;
 
   private lastCompletedTurnMetrics: TurnMetricsSnapshot | null = null;
 
@@ -253,7 +259,11 @@ export class VoiceTelemetry {
     // Reset ALL session counters (prevents cross-session contamination)
     this.totalInputPackets = 0;
     this.inputPacketsDropped = 0;
+    this.sessionPlaybackUnderruns = 0;
+    this.pendingClear = null;
     this.playbackQueueDepthMs = null;
+    this.playbackPendingEncodedBytes = 0;
+    this.playbackInFlightBytes = 0;
     this.playbackStats = null;
     this.playbackTrace = [];
     this.microphoneFormat = null;
@@ -315,7 +325,26 @@ export class VoiceTelemetry {
 
   /** Local-only playback accounting. The diagnostics panel polls this state. */
   public onPlaybackBufferEvent(event: PlaybackBufferEvent): void {
+    if (event.type === 'clear_requested' && event.reason === 'interruption') {
+      this.pendingClear = { generation: event.generation, turn: this.currentTurn, sessionId: this.sessionId };
+    }
+    if (event.type === 'cleared' && event.reason === 'interruption' &&
+        this.pendingClear?.generation === event.generation && this.pendingClear.sessionId === this.sessionId) {
+      const { turn } = this.pendingClear;
+      this.pendingClear = null;
+      if (event.clearAcknowledgmentMs !== undefined) {
+        if (this.lastCompletedTurnMetrics?.turnNumber === turn)
+          this.lastCompletedTurnMetrics.clearRequestToAcknowledgmentMs = event.clearAcknowledgmentMs;
+        else if (this.currentTurn === turn) this.turnClearAcknowledgmentMs = event.clearAcknowledgmentMs;
+        captureVoiceEvent('voice_playback_clear_acknowledged', {
+          telemetry_session_id: this.sessionId, turn_number: turn,
+          clear_request_to_acknowledgment_ms: event.clearAcknowledgmentMs,
+        });
+      }
+    }
     if (event.queueDepthMs !== undefined) this.playbackQueueDepthMs = event.queueDepthMs;
+    if (event.pendingEncodedBytes !== undefined) this.playbackPendingEncodedBytes = event.pendingEncodedBytes;
+    if (event.inFlightBytes !== undefined) this.playbackInFlightBytes = event.inFlightBytes;
     if (event.stats) this.playbackStats = { ...event.stats };
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
     this.playbackTrace.push({
@@ -325,6 +354,9 @@ export class VoiceTelemetry {
       ...(event.samples !== undefined ? { samples: event.samples } : {}),
       ...(event.queueDepthMs !== undefined ? { queueDepthMs: event.queueDepthMs } : {}),
       ...(event.reason !== undefined ? { reason: event.reason } : {}),
+      ...(event.clearAcknowledgmentMs !== undefined ? { clearAcknowledgmentMs: event.clearAcknowledgmentMs } : {}),
+      ...(event.pendingEncodedBytes !== undefined ? { pendingEncodedBytes: event.pendingEncodedBytes } : {}),
+      ...(event.inFlightBytes !== undefined ? { inFlightBytes: event.inFlightBytes } : {}),
       relTimeMs: Math.round(now - this.sessionStartTime),
     });
     if (this.playbackTrace.length > MAX_PLAYBACK_TRACE_EVENTS) this.playbackTrace.shift();
@@ -415,6 +447,7 @@ export class VoiceTelemetry {
       return; // Already ended - idempotent guard
     }
     this.isSessionActive = false;
+    this.pendingClear = null;
 
     // If a turn was in progress, complete it cleanly
     if (this.turnInputPacketCount > 0 || this.turnOutputChunkCount > 0) {
@@ -478,6 +511,7 @@ export class VoiceTelemetry {
       this.turnFirstGeminiAudioTime = now;
 
       const proxyLatency = calculateElapsedMs(this.turnLastPacketTime, now);
+      this.turnInputToFirstAudioMs = proxyLatency;
       this.recordDiagnosticEvent(
         "first_gemini_audio",
         proxyLatency !== null ? `turnaround: ${proxyLatency}ms` : undefined
@@ -518,41 +552,29 @@ export class VoiceTelemetry {
 
   public onPlaybackUnderrun(): void {
     this.turnPlaybackUnderruns++;
+    this.sessionPlaybackUnderruns++;
     this.recordDiagnosticEvent("playback_gap");
   }
 
   // --- Interruption Measurements ---
 
   public onInterruptionSignalReceived(): void {
-    this.turnInterruptedTime = typeof performance !== "undefined" ? performance.now() : Date.now();
-    this.turnIsInterrupted = true;
     this.recordDiagnosticEvent("interruption_received");
   }
 
-  public onPlaybackStoppedDueToInterruption(): void {
-    this.turnPlaybackStoppedTime = typeof performance !== "undefined" ? performance.now() : Date.now();
-    const interruptionDuration = calculateElapsedMs(
-      this.turnInterruptedTime,
-      this.turnPlaybackStoppedTime
-    );
-
-    this.recordDiagnosticEvent(
-      "playback_stopped_interruption",
-      interruptionDuration !== null ? `${interruptionDuration}ms` : undefined
-    );
-
-    this.finalizeInterruption(interruptionDuration);
+  public onInterruptionClearRequested(): void {
+    // The clear request is synchronous; its worklet acknowledgment arrives later.
+    this.finalizeInterruption();
   }
 
   public onInterruptionWithoutPlayback(): void {
-    this.finalizeInterruption(null);
+    this.finalizeInterruption();
   }
 
-  private finalizeInterruption(interruptionDuration: number | null): void {
+  private finalizeInterruption(): void {
     captureVoiceEvent("voice_interruption", {
       telemetry_session_id: this.sessionId,
       turn_number: this.currentTurn,
-      interruption_to_playback_stop_ms: interruptionDuration,
       model_name: this.modelName,
       vad_profile: this.vadProfile,
     });
@@ -583,20 +605,14 @@ export class VoiceTelemetry {
     const speechEndToFirstPlaybackMs: number | null = null;
 
     // Honest transport turnaround: timestamp of last input packet sent to first audio chunk from Gemini
-    const lastInputPacketToFirstGeminiAudioMs = calculateElapsedMs(
-      this.turnLastPacketTime,
-      this.turnFirstGeminiAudioTime
-    );
+    const lastInputPacketToFirstGeminiAudioMs = this.turnInputToFirstAudioMs;
 
     const firstGeminiAudioToPlaybackMs = calculateElapsedMs(
       this.turnFirstGeminiAudioTime,
       this.turnFirstPlaybackStartTime
     );
 
-    const interruptionToPlaybackStopMs = calculateElapsedMs(
-      this.turnInterruptedTime,
-      this.turnPlaybackStoppedTime
-    );
+    const clearRequestToAcknowledgmentMs = this.turnClearAcknowledgmentMs;
 
     const metricsSnapshot: TurnMetricsSnapshot = {
       turnNumber: this.currentTurn,
@@ -604,7 +620,7 @@ export class VoiceTelemetry {
       lastInputPacketToFirstGeminiAudioMs,
       firstGeminiAudioToPlaybackMs,
       speechEndToFirstPlaybackMs,
-      interruptionToPlaybackStopMs,
+      clearRequestToAcknowledgmentMs,
       inputPacketCount: this.turnInputPacketCount,
       inputBytes: this.turnInputBytes,
       averagePacketBytes: avgPacketBytes,
@@ -631,7 +647,7 @@ export class VoiceTelemetry {
         turn: this.currentTurn,
         lastPacketToFirstAudioMs: lastInputPacketToFirstGeminiAudioMs,
         geminiToPlaybackMs: firstGeminiAudioToPlaybackMs,
-        interruptionStopMs: interruptionToPlaybackStopMs,
+        clearAcknowledgmentMs: clearRequestToAcknowledgmentMs,
         inputPackets: this.turnInputPacketCount,
         outputChunks: this.turnOutputChunkCount,
       });
@@ -651,7 +667,7 @@ export class VoiceTelemetry {
       first_gemini_audio_to_playback_ms: firstGeminiAudioToPlaybackMs,
       speech_end_to_first_playback_ms: speechEndToFirstPlaybackMs,
 
-      interruption_to_playback_stop_ms: interruptionToPlaybackStopMs,
+      clear_request_to_acknowledgment_ms: clearRequestToAcknowledgmentMs,
 
       input_packet_count: this.turnInputPacketCount,
       input_bytes: this.turnInputBytes,
@@ -685,14 +701,13 @@ export class VoiceTelemetry {
     this.turnPacketIntervalSum = 0;
     this.turnPacketIntervalCount = 0;
     this.turnFirstGeminiAudioTime = null;
+    this.turnInputToFirstAudioMs = null;
     this.turnFirstPlaybackScheduledTime = null;
     this.turnFirstPlaybackStartTime = null;
     this.turnOutputChunkCount = 0;
-    this.turnInterruptedTime = null;
-    this.turnPlaybackStoppedTime = null;
+    this.turnClearAcknowledgmentMs = null;
     this.turnPlaybackUnderruns = 0;
     this.turnMaxPlaybackQueueMs = null;
-    this.turnIsInterrupted = false;
   }
 
   // --- Diagnostics Snapshot Getter ---
@@ -710,8 +725,11 @@ export class VoiceTelemetry {
       microphoneLevel: this.microphoneLevel && { ...this.microphoneLevel },
       microphoneErrorCode: this.microphoneErrorCode,
       inputPacketsDropped: this.inputPacketsDropped,
+      sessionPlaybackUnderrunCount: this.sessionPlaybackUnderruns,
       playbackBuffer: {
         queueDepthMs: this.playbackQueueDepthMs,
+        pendingEncodedBytes: this.playbackPendingEncodedBytes,
+        inFlightBytes: this.playbackInFlightBytes,
         stats: this.playbackStats && { ...this.playbackStats },
         recentEvents: [...this.playbackTrace],
       },
