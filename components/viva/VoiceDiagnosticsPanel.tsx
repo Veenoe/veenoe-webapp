@@ -77,7 +77,7 @@ export function VoiceDiagnosticsPanel() {
 
   const lastTurn = snapshot.lastTurnMetrics;
   const mic = snapshot.microphoneDiagnostics;
-  const reported = (value: boolean | number | undefined) => value === undefined ? "unreported" : String(value);
+  const reported = (value: string | boolean | number | undefined) => value === undefined ? "unreported" : String(value);
 
   const connectionBadgeColor =
     snapshot.connectionState === "connected"
@@ -89,7 +89,7 @@ export function VoiceDiagnosticsPanel() {
           : "bg-muted text-muted-foreground border-border";
 
   return (
-    <div className="fixed bottom-4 right-4 z-[60] font-mono text-xs select-none max-w-sm w-full transition-all">
+    <div className="fixed bottom-4 right-4 z-60 font-mono text-xs select-none max-w-sm w-full transition-all">
       {/* Minimized Pill / Header */}
       <div
         onClick={() => setIsOpen(!isOpen)}
