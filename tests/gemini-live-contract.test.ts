@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { Modality } from '@google/genai';
+import { Live, Modality, type LiveCallbacks, type Session } from '@google/genai';
 
 import {
   createGeminiClientContent,
@@ -67,6 +67,62 @@ test('text send and connection state both require an open transport', () => {
   internal.transportOpen = true;
   assert.equal(client.sendText('conclude'), false);
   assert.equal(client.getConnectionState(), 'disconnected');
+});
+
+test('disconnect during Live setup closes a late session and ignores stale callbacks', async () => {
+  const originalConnect = Live.prototype.connect;
+  let callbacks: LiveCallbacks | null = null;
+  let resolveSession!: (session: Session) => void;
+  const pending = new Promise<Session>(resolve => { resolveSession = resolve; });
+  Live.prototype.connect = async (params) => { callbacks = params.callbacks; return pending; };
+  let connected = 0;
+  let errors = 0;
+  let disconnected = 0;
+  let closed = 0;
+  try {
+    const client = new GeminiLiveClientSDK('auth_tokens/test', {
+      onConnected: () => { connected++; },
+      onError: () => { errors++; },
+      onDisconnected: () => { disconnected++; },
+    });
+    const connecting = client.connect();
+    callbacks!.onopen?.();
+    assert.equal(connected, 1);
+    client.disconnect();
+    callbacks!.onopen?.();
+    callbacks!.onerror?.({} as ErrorEvent);
+    callbacks!.onclose?.({} as CloseEvent);
+    resolveSession({ close: () => { closed++; } } as Session);
+    await connecting;
+    assert.deepEqual([connected, errors, disconnected, closed], [1, 0, 0, 1]);
+    assert.equal(client.getConnectionState(), 'disconnected');
+  } finally {
+    Live.prototype.connect = originalConnect;
+  }
+});
+
+test('disconnect during retry delay prevents another Live connection', async () => {
+  const originalConnect = Live.prototype.connect;
+  let attempts = 0;
+  Live.prototype.connect = async () => { attempts++; throw new Error('connect failed'); };
+  let releaseDelay!: () => void;
+  let retries = 0;
+  let errors = 0;
+  try {
+    const client = new GeminiLiveClientSDK('auth_tokens/test', {
+      onReconnectAttempt: () => { retries++; }, onError: () => { errors++; },
+    });
+    (client as unknown as { delay: () => Promise<void> }).delay = () => new Promise(resolve => { releaseDelay = resolve; });
+    const connecting = client.connect();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual([attempts, retries], [1, 1]);
+    client.disconnect();
+    releaseDelay();
+    await connecting;
+    assert.deepEqual([attempts, retries, errors], [1, 1, 0]);
+  } finally {
+    Live.prototype.connect = originalConnect;
+  }
 });
 
 test('uses audio response without duplicating backend VAD or voice', () => {

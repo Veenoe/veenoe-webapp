@@ -172,10 +172,21 @@ test("microphone format and pressure diagnostics reset per session", () => {
     outputSampleRate: 16000, packetTargetMs: 20, resamplingActive: true
   });
   telemetry.onMicrophonePacketsDropped(3);
+  telemetry.onMicrophoneDiagnostics({ requested: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }, supported: {}, applied: { echoCancellation: false }, capabilities: null });
+  telemetry.onMicrophoneLevel({ rmsDbfs: -30, peakDbfs: -10, clippedSampleRatio: 0 });
+  telemetry.onMicrophoneError('unavailable');
   assert.equal(telemetry.getSnapshot().microphoneFormat?.processingSampleRate, 48000);
+  assert.equal(telemetry.getSnapshot().microphoneDiagnostics?.applied.echoCancellation, false);
+  assert.equal(telemetry.getSnapshot().microphoneLevel?.rmsDbfs, -30);
+  assert.equal(telemetry.getSnapshot().microphoneErrorCode, 'unavailable');
+  assert.equal(telemetry.getSnapshot().connectionErrorCount, 0);
+  assert.doesNotMatch(JSON.stringify(telemetry.getSnapshot()), /deviceId|groupId|raw_audio/);
   assert.equal(telemetry.getSnapshot().inputPacketsDropped, 3);
   telemetry.onSessionInitStart();
   assert.equal(telemetry.getSnapshot().microphoneFormat, null);
+  assert.equal(telemetry.getSnapshot().microphoneDiagnostics, null);
+  assert.equal(telemetry.getSnapshot().microphoneLevel, null);
+  assert.equal(telemetry.getSnapshot().microphoneErrorCode, null);
   assert.equal(telemetry.getSnapshot().inputPacketsDropped, 0);
 });
 

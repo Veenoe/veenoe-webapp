@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { useVivaStore } from "@/lib/store/viva-store";
 import { GeminiLiveClientSDK } from "@/lib/gemini/live-client-sdk";
-import { AudioRecorder } from "@/lib/gemini/audio-recorder";
+import { AudioRecorder, MicrophoneError } from "@/lib/gemini/audio-recorder";
 import { AudioPlayer } from "@/lib/gemini/audio-player";
 import {
   SessionState,
@@ -17,7 +17,7 @@ import { voiceTelemetry } from "@/lib/telemetry/voice-telemetry";
 import { createToolHandler } from "./viva/tool-handlers";
 import { createAudioPipeline } from "./viva/audio-pipeline";
 import { abandonViva } from "@/lib/api/axios";
-import { applyAbandonOutcome } from "./viva/session-lifecycle";
+import { applyAbandonOutcome, endSessionForMicrophoneFailure } from "./viva/session-lifecycle";
 
 export function useVivaSession() {
   const router = useRouter();
@@ -44,6 +44,7 @@ export function useVivaSession() {
   const isConclusionPendingRef = useRef(false);
   const isConclusionSavingRef = useRef(false);
   const abandonmentRef = useRef<Promise<void> | null>(null);
+  const fatalMicrophoneHandledRef = useRef(false);
 
   // Cleanup all resources
   const cleanupResources = useCallback(() => {
@@ -75,7 +76,7 @@ export function useVivaSession() {
     isConclusionPendingRef.current = false;
   }, [cleanupResources, setSessionState]);
 
-  const abandonSession = useCallback(() => {
+  const abandonSession = useCallback((preserveError = false) => {
     const sessionId = useVivaStore.getState().sessionId;
     if (!sessionId || abandonmentRef.current) {
       return abandonmentRef.current ?? Promise.resolve();
@@ -92,7 +93,9 @@ export function useVivaSession() {
       })
       .catch(() => {
         if (useVivaStore.getState().sessionId === sessionId) {
-          setError("Could not end the session. Please try again.");
+          if (!preserveError && !fatalMicrophoneHandledRef.current) {
+            setError("Could not end the session. Please try again.");
+          }
           setSessionState(SessionState.ERROR);
         }
         throw new Error("Session abandonment failed");
@@ -104,9 +107,18 @@ export function useVivaSession() {
     return pending;
   }, [cleanupResources, router, setError, setSessionState]);
 
+  const handleFatalMicrophoneError = useCallback((error: MicrophoneError) => {
+    endSessionForMicrophoneFailure(error, fatalMicrophoneHandledRef, {
+      recordError: (code) => voiceTelemetry.onMicrophoneError(code),
+      setError,
+      setSessionState,
+      cleanupResources,
+      abandonSession: () => abandonSession(true),
+    });
+  }, [abandonSession, cleanupResources, setError, setSessionState]);
+
   // Create audio pipeline controller
   // Existing controller factory retains refs; it does not read their values during render.
-  // eslint-disable-next-line react-hooks/refs
   const audioPipeline = useMemo(() => createAudioPipeline({
     setConversationState,
     setPlaybackState,
@@ -117,7 +129,6 @@ export function useVivaSession() {
   }), [setConversationState, setPlaybackState, finishConclusion]);
 
   // Create tool handler (with auth token getter for API calls)
-  // eslint-disable-next-line react-hooks/refs
   const handleToolCall = useMemo(() => createToolHandler({
     setError,
     finishConclusion,
@@ -146,14 +157,15 @@ export function useVivaSession() {
           () => voiceTelemetry.onMicrophonePacketsDropped(1),
         );
       }, (count) => voiceTelemetry.onMicrophonePacketsDropped(count),
-        (format) => voiceTelemetry.onMicrophoneFormat(format));
+        (format) => voiceTelemetry.onMicrophoneFormat(format),
+        (level) => voiceTelemetry.onMicrophoneLevel(level));
+      if (fatalMicrophoneHandledRef.current) return;
       setMicrophoneState(MicrophoneState.ACTIVE);
       setConversationState(ConversationState.LISTENING);
-    } catch {
-      setError("Failed to start recording");
-      setMicrophoneState(MicrophoneState.IDLE);
+    } catch (error) {
+      handleFatalMicrophoneError(error instanceof MicrophoneError ? error : new MicrophoneError('processing'));
     }
-  }, [audioPipeline, setMicrophoneState, setConversationState, setError]);
+  }, [audioPipeline, setMicrophoneState, setConversationState, handleFatalMicrophoneError]);
 
   // Initialize session
   const initializeSession = useCallback(async () => {
@@ -162,6 +174,7 @@ export function useVivaSession() {
 
     try {
       setSessionState(SessionState.STARTING);
+      fatalMicrophoneHandledRef.current = false;
       isConclusionPendingRef.current = false;
       audioPipeline.reset();
 
@@ -173,7 +186,13 @@ export function useVivaSession() {
 
       // Initialize audio recorder (handles microphone input)
       audioHandlerRef.current = new AudioRecorder();
-      await audioHandlerRef.current.initialize();
+      await audioHandlerRef.current.initialize(() => {
+        handleFatalMicrophoneError(new MicrophoneError('ended'));
+      });
+      if (fatalMicrophoneHandledRef.current) return;
+      const microphoneDiagnostics = audioHandlerRef.current.getMicrophoneDiagnostics();
+      if (!microphoneDiagnostics) throw new MicrophoneError('ended');
+      voiceTelemetry.onMicrophoneDiagnostics(microphoneDiagnostics);
       voiceTelemetry.onMicrophoneReady();
 
       // Initialize audio player with pipeline callbacks and telemetry hooks
@@ -186,6 +205,7 @@ export function useVivaSession() {
         })
       );
       await audioPlayerRef.current.initialize();
+      if (fatalMicrophoneHandledRef.current) return;
       voiceTelemetry.onAudioPlayerReady();
 
       // Initialize clean Gemini Live SDK transport
@@ -193,6 +213,7 @@ export function useVivaSession() {
         ephemeralToken,
         {
           onConnected: () => {
+            if (!audioHandlerRef.current?.getMicrophoneDiagnostics()) return;
             voiceTelemetry.onGeminiConnected();
             setSessionState(SessionState.ACTIVE);
             _startAudioPipeline();
@@ -257,10 +278,17 @@ export function useVivaSession() {
         googleModel ?? undefined
       );
 
+      if (!audioHandlerRef.current?.getMicrophoneDiagnostics()) throw new MicrophoneError('ended');
       await geminiClientRef.current.connect();
     } catch (err) {
-      voiceTelemetry.onGeminiError(err);
-      setError(err instanceof Error ? err.message : "Connection failed");
+      if (fatalMicrophoneHandledRef.current) return;
+      if (err instanceof MicrophoneError) {
+        handleFatalMicrophoneError(err);
+        return;
+      } else {
+        voiceTelemetry.onGeminiError(err);
+        setError(err instanceof Error ? err.message : "Connection failed");
+      }
       setSessionState(SessionState.ERROR);
       void abandonSession().catch(() => {});
     }
@@ -272,6 +300,7 @@ export function useVivaSession() {
     _startAudioPipeline,
     audioPipeline,
     abandonSession,
+    handleFatalMicrophoneError,
   ]);
 
   // Request conclusion from AI

@@ -76,6 +76,8 @@ export function VoiceDiagnosticsPanel() {
   };
 
   const lastTurn = snapshot.lastTurnMetrics;
+  const mic = snapshot.microphoneDiagnostics;
+  const reported = (value: string | boolean | number | undefined) => value === undefined ? "unreported" : String(value);
 
   const connectionBadgeColor =
     snapshot.connectionState === "connected"
@@ -87,7 +89,7 @@ export function VoiceDiagnosticsPanel() {
           : "bg-muted text-muted-foreground border-border";
 
   return (
-    <div className="fixed bottom-4 right-4 z-[60] font-mono text-xs select-none max-w-sm w-full transition-all">
+    <div className="fixed bottom-4 right-4 z-60 font-mono text-xs select-none max-w-sm w-full transition-all">
       {/* Minimized Pill / Header */}
       <div
         onClick={() => setIsOpen(!isOpen)}
@@ -208,6 +210,21 @@ export function VoiceDiagnosticsPanel() {
           </div>
 
           {/* Transport & Audio Metrics */}
+          <div className="space-y-1 bg-muted/20 p-2 rounded-md border border-border/40 text-[11px]">
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Microphone Capture</div>
+            {(['echoCancellation', 'noiseSuppression', 'autoGainControl'] as const).map((key) => (
+              <div key={key} className="flex justify-between gap-2">
+                <span className="text-muted-foreground">{key}</span>
+                <span title={`Requested: ${mic?.requested[key] ?? '—'}; browser support: ${reported(mic?.supported[key])}; capability: ${JSON.stringify(mic?.capabilities?.[key]) ?? 'unreported'}`}>
+                  {reported(mic?.applied[key])}
+                </span>
+              </div>
+            ))}
+            <div>Channels: {reported(mic?.applied.channelCount)} · Track: {reported(mic?.applied.sampleRate)} Hz</div>
+            <div>Web Audio: {snapshot.microphoneFormat?.processingSampleRate ?? '—'} Hz → PCM: {snapshot.microphoneFormat?.outputSampleRate ?? '—'} Hz ({snapshot.microphoneFormat?.resamplingActive ? 'resampling' : 'no resampling'})</div>
+            <div>Input RMS: {snapshot.microphoneLevel?.rmsDbfs.toFixed(1) ?? '—'} dBFS · Peak: {snapshot.microphoneLevel?.peakDbfs.toFixed(1) ?? '—'} dBFS · ≥98%: {snapshot.microphoneLevel ? (snapshot.microphoneLevel.clippedSampleRatio * 100).toFixed(2) : '—'}%</div>
+            {snapshot.microphoneErrorCode && <div>Mic error: {snapshot.microphoneErrorCode}</div>}
+          </div>
           <div className="space-y-1.5 bg-muted/20 p-2 rounded-md border border-border/40">
             <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               Microphone & Playback Transport
