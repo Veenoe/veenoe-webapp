@@ -1,166 +1,194 @@
-/** Gemini Live PCM16 playback through one persistent audio-thread queue. */
+/**
+ * AudioPlayer - Handles audio playback for Gemini Live API responses.
+ * 
+ * Design Decisions (First Principles):
+ * 1. Lazy AudioContext creation (browser autoplay policy)
+ * 2. Source tracking with proper cleanup to prevent memory leaks
+ * 3. Guard checks in callbacks to handle race conditions during cleanup
+ * 4. Clear separation between normal end and forced stop
+ */
+
+// Debug utility - disabled in production
+const debug = process.env.NODE_ENV !== 'production'
+    ? (...args: unknown[]) => console.log('[AudioPlayer]', ...args)
+    : () => { };
+
 export interface AudioPlayerCallbacks {
     onPlayStart?: () => void;
     onPlayEnd?: () => void;
     onAudioScheduled?: (queueDurationMs: number) => void;
     onUnderrun?: () => void;
-    onPlaybackError?: () => void;
 }
 
-const OUTPUT_SAMPLE_RATE_HZ = 24000;
-const MAX_IN_FLIGHT_BYTES = OUTPUT_SAMPLE_RATE_HZ * 2 * 4;
-
-/** Owns the output AudioContext and serializes Gemini chunks into one worklet. */
 export class AudioPlayer {
     private audioContext: AudioContext | null = null;
-    private node: AudioWorkletNode | null = null;
-    private setup: Promise<void> | null = null;
-    private enqueueTail: Promise<void> = Promise.resolve();
-    private generation = 0;
-    private pendingChunks = 0;
-    private inFlightBytes = 0;
-    private completionRequested = false;
+    private nextStartTime = 0;
+    private onPlayStart?: () => void;
+    private onPlayEnd?: () => void;
+    private onAudioScheduled?: (queueDurationMs: number) => void;
+    private onUnderrun?: () => void;
+    private sources = new Set<AudioBufferSourceNode>();
     private isPlaying = false;
-    private destroyed = false;
+    private isDestroyed = false;  // Guard flag to prevent stale callbacks
+    private playbackGeneration = 0;
 
-    constructor(private callbacks: AudioPlayerCallbacks = {}) {}
+    constructor(callbacks?: AudioPlayerCallbacks) {
+        this.onPlayStart = callbacks?.onPlayStart;
+        this.onPlayEnd = callbacks?.onPlayEnd;
+        this.onAudioScheduled = callbacks?.onAudioScheduled;
+        this.onUnderrun = callbacks?.onUnderrun;
+    }
 
     async initialize(): Promise<void> {
-        // A user gesture on first playback is needed for browser autoplay policies.
+        // Audio context will be created on first play to respect browser autoplay policies
+        debug("Initialized (AudioContext will be created on first play)");
     }
 
-    private async prepare(): Promise<void> {
-        if (this.setup) return this.setup;
-        this.setup = (async () => {
-            const context = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE_HZ });
-            this.audioContext = context;
-            try {
-                if (context.sampleRate !== OUTPUT_SAMPLE_RATE_HZ) throw new Error('Unsupported playback sample rate');
-                await context.audioWorklet.addModule('/audio-output-pipeline.js');
-                await context.audioWorklet.addModule('/audio-output-worklet.js');
-                if (this.destroyed) return;
-                const node = new AudioWorkletNode(context, 'audio-output-processor', {
-                    numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1],
-                });
-                node.port.onmessage = ({ data }) => {
-                    if (this.destroyed || data.generation !== this.generation) return;
-                    switch (data.type) {
-                        case 'started':
-                            this.isPlaying = true;
-                            this.callbacks.onPlayStart?.();
-                            break;
-                        case 'ended':
-                            if (this.isPlaying) this.callbacks.onPlayEnd?.();
-                            this.isPlaying = false;
-                            break;
-                        case 'underrun':
-                            this.callbacks.onUnderrun?.();
-                            break;
-                        case 'depth':
-                            this.inFlightBytes = Math.max(0, this.inFlightBytes - data.acceptedBytes);
-                            this.callbacks.onAudioScheduled?.(data.queueDepthMs);
-                            break;
-                        case 'overflow':
-                            this.failPlayback();
-                            break;
-                    }
-                };
-                node.connect(context.destination);
-                node.onprocessorerror = () => this.failPlayback();
-                this.node = node;
-            } catch (error) {
-                if (this.audioContext === context) this.audioContext = null;
-                void context.close().catch(() => {});
-                this.setup = null;
-                throw error;
-            }
-        })();
-        return this.setup;
-    }
+    async playAudio(base64String: string): Promise<void> {
+        // Guard: Don't play if destroyed
+        if (this.isDestroyed) {
+            debug("Ignoring play request - player is destroyed");
+            return;
+        }
+        const generation = this.playbackGeneration;
 
-    playAudio(base64: string): Promise<void> {
-        if (this.destroyed) return Promise.resolve();
-        const generation = this.generation;
-        this.pendingChunks++;
-        // Concurrent SDK callbacks may await context setup or resume; preserve arrival order.
-        const enqueue = this.enqueueTail.then(() => this.enqueueAudio(base64, generation));
-        this.enqueueTail = enqueue.catch(() => {});
-        return enqueue;
-    }
-
-    private async enqueueAudio(base64: string, generation: number): Promise<void> {
         try {
-            await this.prepare();
-            const context = this.audioContext;
-            if (!context || generation !== this.generation || this.destroyed) return;
-            if (context.state === 'suspended') await context.resume();
-            if (generation !== this.generation || this.destroyed || !this.node) return;
-            const binary = atob(base64);
-            const pcm = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) pcm[i] = binary.charCodeAt(i);
-            // Limit chunks waiting in MessagePort as well as the worklet's ring buffer.
-            if (this.inFlightBytes + pcm.byteLength > MAX_IN_FLIGHT_BYTES) {
-                this.failPlayback();
+            if (!this.audioContext || this.audioContext.state === "closed") {
+                this.audioContext = new AudioContext({ sampleRate: 24000 });
+                this.nextStartTime = this.audioContext.currentTime;
+            }
+
+            // Resume context if suspended (browser autoplay policy)
+            if (this.audioContext.state === "suspended") {
+                await this.audioContext.resume();
+            }
+            if (generation !== this.playbackGeneration || this.isDestroyed) return;
+        } catch (error) {
+            debug("Failed to create/resume AudioContext:", error);
+            throw new Error("Audio playback is not supported in this browser");
+        }
+
+        const float32AudioData = this.base64ToFloat32AudioData(base64String);
+
+        // Create buffer
+        const audioBuffer = this.audioContext.createBuffer(
+            1,
+            float32AudioData.length,
+            24000
+        );
+        audioBuffer.copyToChannel(new Float32Array(float32AudioData), 0);
+
+        // Create source
+        const source = this.audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(this.audioContext.destination);
+
+        // Check for playback underrun (gap in audio stream while actively playing)
+        const currentTime = this.audioContext.currentTime;
+        if (this.isPlaying && this.nextStartTime < currentTime) {
+            this.onUnderrun?.();
+        }
+
+        // Schedule playback
+        // Ensure we don't schedule in the past, but also keep the stream continuous
+        this.nextStartTime = Math.max(this.nextStartTime, currentTime);
+        source.start(this.nextStartTime);
+
+        const queuedDurationMs = Math.max(0, (this.nextStartTime - currentTime) * 1000);
+        this.onAudioScheduled?.(queuedDurationMs);
+
+        // Track the source
+        this.sources.add(source);
+
+        // Update state and trigger callback if this is the first active source
+        if (!this.isPlaying) {
+            this.isPlaying = true;
+            this.onPlayStart?.();
+        }
+
+        // Advance time for next chunk
+        this.nextStartTime += audioBuffer.duration;
+
+        // Cleanup when this specific source ends
+        source.onended = () => {
+            // Guard: Check if source was already cleaned up (prevents memory leak)
+            // This can happen if stop() was called while audio was playing
+            if (!this.sources.has(source)) {
                 return;
             }
-            this.inFlightBytes += pcm.byteLength;
-            this.node.port.postMessage({ type: 'audio', generation, buffer: pcm.buffer }, [pcm.buffer]);
-        } catch {
-            throw new Error('Audio playback could not be initialized');
-        } finally {
-            if (generation === this.generation) {
-                this.pendingChunks--;
-                this.flushCompletion();
+
+            this.sources.delete(source);
+
+            // If no more sources are playing, trigger end callback
+            // But only if we haven't been destroyed
+            if (this.sources.size === 0 && this.isPlaying && !this.isDestroyed) {
+                this.isPlaying = false;
+                this.onPlayEnd?.();
             }
-        }
+        };
     }
 
-    /** Drain buffered PCM, then emit the normal playback-end callback once. */
-    completeTurn(): void {
-        if (this.destroyed) return;
-        this.completionRequested = true;
-        this.flushCompletion();
-    }
-
-    private failPlayback(): void {
-        if (this.destroyed) return;
-        this.stop();
-        this.callbacks.onPlaybackError?.();
-    }
-
-    private flushCompletion(): void {
-        // The server's turnComplete may arrive before earlier async enqueues finish.
-        if (this.completionRequested && this.pendingChunks === 0 && this.node) {
-            this.node.port.postMessage({ type: 'complete', generation: this.generation });
-            this.completionRequested = false;
-        }
-    }
-
-    /** Discard the current response without reporting a normal playback end. */
     stop(): void {
-        // Worklet messages are ordered; generation also filters events already in transit.
-        this.generation++;
-        this.pendingChunks = 0;
-        this.inFlightBytes = 0;
-        this.enqueueTail = Promise.resolve();
-        this.completionRequested = false;
+        debug("Stopping all audio sources");
+        this.playbackGeneration++;
+
+        // Clear all sources
+        this.sources.forEach(source => {
+            // Remove callback first to prevent it from firing
+            source.onended = null;
+            try {
+                source.stop();
+            } catch {
+                // Ignore errors if source already stopped
+            }
+        });
+        this.sources.clear();
+
+        // Reset time tracking
+        if (this.audioContext) {
+            this.nextStartTime = this.audioContext.currentTime;
+        }
+
         this.isPlaying = false;
-        this.node?.port.postMessage({ type: 'clear', generation: this.generation });
+        // We don't trigger onPlayEnd here because this is a forced stop (interruption)
     }
 
-    /** Release the persistent worklet and context; safe to call more than once. */
-    cleanup(): void {
-        if (this.destroyed) return;
-        this.destroyed = true;
-        this.stop();
-        if (this.node) {
-            this.node.port.onmessage = null;
-            this.node.port.close();
-            this.node.disconnect();
-            this.node = null;
+    private base64ToFloat32AudioData(base64String: string): Float32Array {
+        const byteCharacters = atob(base64String);
+        const byteArray = new Uint8Array(byteCharacters.length);
+
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteArray[i] = byteCharacters.charCodeAt(i);
         }
-        const context = this.audioContext;
-        this.audioContext = null;
-        if (context) void context.close().catch(() => {});
+
+        // Convert Uint8Array (which contains 16-bit PCM) to Float32Array
+        const length = byteArray.length / 2; // 16-bit audio, so 2 bytes per sample
+        const float32AudioData = new Float32Array(length);
+
+        const dataView = new DataView(byteArray.buffer);
+
+        for (let i = 0; i < length; i++) {
+            // Read 16-bit signed integer (little-endian)
+            const sample = dataView.getInt16(i * 2, true);
+
+            // Convert from 16-bit PCM to Float32 (range -1 to 1)
+            float32AudioData[i] = sample < 0 ? sample / 32768 : sample / 32767;
+        }
+
+        return float32AudioData;
+    }
+
+    cleanup(): void {
+        debug("Cleaning up");
+
+        // Mark as destroyed to prevent any pending callbacks from executing
+        this.isDestroyed = true;
+
+        this.stop();
+
+        if (this.audioContext) {
+            this.audioContext.close();
+            this.audioContext = null;
+        }
     }
 }
