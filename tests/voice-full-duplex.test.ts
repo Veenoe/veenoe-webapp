@@ -124,6 +124,25 @@ test('interruption without queued playback does not record a playback stop', () 
   assert.deepEqual(events, ['signal', 'stop', 'no-playback']);
 });
 
+test('interruption finishes a saved conclusion waiting on playback', () => {
+  useVivaStore.getState().resetSession();
+  const pending = { current: true };
+  const playing = { current: true };
+  let finished = 0;
+  const conclusionPipeline = createAudioPipeline({
+    setConversationState: state => useVivaStore.getState().setConversationState(state),
+    setPlaybackState: state => useVivaStore.getState().setPlaybackState(state),
+    isConclusionPendingRef: pending,
+    isTurnCompleteRef: { current: false },
+    isAudioPlayingRef: playing,
+    finishConclusion: () => { finished++; },
+  });
+  conclusionPipeline.interruptPlayback(() => {}, () => {}, () => {}, () => {});
+  assert.equal(finished, 1);
+  assert.equal(playing.current, false);
+  useVivaStore.getState().resetSession();
+});
+
 test('normal playback ends into listening once turn completes', () => {
   const { pipeline, turnComplete } = setup();
   const callbacks = pipeline.createPlaybackCallbacks();
@@ -132,6 +151,14 @@ test('normal playback ends into listening once turn completes', () => {
   callbacks.onPlayEnd?.();
   assert.equal(useVivaStore.getState().conversationState, ConversationState.LISTENING);
   assert.equal(useVivaStore.getState().playbackState, PlaybackState.IDLE);
+});
+
+test('playback failure reaches the session error handler', () => {
+  const { pipeline } = setup();
+  let failures = 0;
+  pipeline.createPlaybackCallbacks({ onPlaybackError: () => { failures++; } }).onPlaybackError?.();
+  assert.equal(failures, 1);
+  useVivaStore.getState().resetSession();
 });
 
 test('interrupted Gemini message does not dispatch stale audio from the same response', () => {

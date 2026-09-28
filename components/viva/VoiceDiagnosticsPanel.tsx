@@ -295,6 +295,31 @@ export function VoiceDiagnosticsPanel() {
                   {lastTurn?.playbackUnderrunCount || 0}
                 </span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Queue now:</span>
+                <span className="font-medium text-foreground">
+                  {snapshot.playbackBuffer.queueDepthMs === null ? "—" : `${Math.round(snapshot.playbackBuffer.queueDepthMs)} ms`}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Stored / played samples:</span>
+                <span className="font-medium text-foreground">
+                  {snapshot.playbackBuffer.stats
+                    ? `${snapshot.playbackBuffer.stats.storedSamples} / ${snapshot.playbackBuffer.stats.playedSamples}`
+                    : "—"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Cleared / rejected samples:</span>
+                <span className="font-medium text-foreground">
+                  {snapshot.playbackBuffer.stats
+                    ? `${snapshot.playbackBuffer.stats.clearedSamples} / ${snapshot.playbackBuffer.stats.rejectedSamples}`
+                    : "—"}
+                </span>
+              </div>
+              <div className="text-[10px] text-muted-foreground">
+                Copy JSON includes the last {snapshot.playbackBuffer.recentEvents.length} playback buffer events.
+              </div>
             </div>
           </div>
 

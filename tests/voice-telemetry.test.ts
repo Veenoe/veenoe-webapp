@@ -269,6 +269,23 @@ test("bounded recent event history does not exceed 20 items", () => {
   assert.ok(snap.recentEvents.length <= 20);
 });
 
+test("playback accounting remains local and resets for the next session", () => {
+  const telemetry = new VoiceTelemetry();
+  telemetry.onSessionInitStart();
+  telemetry.onPlaybackBufferEvent({
+    type: 'depth', generation: 0, chunkId: 1, samples: 2400, queueDepthMs: 100,
+    stats: { receivedSamples: 2400, storedSamples: 2400, playedSamples: 0,
+      clearedSamples: 0, rejectedSamples: 0, waitingSilenceSamples: 0 },
+  });
+  const snapshot = telemetry.getSnapshot();
+  assert.equal(snapshot.playbackBuffer.stats?.storedSamples, 2400);
+  assert.equal(snapshot.playbackBuffer.recentEvents.length, 1);
+  assert.equal(JSON.stringify(snapshot.playbackBuffer).includes('deviceId'), false);
+  telemetry.onSessionInitStart();
+  assert.equal(telemetry.getSnapshot().playbackBuffer.stats, null);
+  assert.deepEqual(telemetry.getSnapshot().playbackBuffer.recentEvents, []);
+});
+
 test("PostHog adapter safely no-ops without credentials", () => {
   // Ensure unconfigured environment does not throw
   delete process.env.NEXT_PUBLIC_POSTHOG_KEY;

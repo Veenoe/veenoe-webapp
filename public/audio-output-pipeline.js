@@ -2,7 +2,7 @@
 (function (root) {
   const SAMPLE_RATE_HZ = 24000;
   const START_BUFFER_MS = 100; // Covers small arrival jitter without adding a large speech delay.
-  const CAPACITY_MS = 4000; // Hard memory limit; this is separate from the startup target.
+  const CAPACITY_MS = 30000; // 1.44 MB maximum backlog; startup remains 100 ms.
 
   class AudioOutputPipeline {
     constructor() {
@@ -20,6 +20,8 @@
       this.playing = false;
       this.complete = false;
       this.ended = false;
+      this.lastRenderedSamples = 0;
+      this.lastWaitingSilenceSamples = 0;
     }
 
     enqueue(buffer) {
@@ -38,6 +40,8 @@
 
     render(output) {
       let event = null;
+      this.lastRenderedSamples = 0;
+      this.lastWaitingSilenceSamples = 0;
       if (this.complete && this.started && !this.playing && this.length === 0 && !this.ended) {
         this.ended = true;
         output.fill(0);
@@ -58,8 +62,10 @@
           this.head = (this.head + 1) % this.samples.length;
         }
         this.length -= count;
+        this.lastRenderedSamples = count;
       }
       for (let i = written; i < output.length; i++) output[i] = 0;
+      if (this.started && !this.complete) this.lastWaitingSilenceSamples = output.length - written;
       if (this.playing && this.length === 0) {
         if (this.complete) {
           this.playing = false;

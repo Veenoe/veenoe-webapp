@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createToolHandler } from '../lib/hooks/viva/tool-handlers';
+import { createAudioPipeline } from '../lib/hooks/viva/audio-pipeline';
 import { useVivaStore } from '../lib/store/viva-store';
 
 test('repeated Gemini conclusion calls save once per session', async () => {
@@ -9,7 +10,7 @@ test('repeated Gemini conclusion calls save once per session', async () => {
   let writes = 0;
   const handler = createToolHandler({
     setError: () => {}, finishConclusion: () => {},
-    isAudioPlayingRef: { current: true },
+    hasPendingPlayback: () => true,
     isConclusionPendingRef: { current: false },
     getToken: async () => null,
     saveConclusion: async () => {
@@ -41,7 +42,7 @@ test('failed feedback save requests abandonment instead of reporting completion'
     finishConclusion: () => {
       completed++;
     },
-    isAudioPlayingRef: { current: false },
+    hasPendingPlayback: () => false,
     isConclusionPendingRef: { current: false },
     isConclusionSavingRef: saving,
     getToken: async () => null,
@@ -57,6 +58,38 @@ test('failed feedback save requests abandonment instead of reporting completion'
     assert.equal(completed, 0);
     assert.equal(abandoned, 1);
     assert.equal(saving.current, false);
+  } finally {
+    useVivaStore.getState().resetSession();
+  }
+});
+
+test('saved conclusion waits for queued audio even before playback starts', async () => {
+  useVivaStore.getState().resetSession();
+  useVivaStore.setState({ sessionId: 'session-one' });
+  const pending = { current: false };
+  const playing = { current: false };
+  let completed = 0;
+  const finishConclusion = () => { completed++; };
+  const pipeline = createAudioPipeline({
+    setConversationState: () => {}, setPlaybackState: () => {},
+    isConclusionPendingRef: pending, isTurnCompleteRef: { current: true },
+    isAudioPlayingRef: playing, finishConclusion,
+  });
+  const handler = createToolHandler({
+    setError: () => {}, finishConclusion,
+    hasPendingPlayback: () => true,
+    isConclusionPendingRef: pending,
+    getToken: async () => null,
+    saveConclusion: async () => ({ status: 'completed', score: 9, final_feedback: 'done' }),
+  });
+  try {
+    await handler('conclude_viva', { score: 9 });
+    assert.equal(pending.current, true);
+    assert.equal(completed, 0);
+    const playback = pipeline.createPlaybackCallbacks();
+    playback.onPlayStart?.();
+    playback.onPlayEnd?.();
+    assert.equal(completed, 1);
   } finally {
     useVivaStore.getState().resetSession();
   }

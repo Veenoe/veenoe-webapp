@@ -17,6 +17,17 @@ import {
   VoiceEventProperties,
 } from "../analytics/posthog";
 import type { MicrophoneDiagnostics, MicrophoneFormat, MicrophoneLevel, MicrophoneErrorCode } from "../gemini/audio-recorder";
+import type { PlaybackBufferEvent, PlaybackBufferStats } from "../gemini/audio-player";
+
+export interface PlaybackTraceEvent extends PlaybackBufferEvent {
+  relTimeMs: number;
+}
+
+export interface PlaybackBufferSnapshot {
+  queueDepthMs: number | null;
+  stats: PlaybackBufferStats | null;
+  recentEvents: PlaybackTraceEvent[];
+}
 
 export interface DiagnosticEventItem {
   id: string;
@@ -58,6 +69,7 @@ export interface DiagnosticsSnapshot {
   microphoneLevel: MicrophoneLevel | null;
   microphoneErrorCode: MicrophoneErrorCode | null;
   inputPacketsDropped: number;
+  playbackBuffer: PlaybackBufferSnapshot;
   lastTurnMetrics: TurnMetricsSnapshot | null;
   // Session totals
   totalInputPackets: number;
@@ -116,6 +128,7 @@ export function generateAnonymousSessionId(): string {
 }
 
 const MAX_RECENT_EVENTS = 20;
+const MAX_PLAYBACK_TRACE_EVENTS = 80;
 
 export class VoiceTelemetry {
   private sessionId: string;
@@ -128,6 +141,9 @@ export class VoiceTelemetry {
   private microphoneLevel: MicrophoneLevel | null = null;
   private microphoneErrorCode: MicrophoneErrorCode | null = null;
   private inputPacketsDropped = 0;
+  private playbackQueueDepthMs: number | null = null;
+  private playbackStats: PlaybackBufferStats | null = null;
+  private playbackTrace: PlaybackTraceEvent[] = [];
 
   // Session lifecycle flags
   private isSessionActive = false;
@@ -237,6 +253,9 @@ export class VoiceTelemetry {
     // Reset ALL session counters (prevents cross-session contamination)
     this.totalInputPackets = 0;
     this.inputPacketsDropped = 0;
+    this.playbackQueueDepthMs = null;
+    this.playbackStats = null;
+    this.playbackTrace = [];
     this.microphoneFormat = null;
     this.microphoneDiagnostics = null;
     this.microphoneLevel = null;
@@ -292,6 +311,23 @@ export class VoiceTelemetry {
 
   public onMicrophonePacketsDropped(count: number): void {
     this.inputPacketsDropped += count;
+  }
+
+  /** Local-only playback accounting. The diagnostics panel polls this state. */
+  public onPlaybackBufferEvent(event: PlaybackBufferEvent): void {
+    if (event.queueDepthMs !== undefined) this.playbackQueueDepthMs = event.queueDepthMs;
+    if (event.stats) this.playbackStats = { ...event.stats };
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    this.playbackTrace.push({
+      type: event.type,
+      generation: event.generation,
+      ...(event.chunkId !== undefined ? { chunkId: event.chunkId } : {}),
+      ...(event.samples !== undefined ? { samples: event.samples } : {}),
+      ...(event.queueDepthMs !== undefined ? { queueDepthMs: event.queueDepthMs } : {}),
+      ...(event.reason !== undefined ? { reason: event.reason } : {}),
+      relTimeMs: Math.round(now - this.sessionStartTime),
+    });
+    if (this.playbackTrace.length > MAX_PLAYBACK_TRACE_EVENTS) this.playbackTrace.shift();
   }
 
   public onAudioPlayerReady(): void {
@@ -674,6 +710,11 @@ export class VoiceTelemetry {
       microphoneLevel: this.microphoneLevel && { ...this.microphoneLevel },
       microphoneErrorCode: this.microphoneErrorCode,
       inputPacketsDropped: this.inputPacketsDropped,
+      playbackBuffer: {
+        queueDepthMs: this.playbackQueueDepthMs,
+        stats: this.playbackStats && { ...this.playbackStats },
+        recentEvents: [...this.playbackTrace],
+      },
       lastTurnMetrics: this.lastCompletedTurnMetrics,
       totalInputPackets: this.totalInputPackets,
       totalInputBytes: this.totalInputBytes,

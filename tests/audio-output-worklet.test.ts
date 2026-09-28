@@ -3,7 +3,7 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 
-const messages: Array<{ type: string; generation: number }> = [];
+const messages: Array<{ type: string; generation: number; stats?: Record<string, number>; chunkId?: number }> = [];
 let Processor!: new () => {
   port: { onmessage: (event: { data: unknown }) => void };
   process: (inputs: unknown[], outputs: Float32Array[][]) => boolean;
@@ -47,19 +47,26 @@ test('production worklet starts once, clears by generation and reports drain onc
   assert.equal(messages.filter(m => m.type === 'ended' && m.generation === 1).length, 1);
   render();
   assert.equal(messages.filter(m => m.type === 'ended').length, 1);
+  const ended = messages.find(m => m.type === 'ended');
+  assert.equal(ended?.stats?.storedSamples, 2402);
+  assert.equal(ended?.stats?.clearedSamples, 2272);
+  assert.equal(ended?.stats?.playedSamples, 130);
+  assert.equal(messages.find(m => m.type === 'stale')?.stats?.rejectedSamples, 2400);
 });
 
 test('production worklet overflow clears and ignores subsequent audio until reset', () => {
   messages.length = 0;
   const processor = new Processor();
   const send = (data: unknown) => processor.port.onmessage({ data });
-  send({ type: 'audio', generation: 0, buffer: pcm(96000) });
+  send({ type: 'audio', generation: 0, buffer: pcm(720000) });
   send({ type: 'audio', generation: 0, buffer: pcm(1) });
   send({ type: 'audio', generation: 0, buffer: pcm(2400) });
   const output = new Float32Array(128);
   processor.process([], [[output]]);
   assert.equal(output.every(sample => sample === 0), true);
   assert.equal(messages.filter(m => m.type === 'overflow').length, 1);
+  assert.equal(messages.find(m => m.type === 'overflow')?.stats?.clearedSamples, 720000);
+  assert.equal(messages.find(m => m.type === 'rejected')?.stats?.rejectedSamples, 2401);
   send({ type: 'clear', generation: 1 });
   send({ type: 'audio', generation: 1, buffer: pcm(2400) });
   processor.process([], [[output]]);

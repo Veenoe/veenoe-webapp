@@ -85,6 +85,8 @@ export function createAudioPipeline(deps: AudioPipelineDependencies) {
             extraCallbacks?.onAudioScheduled?.(queueDurationMs);
         },
         onUnderrun: () => extraCallbacks?.onUnderrun?.(),
+        onPlaybackError: () => extraCallbacks?.onPlaybackError?.(),
+        onBufferEvent: (event) => extraCallbacks?.onBufferEvent?.(event),
     });
 
     const interruptPlayback = (
@@ -103,6 +105,7 @@ export function createAudioPipeline(deps: AudioPipelineDependencies) {
         isTurnCompleteRef.current = true;
         setPlaybackState(PlaybackState.IDLE);
         setConversationState(ConversationState.LISTENING);
+        if (isConclusionPendingRef.current) finishConclusion();
     };
 
     return {

@@ -142,7 +142,7 @@ export function useVivaSession() {
   const handleToolCall = useMemo(() => createToolHandler({
     setError,
     finishConclusion,
-    isAudioPlayingRef,
+    hasPendingPlayback: () => audioPlayerRef.current?.hasPendingAudio() ?? false,
     isConclusionPendingRef,
     getToken,
     abandonSession,
@@ -213,6 +213,7 @@ export function useVivaSession() {
           onPlayEnd: () => voiceTelemetry.onPlaybackEnded(),
           onAudioScheduled: (queueDurationMs) => voiceTelemetry.onAudioScheduled(queueDurationMs),
           onUnderrun: () => voiceTelemetry.onPlaybackUnderrun(),
+          onBufferEvent: (event) => voiceTelemetry.onPlaybackBufferEvent(event),
           onPlaybackError: handleFatalPlaybackError,
         })
       );
@@ -220,18 +221,29 @@ export function useVivaSession() {
       if (fatalMicrophoneHandledRef.current) return;
       voiceTelemetry.onAudioPlayerReady();
 
-      // Initialize clean Gemini Live SDK transport
+      let sessionReady = false;
+      let setupReady = false;
+      let microphoneStarted = false;
+      const startMicrophoneWhenReady = () => {
+        if (!sessionReady || !setupReady || microphoneStarted || fatalMicrophoneHandledRef.current) return;
+        if (geminiClientRef.current?.getConnectionState() !== 'connected') return;
+        microphoneStarted = true;
+        setSessionState(SessionState.ACTIVE);
+        void _startAudioPipeline();
+      };
+
+      // The SDK's socket-open callback can precede its usable Live session.
       geminiClientRef.current = new GeminiLiveClientSDK(
         ephemeralToken,
         {
           onConnected: () => {
             if (!audioHandlerRef.current?.getMicrophoneDiagnostics()) return;
             voiceTelemetry.onGeminiConnected();
-            setSessionState(SessionState.ACTIVE);
-            _startAudioPipeline();
           },
           onSetupComplete: () => {
             voiceTelemetry.onGeminiSetupComplete();
+            setupReady = true;
+            startMicrophoneWhenReady();
           },
           onDisconnected: () => {
             voiceTelemetry.onGeminiDisconnected();
@@ -292,13 +304,20 @@ export function useVivaSession() {
             );
           },
           onTranscript: (text, isFinal) => addTranscript({ role: "assistant", text, isFinal }),
-          onToolCall: handleToolCall,
+          onToolCall: (toolName, args) => {
+            // conclude_viva ends this session without a tool response, so no
+            // later Gemini turnComplete is required to drain its final audio.
+            if (toolName === "conclude_viva") audioPlayerRef.current?.completeTurn();
+            void handleToolCall(toolName, args);
+          },
         },
         googleModel ?? undefined
       );
 
       if (!audioHandlerRef.current?.getMicrophoneDiagnostics()) throw new MicrophoneError('ended');
       await geminiClientRef.current.connect();
+      sessionReady = true;
+      startMicrophoneWhenReady();
     } catch (err) {
       if (fatalMicrophoneHandledRef.current) return;
       if (err instanceof MicrophoneError) {

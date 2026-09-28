@@ -36,9 +36,9 @@ test('output queue preserves PCM order through partial chunks', () => {
 
 test('ring wraparound preserves the boundary between old and new chunks', () => {
   const queue = new AudioOutputPipeline();
-  queue.enqueue(pcm(Array(96000).fill(1000)));
+  queue.enqueue(pcm(Array(720000).fill(1000)));
   const output = new Float32Array(128);
-  for (let i = 0; i < 740; i++) queue.render(output);
+  for (let i = 0; i < 5615; i++) queue.render(output);
   assert.equal(queue.queuedSamples, 1280);
   queue.enqueue(pcm(Array(2400).fill(2000)));
   for (let i = 0; i < 10; i++) {
@@ -80,8 +80,8 @@ test('completion drains a short final chunk and clear prevents stale replay', ()
 
 test('capacity rejects overflow without overwriting queued PCM', () => {
   const queue = new AudioOutputPipeline();
-  assert.equal(queue.enqueue(pcm(Array(96000).fill(1234))), true);
+  assert.equal(queue.enqueue(pcm(Array(720000).fill(1234))), true);
   assert.equal(queue.enqueue(pcm([5678])), false);
-  assert.equal(queue.queuedSamples, 96000);
+  assert.equal(queue.queuedSamples, 720000);
   assert.equal(queue.enqueue(new ArrayBuffer(1)), false);
 });
