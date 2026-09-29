@@ -15,6 +15,12 @@ export type MicrophoneDiagnostics = {
     capabilities: Partial<Pick<MediaTrackCapabilities, AudioFeature>> | null;
 };
 export type MicrophoneLevel = { rmsDbfs: number; peakDbfs: number; clippedSampleRatio: number };
+export type MicrophoneDropReason = 'worklet_backpressure' | 'stale_main' | 'forwarding_failure' |
+    'transport_unready' | 'send_failure';
+export interface MicrophonePacketTiming {
+    sequence: number;
+    captureToMainAgeMs: number;
+}
 export type MicrophoneErrorCode = 'permission_denied' | 'not_found' | 'unavailable' | 'constraint' | 'unsupported' | 'processing' | 'unexpected' | 'ended';
 
 export class MicrophoneError extends Error {
@@ -62,30 +68,36 @@ export function classifyMicrophoneError(error: unknown): MicrophoneError {
 
 type WorkletMessage =
     | { type: 'format'; outputSampleRate: number; packetTargetMs: number }
-    | { type: 'audio'; buffer: ArrayBuffer; dropped: number; createdAtMs: number; level?: MicrophoneLevel };
+    | { type: 'audio'; buffer: ArrayBuffer; dropped: number; createdAtMs: number;
+        sequence: number; level?: MicrophoneLevel };
 
 /** Acknowledge every audio message, including stale or failed callbacks. */
 export function handleWorkletAudioMessage(
     message: Extract<WorkletMessage, { type: 'audio' }>,
     nowMs: number,
-    onAudioData: (buffer: ArrayBuffer) => void,
-    onPacketsDropped: (count: number) => void,
+    onAudioData: (buffer: ArrayBuffer, timing: MicrophonePacketTiming) => void,
+    onPacketsDropped: (count: number, reason: MicrophoneDropReason, sequence: number) => void,
     acknowledge: () => void,
     onLevel: (level: MicrophoneLevel) => void = () => {},
+    onPacketObserved: (timing: MicrophonePacketTiming) => void = () => {},
 ): void {
+    // Both timestamps use this recorder's AudioContext clock.
+    const timing = { sequence: message.sequence,
+        captureToMainAgeMs: Math.max(0, nowMs - message.createdAtMs) };
     try {
-        try {
-            if (message.level) onLevel(message.level);
-        } catch { /* Optional diagnostics must not block audio delivery. */ }
-        if (message.dropped > 0) onPacketsDropped(message.dropped);
-        if (nowMs - message.createdAtMs > 100) {
-            onPacketsDropped(1);
+        try { if (message.level) onLevel(message.level); }
+        catch { /* Optional diagnostics must not block audio delivery. */ }
+        try { onPacketObserved(timing); }
+        catch { /* Keep packet observation independent of level reporting. */ }
+        if (message.dropped > 0) onPacketsDropped(message.dropped, 'worklet_backpressure', message.sequence);
+        if (timing.captureToMainAgeMs > 100) {
+            onPacketsDropped(1, 'stale_main', message.sequence);
             return;
         }
         try {
-            onAudioData(message.buffer);
+            onAudioData(message.buffer, timing);
         } catch {
-            onPacketsDropped(1);
+            onPacketsDropped(1, 'forwarding_failure', message.sequence);
         }
     } finally {
         acknowledge();
@@ -147,10 +159,11 @@ export class AudioRecorder {
     }
 
     async startRecording(
-        onAudioData: (audioData: ArrayBuffer) => void,
-        onPacketsDropped: (count: number) => void = () => { },
+        onAudioData: (audioData: ArrayBuffer, timing: MicrophonePacketTiming) => void,
+        onPacketsDropped: (count: number, reason: MicrophoneDropReason, sequence: number) => void = () => { },
         onFormat: (format: MicrophoneFormat) => void = () => { },
         onLevel: (level: MicrophoneLevel) => void = () => { },
+        onPacketObserved: (timing: MicrophonePacketTiming) => void = () => {},
     ): Promise<void> {
         if (!this.audioContext || !this.mediaStream) {
             throw new Error('Audio not initialized. Call initialize() first.');
@@ -170,7 +183,7 @@ export class AudioRecorder {
                     return;
                 }
                 handleWorkletAudioMessage(event.data, this.audioContext!.currentTime * 1000,
-                    onAudioData, onPacketsDropped, () => node.port.postMessage('ack'), onLevel);
+                    onAudioData, onPacketsDropped, () => node.port.postMessage('ack'), onLevel, onPacketObserved);
             };
             this.sourceNode.connect(node);
             // Keep the processing graph pulled, while outputting silence to speakers.

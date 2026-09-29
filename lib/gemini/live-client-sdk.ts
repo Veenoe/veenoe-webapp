@@ -253,7 +253,7 @@ export class GeminiLiveClientSDK {
     }
 
     /** True means the open SDK session accepted the synchronous call, not network delivery. */
-    sendAudio(audioData: ArrayBuffer): boolean {
+    sendAudio(audioData: ArrayBuffer, onSynchronousFailure?: () => void): boolean {
         if (!this.session || !this.transportOpen) {
             console.warn("[GeminiLiveClientSDK] Cannot send audio: Session not active");
             return false;
@@ -270,6 +270,7 @@ export class GeminiLiveClientSDK {
             return true;
         } catch (error) {
             this.transportOpen = false;
+            onSynchronousFailure?.();
             this.eventHandlers.onError?.(error instanceof Error ? error : new Error('Gemini audio send failed'));
             return false;
         }

@@ -45,6 +45,7 @@ export function useVivaSession() {
   const isConclusionSavingRef = useRef(false);
   const abandonmentRef = useRef<Promise<void> | null>(null);
   const fatalMicrophoneHandledRef = useRef(false);
+  const fatalPlaybackHandledRef = useRef(false);
 
   // Cleanup all resources
   const cleanupResources = useCallback(() => {
@@ -117,6 +118,15 @@ export function useVivaSession() {
     });
   }, [abandonSession, cleanupResources, setError, setSessionState]);
 
+  const handleFatalPlaybackError = useCallback(() => {
+    if (fatalPlaybackHandledRef.current) return;
+    fatalPlaybackHandledRef.current = true;
+    setError("Audio playback could not continue. Please try again.");
+    setSessionState(SessionState.ERROR);
+    cleanupResources();
+    void abandonSession(true).catch(() => {});
+  }, [abandonSession, cleanupResources, setError, setSessionState]);
+
   // Create audio pipeline controller
   // Existing controller factory retains refs; it does not read their values during render.
   const audioPipeline = useMemo(() => createAudioPipeline({
@@ -132,7 +142,7 @@ export function useVivaSession() {
   const handleToolCall = useMemo(() => createToolHandler({
     setError,
     finishConclusion,
-    isAudioPlayingRef,
+    hasPendingPlayback: () => audioPlayerRef.current?.hasPendingAudio() ?? false,
     isConclusionPendingRef,
     getToken,
     abandonSession,
@@ -144,21 +154,28 @@ export function useVivaSession() {
     if (!audioHandlerRef.current || !geminiClientRef.current) return;
 
     try {
-      await audioHandlerRef.current.startRecording((audioData: ArrayBuffer) => {
+      const inputState = () => {
+        const { microphoneState, playbackState } = useVivaStore.getState();
+        return { microphoneState, playbackState };
+      };
+      await audioHandlerRef.current.startRecording((audioData, timing) => {
         const client = geminiClientRef.current;
-        if (!client) return;
         const { microphoneState, isMuted } = useVivaStore.getState();
+        let sendFailed = false;
         audioPipeline.forwardMicrophoneAudio(
           audioData,
           microphoneState,
           isMuted,
-          (data) => client.sendAudio(data),
+          (data) => client?.sendAudio(data, () => { sendFailed = true; }) ?? false,
           (byteLength) => voiceTelemetry.onMicrophonePacketSent(byteLength),
-          () => voiceTelemetry.onMicrophonePacketsDropped(1),
+          () => voiceTelemetry.onMicrophoneDrop(
+            sendFailed ? 'send_failure' : 'transport_unready', 1, inputState(), timing.sequence),
+          (reason) => voiceTelemetry.onMicrophoneForwardingPaused(reason),
         );
-      }, (count) => voiceTelemetry.onMicrophonePacketsDropped(count),
+      }, (count, reason, sequence) => voiceTelemetry.onMicrophoneDrop(reason, count, inputState(), sequence),
         (format) => voiceTelemetry.onMicrophoneFormat(format),
-        (level) => voiceTelemetry.onMicrophoneLevel(level));
+        (level) => voiceTelemetry.onMicrophoneLevel(level),
+        (timing) => voiceTelemetry.onMicrophonePacketObserved(timing));
       if (fatalMicrophoneHandledRef.current) return;
       setMicrophoneState(MicrophoneState.ACTIVE);
       setConversationState(ConversationState.LISTENING);
@@ -175,6 +192,7 @@ export function useVivaSession() {
     try {
       setSessionState(SessionState.STARTING);
       fatalMicrophoneHandledRef.current = false;
+      fatalPlaybackHandledRef.current = false;
       isConclusionPendingRef.current = false;
       audioPipeline.reset();
 
@@ -202,24 +220,37 @@ export function useVivaSession() {
           onPlayEnd: () => voiceTelemetry.onPlaybackEnded(),
           onAudioScheduled: (queueDurationMs) => voiceTelemetry.onAudioScheduled(queueDurationMs),
           onUnderrun: () => voiceTelemetry.onPlaybackUnderrun(),
+          onBufferEvent: (event) => voiceTelemetry.onPlaybackBufferEvent(event),
+          onPlaybackError: handleFatalPlaybackError,
         })
       );
       await audioPlayerRef.current.initialize();
       if (fatalMicrophoneHandledRef.current) return;
       voiceTelemetry.onAudioPlayerReady();
 
-      // Initialize clean Gemini Live SDK transport
+      let sessionReady = false;
+      let setupReady = false;
+      let microphoneStarted = false;
+      const startMicrophoneWhenReady = () => {
+        if (!sessionReady || !setupReady || microphoneStarted || fatalMicrophoneHandledRef.current) return;
+        if (geminiClientRef.current?.getConnectionState() !== 'connected') return;
+        microphoneStarted = true;
+        setSessionState(SessionState.ACTIVE);
+        void _startAudioPipeline();
+      };
+
+      // The SDK's socket-open callback can precede its usable Live session.
       geminiClientRef.current = new GeminiLiveClientSDK(
         ephemeralToken,
         {
           onConnected: () => {
             if (!audioHandlerRef.current?.getMicrophoneDiagnostics()) return;
             voiceTelemetry.onGeminiConnected();
-            setSessionState(SessionState.ACTIVE);
-            _startAudioPipeline();
           },
           onSetupComplete: () => {
             voiceTelemetry.onGeminiSetupComplete();
+            setupReady = true;
+            startMicrophoneWhenReady();
           },
           onDisconnected: () => {
             voiceTelemetry.onGeminiDisconnected();
@@ -255,31 +286,45 @@ export function useVivaSession() {
           onAudioData: async (base64) => {
             const player = audioPlayerRef.current;
             if (!player) return;
-            await audioPipeline.receiveGeminiAudio(
-              base64,
-              (audio) => player.playAudio(audio),
-              () => voiceTelemetry.onGeminiAudioChunkReceived(),
-            );
+            try {
+              await audioPipeline.receiveGeminiAudio(
+                base64,
+                (audio) => player.playAudio(audio),
+                () => voiceTelemetry.onGeminiAudioChunkReceived(),
+              );
+            } catch {
+              handleFatalPlaybackError();
+            }
           },
           onTurnComplete: () => {
-            audioPipeline.completeTurn(() => voiceTelemetry.onTurnComplete());
+            audioPipeline.completeTurn(() => {
+              audioPlayerRef.current?.completeTurn();
+              voiceTelemetry.onTurnComplete();
+            });
           },
           onInterrupted: () => {
             audioPipeline.interruptPlayback(
               () => audioPlayerRef.current?.stop(),
               () => voiceTelemetry.onInterruptionSignalReceived(),
-              () => voiceTelemetry.onPlaybackStoppedDueToInterruption(),
+              () => voiceTelemetry.onInterruptionClearRequested(),
               () => voiceTelemetry.onInterruptionWithoutPlayback(),
             );
           },
           onTranscript: (text, isFinal) => addTranscript({ role: "assistant", text, isFinal }),
-          onToolCall: handleToolCall,
+          onToolCall: (toolName, args) => {
+            // conclude_viva ends this session without a tool response, so no
+            // later Gemini turnComplete is required to drain its final audio.
+            if (toolName === "conclude_viva") audioPlayerRef.current?.completeTurn();
+            void handleToolCall(toolName, args);
+          },
         },
         googleModel ?? undefined
       );
 
       if (!audioHandlerRef.current?.getMicrophoneDiagnostics()) throw new MicrophoneError('ended');
       await geminiClientRef.current.connect();
+      sessionReady = true;
+      startMicrophoneWhenReady();
     } catch (err) {
       if (fatalMicrophoneHandledRef.current) return;
       if (err instanceof MicrophoneError) {
@@ -301,6 +346,7 @@ export function useVivaSession() {
     audioPipeline,
     abandonSession,
     handleFatalMicrophoneError,
+    handleFatalPlaybackError,
   ]);
 
   // Request conclusion from AI

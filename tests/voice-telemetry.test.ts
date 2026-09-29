@@ -171,7 +171,7 @@ test("microphone format and pressure diagnostics reset per session", () => {
     processingSampleRate: 48000, trackSampleRate: null,
     outputSampleRate: 16000, packetTargetMs: 20, resamplingActive: true
   });
-  telemetry.onMicrophonePacketsDropped(3);
+  telemetry.onMicrophoneDrop('worklet_backpressure', 3, { microphoneState: 'active', playbackState: 'idle' }, 4);
   telemetry.onMicrophoneDiagnostics({ requested: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }, supported: {}, applied: { echoCancellation: false }, capabilities: null });
   telemetry.onMicrophoneLevel({ rmsDbfs: -30, peakDbfs: -10, clippedSampleRatio: 0 });
   telemetry.onMicrophoneError('unavailable');
@@ -188,6 +188,35 @@ test("microphone format and pressure diagnostics reset per session", () => {
   assert.equal(telemetry.getSnapshot().microphoneLevel, null);
   assert.equal(telemetry.getSnapshot().microphoneErrorCode, null);
   assert.equal(telemetry.getSnapshot().inputPacketsDropped, 0);
+  assert.equal(telemetry.getSnapshot().inputContinuity.dropCounts.worklet_backpressure, 0);
+  assert.equal(telemetry.getSnapshot().inputContinuity.recentAnomalies.length, 0);
+});
+
+test('input continuity separates drop reasons, intentional mute, and user markers', () => {
+  const telemetry = new VoiceTelemetry();
+  telemetry.onSessionInitStart();
+  const context = { microphoneState: 'active', playbackState: 'playing' };
+  telemetry.onMicrophonePacketObserved({ sequence: 1, captureToMainAgeMs: 5 });
+  telemetry.onMicrophonePacketObserved({ sequence: 4, captureToMainAgeMs: 12 });
+  telemetry.onMicrophoneDrop('worklet_backpressure', 2, context, 4);
+  telemetry.onMicrophoneDrop('stale_main', 1, context, 4);
+  telemetry.onMicrophoneDrop('transport_unready', 1, context, 5);
+  telemetry.onMicrophoneForwardingPaused('muted');
+  telemetry.markTurnTakingObservation('replied_too_early', context);
+  const snapshot = telemetry.getSnapshot();
+  assert.equal(snapshot.inputPacketsDropped, 4);
+  assert.equal(snapshot.inputContinuity.maxSequenceGap, 2);
+  assert.equal(snapshot.inputContinuity.maxWorkletDropBurst, 2);
+  assert.equal(snapshot.inputContinuity.maxCaptureToMainAgeMs, 12);
+  assert.deepEqual(snapshot.inputContinuity.dropCounts, {
+    worklet_backpressure: 2, stale_main: 1, forwarding_failure: 0,
+    transport_unready: 1, send_failure: 0,
+  });
+  assert.equal(snapshot.inputContinuity.recentAnomalies.at(-1)?.reason, 'replied_too_early');
+  assert.equal(snapshot.connectionErrorCount, 0);
+  assert.doesNotMatch(JSON.stringify(snapshot), /deviceId|groupId|raw_audio|transcript/);
+  for (let index = 0; index < 30; index++) telemetry.onMicrophoneDrop('send_failure', 1, context, index + 6);
+  assert.equal(telemetry.getSnapshot().inputContinuity.recentAnomalies.length, 24);
 });
 
 test("turn isolation and no cross-turn metric leakage", () => {
@@ -222,7 +251,7 @@ test("turn isolation and no cross-turn metric leakage", () => {
   assert.equal(snap2.lastTurnMetrics?.outputAudioChunkCount, 2);
 });
 
-test("interrupted turn calculates interruption latency and flags turn", () => {
+test("interrupted turn waits for a correlated clear acknowledgment", () => {
   const telemetry = new VoiceTelemetry();
   telemetry.onSessionInitStart();
 
@@ -232,13 +261,26 @@ test("interrupted turn calculates interruption latency and flags turn", () => {
 
   // Gemini sends interruption signal
   telemetry.onInterruptionSignalReceived();
-  // Playback is stopped
-  telemetry.onPlaybackStoppedDueToInterruption();
+  telemetry.onPlaybackBufferEvent({ type: "clear_requested", generation: 1, reason: "interruption" });
+  telemetry.onInterruptionClearRequested();
 
   const snap = telemetry.getSnapshot();
   assert.equal(snap.lastTurnMetrics?.interrupted, true);
-  assert.ok(snap.lastTurnMetrics?.interruptionToPlaybackStopMs !== null);
-  assert.ok(snap.lastTurnMetrics!.interruptionToPlaybackStopMs! >= 0);
+  assert.equal(snap.lastTurnMetrics?.clearRequestToAcknowledgmentMs, null);
+  telemetry.onMicrophonePacketSent(256);
+  telemetry.onPlaybackBufferEvent({ type: "cleared", generation: 1, reason: "interruption", clearAcknowledgmentMs: 12 });
+  assert.equal(telemetry.getSnapshot().lastTurnMetrics?.clearRequestToAcknowledgmentMs, 12);
+});
+
+test("first-audio transport turnaround is frozen while the microphone keeps streaming", () => {
+  const telemetry = new VoiceTelemetry();
+  telemetry.onSessionInitStart();
+  telemetry.onMicrophonePacketSent(256);
+  telemetry.onGeminiAudioChunkReceived();
+  telemetry.onMicrophonePacketSent(256);
+  telemetry.onTurnComplete();
+  assert.notEqual(telemetry.getSnapshot().lastTurnMetrics?.lastInputPacketToFirstGeminiAudioMs, null);
+  assert.equal(telemetry.getSnapshot().lastTurnMetrics?.speechEndToFirstGeminiAudioMs, null);
 });
 
 test("interruption without playback leaves playback-stop latency unavailable", () => {
@@ -250,7 +292,7 @@ test("interruption without playback leaves playback-stop latency unavailable", (
 
   const snap = telemetry.getSnapshot();
   assert.equal(snap.lastTurnMetrics?.interrupted, true);
-  assert.equal(snap.lastTurnMetrics?.interruptionToPlaybackStopMs, null);
+  assert.equal(snap.lastTurnMetrics?.clearRequestToAcknowledgmentMs, null);
   assert.equal(snap.recentEvents.some(event => event.name === "playback_stopped_interruption"), false);
 });
 
@@ -267,6 +309,30 @@ test("bounded recent event history does not exceed 20 items", () => {
 
   const snap = telemetry.getSnapshot();
   assert.ok(snap.recentEvents.length <= 20);
+});
+
+test("playback accounting remains local and resets for the next session", () => {
+  const telemetry = new VoiceTelemetry();
+  telemetry.onSessionInitStart();
+  telemetry.onPlaybackBufferEvent({
+    type: 'accepted', generation: 0, chunkId: 1, samples: 2400, queueDepthMs: 100,
+    stats: { receivedSamples: 2400, storedSamples: 2400, playedSamples: 0,
+      clearedSamples: 0, rejectedSamples: 0, waitingSilenceSamples: 0 },
+  });
+  const snapshot = telemetry.getSnapshot();
+  assert.equal(snapshot.playbackBuffer.stats?.storedSamples, 2400);
+  assert.equal(snapshot.playbackBuffer.recentEvents.length, 1);
+  telemetry.onPlaybackBufferEvent({ type: 'transferred', generation: 0,
+    admissionToTransferMs: 18, capacityWaitMs: 4, conversionTransferMs: 2,
+    setupWaitMs: 10, resumeWaitMs: 3 });
+  telemetry.onPlaybackBufferEvent({ type: 'started', generation: 0, admissionToFirstRenderMs: 120 });
+  assert.equal(telemetry.getSnapshot().playbackBuffer.maxAdmissionToTransferMs, 18);
+  assert.equal(telemetry.getSnapshot().playbackBuffer.lastAdmissionToFirstRenderMs, 120);
+  assert.equal(JSON.stringify(snapshot.playbackBuffer).includes('deviceId'), false);
+  telemetry.onSessionInitStart();
+  assert.equal(telemetry.getSnapshot().playbackBuffer.stats, null);
+  assert.deepEqual(telemetry.getSnapshot().playbackBuffer.recentEvents, []);
+  assert.equal(telemetry.getSnapshot().playbackBuffer.maxAdmissionToTransferMs, null);
 });
 
 test("PostHog adapter safely no-ops without credentials", () => {

@@ -1,194 +1,358 @@
-/**
- * AudioPlayer - Handles audio playback for Gemini Live API responses.
- * 
- * Design Decisions (First Principles):
- * 1. Lazy AudioContext creation (browser autoplay policy)
- * 2. Source tracking with proper cleanup to prevent memory leaks
- * 3. Guard checks in callbacks to handle race conditions during cleanup
- * 4. Clear separation between normal end and forced stop
- */
+/** Gemini Live PCM16 playback through one persistent audio-thread queue. */
+export interface PlaybackBufferStats {
+    receivedSamples: number;
+    storedSamples: number;
+    playedSamples: number;
+    clearedSamples: number;
+    rejectedSamples: number;
+    waitingSilenceSamples: number;
+}
 
-// Debug utility - disabled in production
-const debug = process.env.NODE_ENV !== 'production'
-    ? (...args: unknown[]) => console.log('[AudioPlayer]', ...args)
-    : () => { };
+export type PlaybackBufferEventType = 'pending' | 'transferred' | 'accepted' | 'rejected' |
+    'stale' | 'started' | 'ended' | 'underrun' | 'stats' | 'overflow' | 'cleared' |
+    'clear_requested' | 'main_overflow';
+
+export interface PlaybackBufferEvent {
+    type: PlaybackBufferEventType;
+    generation: number;
+    chunkId?: number;
+    samples?: number;
+    queueDepthMs?: number;
+    pendingEncodedBytes?: number;
+    inFlightBytes?: number;
+    clearAcknowledgmentMs?: number;
+    reason?: string;
+    stats?: PlaybackBufferStats;
+    admissionToTransferMs?: number;
+    capacityWaitMs?: number;
+    conversionTransferMs?: number;
+    setupWaitMs?: number;
+    resumeWaitMs?: number;
+    admissionToFirstRenderMs?: number;
+}
+
+type Command =
+    | { type: 'audio'; generation: number; chunkId: number; buffer: ArrayBuffer }
+    | { type: 'complete'; generation: number }
+    | { type: 'clear'; generation: number; reason: string };
+
+type WorkletEvent =
+    | (PlaybackBufferEvent & { type: 'accepted' | 'rejected' | 'stale' | 'overflow'; chunkId: number })
+    | (PlaybackBufferEvent & { type: 'started' | 'ended' | 'underrun' | 'stats' | 'cleared' });
 
 export interface AudioPlayerCallbacks {
     onPlayStart?: () => void;
     onPlayEnd?: () => void;
     onAudioScheduled?: (queueDurationMs: number) => void;
     onUnderrun?: () => void;
+    onPlaybackError?: () => void;
+    onBufferEvent?: (event: PlaybackBufferEvent) => void;
 }
 
+const OUTPUT_SAMPLE_RATE_HZ = 24000;
+const MAX_IN_FLIGHT_BYTES = OUTPUT_SAMPLE_RATE_HZ * 2 * 4;
+const MAX_PENDING_ENCODED_BYTES = Math.ceil(MAX_IN_FLIGHT_BYTES * 4 / 3);
+const WORKLET_EVENT_TYPES = new Set<PlaybackBufferEventType>([
+    'accepted', 'rejected', 'stale', 'started', 'ended', 'underrun',
+    'stats', 'overflow', 'cleared',
+]);
+
+interface PendingChunk {
+    base64: string;
+    generation: number;
+    chunkId: number;
+    encodedBytes: number;
+    resolve: () => void;
+    admittedAtMs: number;
+    capacityWaitStartedAtMs?: number;
+}
+
+/** Owns browser resources, pending encoded audio, and transport reservations. */
 export class AudioPlayer {
     private audioContext: AudioContext | null = null;
-    private nextStartTime = 0;
-    private onPlayStart?: () => void;
-    private onPlayEnd?: () => void;
-    private onAudioScheduled?: (queueDurationMs: number) => void;
-    private onUnderrun?: () => void;
-    private sources = new Set<AudioBufferSourceNode>();
+    private node: AudioWorkletNode | null = null;
+    private setup: Promise<void> | null = null;
+    private pending: PendingChunk[] = [];
+    private draining = false;
+    private pendingEncodedBytes = 0;
+    private inFlight = new Map<number, { generation: number; bytes: number }>();
+    private inFlightBytes = 0;
+    private generation = 0;
+    private nextChunkId = 0;
+    private completionRequested = false;
     private isPlaying = false;
-    private isDestroyed = false;  // Guard flag to prevent stale callbacks
-    private playbackGeneration = 0;
+    private queueDepthMs = 0;
+    private failed = false;
+    private destroyed = false;
+    private clearRequestedAt = new Map<number, number>();
+    private firstAdmissionAtMs: number | null = null;
 
-    constructor(callbacks?: AudioPlayerCallbacks) {
-        this.onPlayStart = callbacks?.onPlayStart;
-        this.onPlayEnd = callbacks?.onPlayEnd;
-        this.onAudioScheduled = callbacks?.onAudioScheduled;
-        this.onUnderrun = callbacks?.onUnderrun;
-    }
+    constructor(private callbacks: AudioPlayerCallbacks = {}) {}
 
     async initialize(): Promise<void> {
-        // Audio context will be created on first play to respect browser autoplay policies
-        debug("Initialized (AudioContext will be created on first play)");
+        // Browser autoplay policy requires a gesture before the first resume.
     }
 
-    async playAudio(base64String: string): Promise<void> {
-        // Guard: Don't play if destroyed
-        if (this.isDestroyed) {
-            debug("Ignoring play request - player is destroyed");
-            return;
-        }
-        const generation = this.playbackGeneration;
-
-        try {
-            if (!this.audioContext || this.audioContext.state === "closed") {
-                this.audioContext = new AudioContext({ sampleRate: 24000 });
-                this.nextStartTime = this.audioContext.currentTime;
-            }
-
-            // Resume context if suspended (browser autoplay policy)
-            if (this.audioContext.state === "suspended") {
-                await this.audioContext.resume();
-            }
-            if (generation !== this.playbackGeneration || this.isDestroyed) return;
-        } catch (error) {
-            debug("Failed to create/resume AudioContext:", error);
-            throw new Error("Audio playback is not supported in this browser");
-        }
-
-        const float32AudioData = this.base64ToFloat32AudioData(base64String);
-
-        // Create buffer
-        const audioBuffer = this.audioContext.createBuffer(
-            1,
-            float32AudioData.length,
-            24000
-        );
-        audioBuffer.copyToChannel(new Float32Array(float32AudioData), 0);
-
-        // Create source
-        const source = this.audioContext.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(this.audioContext.destination);
-
-        // Check for playback underrun (gap in audio stream while actively playing)
-        const currentTime = this.audioContext.currentTime;
-        if (this.isPlaying && this.nextStartTime < currentTime) {
-            this.onUnderrun?.();
-        }
-
-        // Schedule playback
-        // Ensure we don't schedule in the past, but also keep the stream continuous
-        this.nextStartTime = Math.max(this.nextStartTime, currentTime);
-        source.start(this.nextStartTime);
-
-        const queuedDurationMs = Math.max(0, (this.nextStartTime - currentTime) * 1000);
-        this.onAudioScheduled?.(queuedDurationMs);
-
-        // Track the source
-        this.sources.add(source);
-
-        // Update state and trigger callback if this is the first active source
-        if (!this.isPlaying) {
-            this.isPlaying = true;
-            this.onPlayStart?.();
-        }
-
-        // Advance time for next chunk
-        this.nextStartTime += audioBuffer.duration;
-
-        // Cleanup when this specific source ends
-        source.onended = () => {
-            // Guard: Check if source was already cleaned up (prevents memory leak)
-            // This can happen if stop() was called while audio was playing
-            if (!this.sources.has(source)) {
-                return;
-            }
-
-            this.sources.delete(source);
-
-            // If no more sources are playing, trigger end callback
-            // But only if we haven't been destroyed
-            if (this.sources.size === 0 && this.isPlaying && !this.isDestroyed) {
-                this.isPlaying = false;
-                this.onPlayEnd?.();
-            }
-        };
+    private notify(event: PlaybackBufferEvent): void {
+        try { this.callbacks.onBufferEvent?.(event); }
+        catch (error) { console.error('[AudioPlayer] Diagnostic observer failed', error); }
     }
 
-    stop(): void {
-        debug("Stopping all audio sources");
-        this.playbackGeneration++;
+    private notifyMetric(callback: (() => void) | undefined): void {
+        try { callback?.(); }
+        catch (error) { console.error('[AudioPlayer] Metric observer failed', error); }
+    }
 
-        // Clear all sources
-        this.sources.forEach(source => {
-            // Remove callback first to prevent it from firing
-            source.onended = null;
+    private send(command: Command, transfer?: Transferable[]): void {
+        this.node?.port.postMessage(command, transfer ?? []);
+    }
+
+    private async prepare(): Promise<void> {
+        if (this.destroyed) return;
+        if (this.setup) return this.setup;
+        const operation = (async () => {
+            const context = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE_HZ });
+            let createdNode: AudioWorkletNode | null = null;
+            this.audioContext = context;
             try {
-                source.stop();
-            } catch {
-                // Ignore errors if source already stopped
+                if (context.sampleRate !== OUTPUT_SAMPLE_RATE_HZ) throw new Error('Unsupported playback sample rate');
+                await context.audioWorklet.addModule('/audio-output-pipeline.js');
+                if (this.destroyed) return;
+                await context.audioWorklet.addModule('/audio-output-worklet.js');
+                if (this.destroyed) return;
+                // Stop may advance the generation during either module load.
+                const node = new AudioWorkletNode(context, 'audio-output-processor', {
+                    numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1],
+                    processorOptions: { generation: this.generation },
+                });
+                createdNode = node;
+                if (this.destroyed) { node.port.close(); node.disconnect(); return; }
+                node.port.onmessage = ({ data }: MessageEvent<unknown>) => this.receive(data);
+                node.onprocessorerror = () => this.failPlayback();
+                node.connect(context.destination);
+                this.audioContext = context;
+                this.node = node;
+            } catch (error) {
+                if (this.audioContext === context) this.audioContext = null;
+                if (createdNode && this.node !== createdNode) {
+                    createdNode.port.onmessage = null;
+                    createdNode.onprocessorerror = null;
+                    createdNode.port.close();
+                    createdNode.disconnect();
+                }
+                if (context.state !== 'closed') void context.close().catch(() => {});
+                throw error;
             }
-        });
-        this.sources.clear();
-
-        // Reset time tracking
-        if (this.audioContext) {
-            this.nextStartTime = this.audioContext.currentTime;
+        })();
+        this.setup = operation;
+        try { await operation; }
+        catch (error) {
+            if (this.setup === operation) this.setup = null;
+            throw error;
         }
-
-        this.isPlaying = false;
-        // We don't trigger onPlayEnd here because this is a forced stop (interruption)
     }
 
-    private base64ToFloat32AudioData(base64String: string): Float32Array {
-        const byteCharacters = atob(base64String);
-        const byteArray = new Uint8Array(byteCharacters.length);
-
-        for (let i = 0; i < byteCharacters.length; i++) {
-            byteArray[i] = byteCharacters.charCodeAt(i);
+    /** Admission precedes asynchronous setup so pending payloads stay bounded. */
+    playAudio(base64: string): Promise<void> {
+        if (this.destroyed || this.failed) return Promise.resolve();
+        const encodedBytes = base64.length;
+        const estimatedPcmBytes = Math.floor(encodedBytes * 3 / 4);
+        if (!encodedBytes || encodedBytes % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(base64) ||
+            estimatedPcmBytes < 2 || estimatedPcmBytes > MAX_IN_FLIGHT_BYTES ||
+            this.pendingEncodedBytes + encodedBytes > MAX_PENDING_ENCODED_BYTES) {
+            this.notify({ type: 'main_overflow', generation: this.generation });
+            this.failPlayback();
+            return Promise.resolve();
         }
+        return new Promise(resolve => {
+            const chunk: PendingChunk = { base64, generation: this.generation,
+                chunkId: ++this.nextChunkId, encodedBytes, resolve, admittedAtMs: performance.now() };
+            if (this.firstAdmissionAtMs === null) this.firstAdmissionAtMs = chunk.admittedAtMs;
+            this.pending.push(chunk);
+            this.pendingEncodedBytes += encodedBytes;
+            this.notify({ type: 'pending', generation: chunk.generation, chunkId: chunk.chunkId,
+                pendingEncodedBytes: this.pendingEncodedBytes });
+            void this.drain();
+        });
+    }
 
-        // Convert Uint8Array (which contains 16-bit PCM) to Float32Array
-        const length = byteArray.length / 2; // 16-bit audio, so 2 bytes per sample
-        const float32AudioData = new Float32Array(length);
-
-        const dataView = new DataView(byteArray.buffer);
-
-        for (let i = 0; i < length; i++) {
-            // Read 16-bit signed integer (little-endian)
-            const sample = dataView.getInt16(i * 2, true);
-
-            // Convert from 16-bit PCM to Float32 (range -1 to 1)
-            float32AudioData[i] = sample < 0 ? sample / 32768 : sample / 32767;
+    private async drain(): Promise<void> {
+        if (this.draining || this.destroyed) return;
+        this.draining = true;
+        let waitingForAck = false;
+        try {
+            while (this.pending.length && !this.destroyed && !this.failed) {
+                const owner = this.generation;
+                try {
+                    const setupStartedAtMs = performance.now();
+                    await this.prepare();
+                    const setupWaitMs = performance.now() - setupStartedAtMs;
+                    if (this.destroyed || owner !== this.generation) continue;
+                    const context = this.audioContext;
+                    if (!context || !this.node) throw new Error('Playback context unavailable');
+                    const resumeStartedAtMs = performance.now();
+                    if (context.state === 'suspended') await context.resume();
+                    const resumeWaitMs = performance.now() - resumeStartedAtMs;
+                    if (this.destroyed || owner !== this.generation) continue;
+                    let firstTransfer = true;
+                    while (this.pending.length && this.pending[0].generation === owner) {
+                        const chunk = this.pending[0];
+                        // Let the worklet acknowledge transfers before spending more transport budget.
+                        if (this.inFlightBytes + Math.floor(chunk.encodedBytes * 3 / 4) > MAX_IN_FLIGHT_BYTES) {
+                            chunk.capacityWaitStartedAtMs ??= performance.now();
+                            waitingForAck = true;
+                            break;
+                        }
+                        const capacityWaitMs = chunk.capacityWaitStartedAtMs === undefined
+                            ? 0 : performance.now() - chunk.capacityWaitStartedAtMs;
+                        const conversionStartedAtMs = performance.now();
+                        const binary = atob(chunk.base64);
+                        if (!binary.length || binary.length % 2 || binary.length > MAX_IN_FLIGHT_BYTES) {
+                            this.failPlayback();
+                            return;
+                        }
+                        const pcm = new Uint8Array(binary.length);
+                        for (let i = 0; i < binary.length; i++) pcm[i] = binary.charCodeAt(i);
+                        // Ownership moves from the pending string to a transport reservation.
+                        this.pending.shift();
+                        this.pendingEncodedBytes -= chunk.encodedBytes;
+                        this.inFlight.set(chunk.chunkId, { generation: owner, bytes: pcm.byteLength });
+                        this.inFlightBytes += pcm.byteLength;
+                        try {
+                            this.send({ type: 'audio', generation: owner, chunkId: chunk.chunkId, buffer: pcm.buffer }, [pcm.buffer]);
+                        } finally {
+                            // The chunk left the FIFO; failure handling cannot find it there.
+                            chunk.resolve();
+                        }
+                        this.notify({ type: 'transferred', generation: owner, chunkId: chunk.chunkId,
+                            samples: binary.length / 2, pendingEncodedBytes: this.pendingEncodedBytes,
+                            inFlightBytes: this.inFlightBytes,
+                            admissionToTransferMs: performance.now() - chunk.admittedAtMs,
+                            capacityWaitMs, conversionTransferMs: performance.now() - conversionStartedAtMs,
+                            ...(firstTransfer ? { setupWaitMs, resumeWaitMs } : {}) });
+                        firstTransfer = false;
+                    }
+                    this.flushCompletion();
+                    if (waitingForAck) return;
+                } catch {
+                    if (!this.destroyed && owner === this.generation) this.failPlayback();
+                }
+            }
+        } finally {
+            this.draining = false;
+            if (this.pending.length && !waitingForAck && !this.destroyed && !this.failed) void this.drain();
         }
+    }
 
-        return float32AudioData;
+    private receive(data: unknown): void {
+        if (this.destroyed || !data || typeof data !== 'object') return;
+        const event = data as Partial<WorkletEvent>;
+        if (!WORKLET_EVENT_TYPES.has(event.type as PlaybackBufferEventType) || !Number.isSafeInteger(event.generation) ||
+            event.generation !== this.generation) return;
+        if (event.type === 'accepted' || event.type === 'rejected' || event.type === 'stale' || event.type === 'overflow') {
+            if (!Number.isSafeInteger(event.chunkId)) return;
+            const reservation = this.inFlight.get(event.chunkId!);
+            if (!reservation || reservation.generation !== event.generation) return;
+            this.inFlight.delete(event.chunkId!);
+            this.inFlightBytes -= reservation.bytes;
+            if (event.type === 'accepted') void this.drain();
+        }
+        event.pendingEncodedBytes = this.pendingEncodedBytes;
+        event.inFlightBytes = this.inFlightBytes;
+        if (typeof event.queueDepthMs === 'number' && Number.isFinite(event.queueDepthMs) &&
+            event.queueDepthMs >= 0)
+            this.queueDepthMs = event.queueDepthMs;
+        if (event.type === 'cleared') {
+            const requestedAt = this.clearRequestedAt.get(event.generation!);
+            this.clearRequestedAt.delete(event.generation!);
+            if (requestedAt !== undefined && event.reason === 'interruption')
+                event.clearAcknowledgmentMs = performance.now() - requestedAt;
+        }
+        // Publish the final worklet counters before a lifecycle callback can dispose us.
+        if (event.type === 'started') {
+            this.isPlaying = true;
+            if (this.firstAdmissionAtMs !== null)
+                event.admissionToFirstRenderMs = performance.now() - this.firstAdmissionAtMs;
+        }
+        let wasPlaying = false;
+        if (event.type === 'ended') {
+            wasPlaying = this.isPlaying;
+            this.isPlaying = false;
+            this.firstAdmissionAtMs = null;
+        }
+        this.notify(event as PlaybackBufferEvent);
+        if (this.destroyed) return;
+        if (event.type === 'started') this.callbacks.onPlayStart?.();
+        if (event.type === 'ended' && wasPlaying) this.callbacks.onPlayEnd?.();
+        if (event.type === 'underrun') this.notifyMetric(this.callbacks.onUnderrun);
+        if (event.type === 'accepted' && typeof event.queueDepthMs === 'number' &&
+            Number.isFinite(event.queueDepthMs) && event.queueDepthMs >= 0)
+            this.notifyMetric(() => this.callbacks.onAudioScheduled?.(event.queueDepthMs!));
+        if (event.type === 'overflow' || event.type === 'rejected') this.failPlayback();
+    }
+
+    completeTurn(): void {
+        if (this.destroyed || this.failed) return;
+        if (!this.hasPendingAudio()) return;
+        this.completionRequested = true;
+        this.flushCompletion();
+    }
+
+    hasPendingAudio(): boolean {
+        return !this.destroyed && (this.pending.length > 0 || this.inFlightBytes > 0 || this.queueDepthMs > 0 || this.isPlaying);
+    }
+
+    private flushCompletion(): void {
+        // MessagePort ordering puts completion after every admitted transfer.
+        if (this.completionRequested && !this.pending.length && this.node) {
+            this.send({ type: 'complete', generation: this.generation });
+            this.completionRequested = false;
+        }
+    }
+
+    private failPlayback(): void {
+        if (this.destroyed || this.failed) return;
+        this.failed = true;
+        this.stop('failure');
+        this.callbacks.onPlaybackError?.();
+    }
+
+    stop(reason = 'interruption'): void {
+        if (this.destroyed) return;
+        this.generation++;
+        for (const chunk of this.pending) chunk.resolve();
+        this.pending = [];
+        this.pendingEncodedBytes = 0;
+        this.inFlight.clear();
+        this.inFlightBytes = 0;
+        this.queueDepthMs = 0;
+        this.completionRequested = false;
+        this.isPlaying = false;
+        this.firstAdmissionAtMs = null;
+        this.clearRequestedAt.clear();
+        if (this.node) {
+            if (reason === 'interruption') this.clearRequestedAt.set(this.generation, performance.now());
+            this.notify({ type: 'clear_requested', generation: this.generation, reason,
+                pendingEncodedBytes: 0, inFlightBytes: 0, queueDepthMs: 0 });
+            this.send({ type: 'clear', generation: this.generation, reason });
+        } else this.notify({ type: 'pending', generation: this.generation,
+            pendingEncodedBytes: 0, inFlightBytes: 0, queueDepthMs: 0 });
     }
 
     cleanup(): void {
-        debug("Cleaning up");
-
-        // Mark as destroyed to prevent any pending callbacks from executing
-        this.isDestroyed = true;
-
-        this.stop();
-
-        if (this.audioContext) {
-            this.audioContext.close();
-            this.audioContext = null;
+        if (this.destroyed) return;
+        this.stop('cleanup');
+        this.destroyed = true;
+        this.clearRequestedAt.clear();
+        if (this.node) {
+            this.node.port.onmessage = null;
+            this.node.onprocessorerror = null;
+            this.node.port.close();
+            this.node.disconnect();
+            this.node = null;
         }
+        const context = this.audioContext;
+        this.audioContext = null;
+        if (context) void context.close().catch(() => {});
     }
 }

@@ -91,14 +91,17 @@ test('unexpected track end cleans recorder once and notifies owner', async () =>
 });
 
 test('stale packets are dropped, fresh packets forward, and all are acknowledged', () => {
-  const packet = { type: 'audio' as const, buffer: new ArrayBuffer(640), dropped: 0, createdAtMs: 100 };
+  const packet = { type: 'audio' as const, buffer: new ArrayBuffer(640), dropped: 0, createdAtMs: 100, sequence: 1 };
   let sent = 0;
   let dropped = 0;
   let acknowledged = 0;
+  const reasons: string[] = [];
+  const ages: number[] = [];
   const forward = () => { sent++; };
-  const drop = (count: number) => { dropped += count; };
+  const drop = (count: number, reason: string) => { dropped += count; reasons.push(reason); };
   const ack = () => { acknowledged++; };
-  handleWorkletAudioMessage(packet, 199, forward, drop, ack);
+  handleWorkletAudioMessage(packet, 199, forward, drop, ack, undefined,
+    timing => ages.push(timing.captureToMainAgeMs));
   assert.deepEqual([sent, dropped, acknowledged], [1, 0, 1]);
   handleWorkletAudioMessage(packet, 201, forward, drop, ack);
   assert.deepEqual([sent, dropped, acknowledged], [1, 1, 2]);
@@ -108,6 +111,8 @@ test('stale packets are dropped, fresh packets forward, and all are acknowledged
   handleWorkletAudioMessage({ ...packet, level: { rmsDbfs: -30, peakDbfs: -10, clippedSampleRatio: 0 } }, 199,
     forward, drop, ack, () => { throw new Error('diagnostics failed'); });
   assert.deepEqual([sent, dropped, acknowledged], [2, 4, 4]);
+  assert.deepEqual(reasons, ['stale_main', 'worklet_backpressure', 'forwarding_failure']);
+  assert.deepEqual(ages, [99]);
 });
 
 test('recorder rolls back a partially connected graph', async () => {

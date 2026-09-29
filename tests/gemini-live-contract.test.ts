@@ -33,7 +33,9 @@ test('audio send only counts calls accepted by an open SDK transport', () => {
   assert.equal(client.sendAudio(new ArrayBuffer(640)), true);
   assert.equal(calls, 1);
   internal.session.sendRealtimeInput = () => { throw new Error('socket closed'); };
-  assert.equal(client.sendAudio(new ArrayBuffer(640)), false);
+  let synchronousFailures = 0;
+  assert.equal(client.sendAudio(new ArrayBuffer(640), () => { synchronousFailures++; }), false);
+  assert.equal(synchronousFailures, 1);
   assert.equal(errors, 1);
   assert.equal(internal.transportOpen, false);
 });

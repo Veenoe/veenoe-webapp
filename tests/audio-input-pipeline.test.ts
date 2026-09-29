@@ -112,10 +112,10 @@ test('downsampling attenuates speech-band aliases and reset clears resampler sta
 });
 
 test('worklet handoff retains the freshest packet while keeping three in flight', () => {
-  const sent: Array<{ type: string; buffer?: ArrayBuffer; dropped?: number; outputSampleRate?: number; packetTargetMs?: number }> = [];
+  const sent: Array<{ type: string; buffer?: ArrayBuffer; dropped?: number; sequence?: number; outputSampleRate?: number; packetTargetMs?: number }> = [];
   let processor: { pipeline: { push(input: Float32Array): void }; port: { onmessage: (e: { data: string }) => void } } | null = null;
   class Base {
-    port = { postMessage: (value: { type: string; buffer?: ArrayBuffer; dropped?: number }) => sent.push(value), onmessage: () => { } };
+    port = { postMessage: (value: { type: string; buffer?: ArrayBuffer; dropped?: number; sequence?: number }) => sent.push(value), onmessage: () => { } };
   }
   const scope: Record<string, unknown> = {
     ...root, AudioWorkletProcessor: Base, currentTime: 0,
@@ -141,4 +141,5 @@ test('worklet handoff retains the freshest packet while keeping three in flight'
   worklet.port.onmessage({ data: 'ack' });
   assert.equal(sent[5].dropped, 0);
   assert.equal(new DataView(sent[5].buffer!).getInt16(0, true), Math.round(0.7 * 32767));
+  assert.deepEqual(sent.filter(message => message.type === 'audio').map(message => message.sequence), [1, 2, 3, 6, 7]);
 });

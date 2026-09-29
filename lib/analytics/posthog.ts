@@ -57,6 +57,7 @@ export type VoiceEventName =
   | "voice_connection_ready"
   | "voice_turn_completed"
   | "voice_interruption"
+  | "voice_playback_clear_acknowledged"
   | "voice_connection_error"
   | "voice_session_ended"
   | "voice_diagnostics_ping";
@@ -77,7 +78,7 @@ export interface VoiceEventProperties {
   speech_end_to_first_playback_ms?: number | null;
 
   // Interruption
-  interruption_to_playback_stop_ms?: number | null;
+  clear_request_to_acknowledgment_ms?: number | null;
 
   // Audio Input Transport Aggregates
   input_packet_count?: number | null;

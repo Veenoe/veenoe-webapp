@@ -69,6 +69,27 @@ test('transport acceptance and rejection account for active, unmuted packets exa
   useVivaStore.getState().resetSession();
 });
 
+test('playback lifecycle and temporary underrun never gate active microphone forwarding', () => {
+  const { pipeline } = setup();
+  useVivaStore.getState().setMicrophoneState(MicrophoneState.ACTIVE);
+  const playback = pipeline.createPlaybackCallbacks();
+  let sent = 0;
+  const forward = () => {
+    const { microphoneState, isMuted } = useVivaStore.getState();
+    pipeline.forwardMicrophoneAudio(new ArrayBuffer(640), microphoneState, isMuted,
+      () => { sent++; return true; }, () => {}, () => assert.fail('active packet rejected'));
+  };
+  playback.onPlayStart?.();
+  for (let index = 0; index < 100; index++) forward();
+  playback.onUnderrun?.();
+  for (let index = 0; index < 100; index++) forward();
+  pipeline.completeTurn(() => {});
+  for (let index = 0; index < 100; index++) forward();
+  playback.onPlayEnd?.();
+  assert.equal(sent, 300);
+  useVivaStore.getState().resetSession();
+});
+
 test('mute never turns an idle or failed recorder into an active microphone', () => {
   useVivaStore.getState().resetSession();
   useVivaStore.getState().toggleMute();
@@ -124,6 +145,25 @@ test('interruption without queued playback does not record a playback stop', () 
   assert.deepEqual(events, ['signal', 'stop', 'no-playback']);
 });
 
+test('interruption finishes a saved conclusion waiting on playback', () => {
+  useVivaStore.getState().resetSession();
+  const pending = { current: true };
+  const playing = { current: true };
+  let finished = 0;
+  const conclusionPipeline = createAudioPipeline({
+    setConversationState: state => useVivaStore.getState().setConversationState(state),
+    setPlaybackState: state => useVivaStore.getState().setPlaybackState(state),
+    isConclusionPendingRef: pending,
+    isTurnCompleteRef: { current: false },
+    isAudioPlayingRef: playing,
+    finishConclusion: () => { finished++; },
+  });
+  conclusionPipeline.interruptPlayback(() => {}, () => {}, () => {}, () => {});
+  assert.equal(finished, 1);
+  assert.equal(playing.current, false);
+  useVivaStore.getState().resetSession();
+});
+
 test('normal playback ends into listening once turn completes', () => {
   const { pipeline, turnComplete } = setup();
   const callbacks = pipeline.createPlaybackCallbacks();
@@ -132,6 +172,14 @@ test('normal playback ends into listening once turn completes', () => {
   callbacks.onPlayEnd?.();
   assert.equal(useVivaStore.getState().conversationState, ConversationState.LISTENING);
   assert.equal(useVivaStore.getState().playbackState, PlaybackState.IDLE);
+});
+
+test('playback failure reaches the session error handler', () => {
+  const { pipeline } = setup();
+  let failures = 0;
+  pipeline.createPlaybackCallbacks({ onPlaybackError: () => { failures++; } }).onPlaybackError?.();
+  assert.equal(failures, 1);
+  useVivaStore.getState().resetSession();
 });
 
 test('interrupted Gemini message does not dispatch stale audio from the same response', () => {

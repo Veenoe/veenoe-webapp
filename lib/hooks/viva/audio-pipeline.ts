@@ -28,9 +28,13 @@ export function createAudioPipeline(deps: AudioPipelineDependencies) {
         isMuted: boolean,
         sendAudio: (data: ArrayBuffer) => boolean,
         onPacketSent: (byteLength: number) => void,
-        onPacketRejected: () => void
+        onPacketRejected: () => void,
+        onIntentionalSkip: (reason: 'muted' | 'inactive') => void = () => {}
     ) => {
-        if (microphoneState !== MicrophoneState.ACTIVE || isMuted) return;
+        if (microphoneState !== MicrophoneState.ACTIVE || isMuted) {
+            onIntentionalSkip(isMuted ? 'muted' : 'inactive');
+            return;
+        }
         if (sendAudio(data)) onPacketSent(data.byteLength);
         else onPacketRejected();
     };
@@ -62,17 +66,22 @@ export function createAudioPipeline(deps: AudioPipelineDependencies) {
         isTurnCompleteRef.current = true;
     };
 
+    const notifyDiagnostic = (callback: (() => void) | undefined) => {
+        try { callback?.(); }
+        catch (error) { console.error('[AudioPipeline] Diagnostic observer failed', error); }
+    };
+
     const createPlaybackCallbacks = (extraCallbacks?: Partial<AudioPlayerCallbacks>): AudioPlayerCallbacks => ({
         onPlayStart: () => {
             isAudioPlayingRef.current = true;
             setPlaybackState(PlaybackState.PLAYING);
             setConversationState(ConversationState.SPEAKING);
-            extraCallbacks?.onPlayStart?.();
+            notifyDiagnostic(extraCallbacks?.onPlayStart);
         },
         onPlayEnd: () => {
             isAudioPlayingRef.current = false;
             setPlaybackState(PlaybackState.IDLE);
-            extraCallbacks?.onPlayEnd?.();
+            notifyDiagnostic(extraCallbacks?.onPlayEnd);
             if (isConclusionPendingRef.current) {
                 finishConclusion();
             } else if (isTurnCompleteRef.current) {
@@ -82,9 +91,11 @@ export function createAudioPipeline(deps: AudioPipelineDependencies) {
             }
         },
         onAudioScheduled: (queueDurationMs) => {
-            extraCallbacks?.onAudioScheduled?.(queueDurationMs);
+            notifyDiagnostic(() => extraCallbacks?.onAudioScheduled?.(queueDurationMs));
         },
-        onUnderrun: () => extraCallbacks?.onUnderrun?.(),
+        onUnderrun: () => notifyDiagnostic(extraCallbacks?.onUnderrun),
+        onPlaybackError: () => extraCallbacks?.onPlaybackError?.(),
+        onBufferEvent: (event) => notifyDiagnostic(() => extraCallbacks?.onBufferEvent?.(event)),
     });
 
     const interruptPlayback = (
@@ -103,6 +114,7 @@ export function createAudioPipeline(deps: AudioPipelineDependencies) {
         isTurnCompleteRef.current = true;
         setPlaybackState(PlaybackState.IDLE);
         setConversationState(ConversationState.LISTENING);
+        if (isConclusionPendingRef.current) finishConclusion();
     };
 
     return {
