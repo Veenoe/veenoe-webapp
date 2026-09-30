@@ -4,144 +4,160 @@
 
 import { create } from "zustand";
 import {
-    SessionState,
-    MicrophoneState,
-    ConversationState,
-    PlaybackState,
+  SessionState,
+  MicrophoneState,
+  ConversationState,
+  PlaybackState,
 } from "@/types/viva";
 import type { VivaStartResponse } from "@/types/viva";
 
 export interface Transcript {
-    id: string;
-    role: "user" | "assistant";
-    text: string;
-    timestamp: number;
-    isFinal: boolean;
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  timestamp: number;
+  isFinal: boolean;
+  source?: "input" | "output";
+  completion?: "protocol" | "local" | "open";
 }
 
 // Helper type for the conclusion popup data
 export interface ConclusionData {
-    score: number;
-    total: number;
-    feedback: string;
+  score: number;
+  total: number;
+  feedback: string;
 }
 
 interface VivaSessionStore {
-    // Session data
-    sessionId: string | null;
-    ephemeralToken: string | null;
-    googleModel: string | null;
-    vadProfile: string | null;
-    voiceName: string;
-    sessionDurationMinutes: number;
-    sessionState: SessionState;
+  // Session data
+  sessionId: string | null;
+  ephemeralToken: string | null;
+  googleModel: string | null;
+  vadProfile: string | null;
+  voiceName: string;
+  sessionDurationMinutes: number;
+  sessionState: SessionState;
 
-    // Audio state
-    microphoneState: MicrophoneState;
-    conversationState: ConversationState;
-    playbackState: PlaybackState;
-    isMuted: boolean;
+  // Audio state
+  microphoneState: MicrophoneState;
+  conversationState: ConversationState;
+  playbackState: PlaybackState;
+  isMuted: boolean;
 
-    // Transcripts
-    transcripts: Transcript[];
+  // Transcripts
+  transcripts: Transcript[];
 
-    // Timer
-    timeRemaining: number;
-    timerWarningShown: boolean;
+  // Timer
+  timeRemaining: number;
+  timerWarningShown: boolean;
 
-    // Error handling
-    error: string | null;
+  // Error handling
+  error: string | null;
 
-    // -- NEW: Conclusion Data for Popup --
-    conclusionData: ConclusionData | null;
+  // -- NEW: Conclusion Data for Popup --
+  conclusionData: ConclusionData | null;
 
-    // Actions
-    setSessionData: (data: VivaStartResponse) => void;
-    setSessionState: (state: SessionState) => void;
-    setMicrophoneState: (state: MicrophoneState) => void;
-    setConversationState: (state: ConversationState) => void;
-    setPlaybackState: (state: PlaybackState) => void;
-    toggleMute: () => void;
-    addTranscript: (transcript: Omit<Transcript, "id" | "timestamp">) => void;
-    updateTranscript: (id: string, updates: Partial<Transcript>) => void;
-    setTimeRemaining: (seconds: number) => void;
-    setTimerWarning: (shown: boolean) => void;
-    setError: (error: string | null) => void;
+  // Actions
+  setSessionData: (data: VivaStartResponse) => void;
+  setSessionState: (state: SessionState) => void;
+  setMicrophoneState: (state: MicrophoneState) => void;
+  setConversationState: (state: ConversationState) => void;
+  setPlaybackState: (state: PlaybackState) => void;
+  toggleMute: () => void;
+  addTranscript: (transcript: Omit<Transcript, "id" | "timestamp">) => void;
+  upsertTranscript: (transcript: Omit<Transcript, "timestamp">) => void;
+  updateTranscript: (id: string, updates: Partial<Transcript>) => void;
+  setTimeRemaining: (seconds: number) => void;
+  setTimerWarning: (shown: boolean) => void;
+  setError: (error: string | null) => void;
 
-    // -- NEW: Action to set conclusion data --
-    setConclusionData: (data: ConclusionData | null) => void;
+  // -- NEW: Action to set conclusion data --
+  setConclusionData: (data: ConclusionData | null) => void;
 
-    resetSession: () => void;
+  resetSession: () => void;
 }
 
 const initialState = {
-    sessionId: null,
-    ephemeralToken: null,
-    googleModel: null,
-    vadProfile: null,
-    voiceName: "Kore",
-    sessionDurationMinutes: 5,
-    sessionState: SessionState.IDLE,
-    microphoneState: MicrophoneState.IDLE,
-    conversationState: ConversationState.LISTENING,
-    playbackState: PlaybackState.IDLE,
-    isMuted: false,
-    transcripts: [],
-    timeRemaining: 300,
-    timerWarningShown: false,
-    error: null,
-    conclusionData: null, // Initialize as null
+  sessionId: null,
+  ephemeralToken: null,
+  googleModel: null,
+  vadProfile: null,
+  voiceName: "Kore",
+  sessionDurationMinutes: 5,
+  sessionState: SessionState.IDLE,
+  microphoneState: MicrophoneState.IDLE,
+  conversationState: ConversationState.LISTENING,
+  playbackState: PlaybackState.IDLE,
+  isMuted: false,
+  transcripts: [],
+  timeRemaining: 300,
+  timerWarningShown: false,
+  error: null,
+  conclusionData: null, // Initialize as null
 };
 
 export const useVivaStore = create<VivaSessionStore>((set) => ({
-    ...initialState,
+  ...initialState,
 
-    setSessionData: (data) =>
-        set({
-            sessionId: data.viva_session_id,
-            ephemeralToken: data.ephemeral_token,
-            googleModel: data.google_model,
-            vadProfile: data.vad_profile ?? null,
-            voiceName: data.voice_name,
-            sessionDurationMinutes: data.session_duration_minutes,
-            timeRemaining: data.session_duration_minutes * 60,
-        }),
+  setSessionData: (data) =>
+    set({
+      sessionId: data.viva_session_id,
+      ephemeralToken: data.ephemeral_token,
+      googleModel: data.google_model,
+      vadProfile: data.vad_profile ?? null,
+      voiceName: data.voice_name,
+      sessionDurationMinutes: data.session_duration_minutes,
+      timeRemaining: data.session_duration_minutes * 60,
+    }),
 
-    setSessionState: (state) => set({ sessionState: state }),
+  setSessionState: (state) => set({ sessionState: state }),
 
-    setMicrophoneState: (state) => set({ microphoneState: state }),
-    setConversationState: (state) => set({ conversationState: state }),
-    setPlaybackState: (state) => set({ playbackState: state }),
+  setMicrophoneState: (state) => set({ microphoneState: state }),
+  setConversationState: (state) => set({ conversationState: state }),
+  setPlaybackState: (state) => set({ playbackState: state }),
 
-    toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
+  toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
 
-    addTranscript: (transcript) =>
-        set((state) => ({
-            transcripts: [
-                ...state.transcripts,
-                {
-                    ...transcript,
-                    // crypto.randomUUID() guarantees uniqueness, unlike Date.now()+Math.random()
-                    id: crypto.randomUUID(),
-                    timestamp: Date.now(),
-                },
-            ],
-        })),
+  addTranscript: (transcript) =>
+    set((state) => ({
+      transcripts: [
+        ...state.transcripts,
+        {
+          ...transcript,
+          // crypto.randomUUID() guarantees uniqueness, unlike Date.now()+Math.random()
+          id: crypto.randomUUID(),
+          timestamp: Date.now(),
+        },
+      ],
+    })),
+  upsertTranscript: (transcript) =>
+    set((state) => {
+      const existing = state.transcripts.find(
+        (item) => item.id === transcript.id,
+      );
+      return {
+        transcripts: existing
+          ? state.transcripts.map((item) =>
+            item.id === transcript.id ? { ...item, ...transcript } : item,
+          )
+          : [...state.transcripts, { ...transcript, timestamp: Date.now() }],
+      };
+    }),
 
-    updateTranscript: (id, updates) =>
-        set((state) => ({
-            transcripts: state.transcripts.map((t) =>
-                t.id === id ? { ...t, ...updates } : t
-            ),
-        })),
+  updateTranscript: (id, updates) =>
+    set((state) => ({
+      transcripts: state.transcripts.map((t) =>
+        t.id === id ? { ...t, ...updates } : t,
+      ),
+    })),
 
-    setTimeRemaining: (seconds) => set({ timeRemaining: seconds }),
+  setTimeRemaining: (seconds) => set({ timeRemaining: seconds }),
 
-    setTimerWarning: (shown) => set({ timerWarningShown: shown }),
+  setTimerWarning: (shown) => set({ timerWarningShown: shown }),
 
-    setError: (error) => set({ error }),
+  setError: (error) => set({ error }),
 
-    setConclusionData: (data) => set({ conclusionData: data }),
+  setConclusionData: (data) => set({ conclusionData: data }),
 
-    resetSession: () => set(initialState),
+  resetSession: () => set(initialState),
 }));
