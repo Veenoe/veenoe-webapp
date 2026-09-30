@@ -77,7 +77,7 @@ test('normalizer rejects malformed siblings without losing valid transcription o
   );
 });
 
-test('transcript assembler keeps roles and IDs while reconciling a revisable preview and deltas', () => {
+test('canonical input replaces a revisable preview without assuming later input is a delta', () => {
   useVivaStore.getState().resetSession();
   let next = 0;
   const assembler = new TranscriptAssembler(
@@ -94,7 +94,6 @@ test('transcript assembler keeps roles and IDs while reconciling a revisable pre
     source: 'interim_input',
     text: 'I cannot',
   });
-  assembler.accept({ type: 'transcription', source: 'input', text: 'I can ' });
   assembler.accept({ type: 'transcription', source: 'input', text: 'I can' });
   assembler.accept({ type: 'transcription', source: 'input', finished: true });
   assembler.accept({ type: 'transcription', source: 'input', finished: true });
@@ -115,7 +114,7 @@ test('transcript assembler keeps roles and IDs while reconciling a revisable pre
   assert.deepEqual(
     rows.map(({ id, role, text, isFinal }) => ({ id, role, text, isFinal })),
     [
-      { id: 'segment-1', role: 'user', text: 'I can I can', isFinal: true },
+      { id: 'segment-1', role: 'user', text: 'I can', isFinal: true },
       { id: 'segment-2', role: 'assistant', text: 'no no', isFinal: true },
       { id: 'segment-3', role: 'user', text: 'I can', isFinal: true },
     ],
@@ -124,7 +123,7 @@ test('transcript assembler keeps roles and IDs while reconciling a revisable pre
   useVivaStore.getState().resetSession();
 });
 
-test('turn completion is distinct from transcription completion and never closes input', () => {
+test('unmarked canonical messages remain separate and assistant turn completion never finalizes input', () => {
   const entries: Array<{ role: string; completion: string; text: string }> = [];
   const assembler = new TranscriptAssembler((entry) => entries.push(entry));
   assembler.accept({ type: 'transcription', source: 'input', text: 'student' });
@@ -141,8 +140,36 @@ test('turn completion is distinct from transcription completion and never closes
     text: ' continued',
     finished: true,
   });
-  assert.equal(entries.at(-1)?.text, 'student continued');
+  assert.equal(entries.at(-1)?.text, ' continued');
   assert.equal(entries.at(-1)?.completion, 'protocol');
+  assert.deepEqual(
+    entries.filter((entry) => entry.role === 'user').map((entry) => entry.text),
+    ['student', ' continued', ' continued'],
+  );
+});
+
+test('two canonical input messages without finished cannot be safely merged or called final', () => {
+  useVivaStore.getState().resetSession();
+  let next = 0;
+  const assembler = new TranscriptAssembler(
+    (entry) => useVivaStore.getState().upsertTranscript(entry),
+    () => `segment-${++next}`,
+  );
+  assembler.accept({ type: 'transcription', source: 'input', text: 'no no' });
+  assembler.accept({ type: 'transcription', source: 'input', text: 'no no' });
+  assembler.closeOutputTurn();
+  assert.deepEqual(
+    useVivaStore.getState().transcripts.map(({ text, isFinal, completion }) => ({
+      text,
+      isFinal,
+      completion,
+    })),
+    [
+      { text: 'no no', isFinal: false, completion: 'open' },
+      { text: 'no no', isFinal: false, completion: 'open' },
+    ],
+  );
+  useVivaStore.getState().resetSession();
 });
 
 test('outgoing tool response requires live transport and retains the server call ID', () => {

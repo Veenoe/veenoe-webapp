@@ -5,7 +5,11 @@ import {
   Modality,
   type LiveCallbacks,
   type Session,
+  type LiveServerMessage,
 } from '@google/genai';
+import { createToolHandler } from '../lib/hooks/viva/tool-handlers';
+import { createAudioPipeline } from '../lib/hooks/viva/audio-pipeline';
+import { useVivaStore } from '../lib/store/viva-store';
 
 import {
   createGeminiClientContent,
@@ -209,4 +213,71 @@ test('normalizes conclude_viva calls for the existing local handler', () => {
     }),
     [{ type: 'tool_call', id: 'call-1', name: 'conclude_viva', args }],
   );
+});
+
+test('SDK terminal dispatch saves once, drains buffered audio, and sends no Gemini response', async () => {
+  useVivaStore.getState().resetSession();
+  useVivaStore.setState({ sessionId: 'session-one' });
+  const originalConnect = Live.prototype.connect;
+  let callbacks: LiveCallbacks | undefined;
+  let toolResponses = 0;
+  let playbackCompletions = 0;
+  let writes = 0;
+  let finished = 0;
+  const conclusionPending = { current: false };
+  const pipeline = createAudioPipeline({
+    setConversationState: () => {},
+    setPlaybackState: () => {},
+    isConclusionPendingRef: conclusionPending,
+    isTurnCompleteRef: { current: false },
+    isAudioPlayingRef: { current: true },
+    finishConclusion: () => { finished++; },
+  });
+  const handler = createToolHandler({
+    setError: () => assert.fail('valid conclusion must not error'),
+    finishConclusion: () => { finished++; },
+    hasPendingPlayback: () => true,
+    isConclusionPendingRef: conclusionPending,
+    getToken: async () => null,
+    onTerminalCallAccepted: () => { playbackCompletions++; },
+    saveConclusion: async () => {
+      writes++;
+      return { status: 'completed', score: 8, final_feedback: 'done' };
+    },
+  });
+  const completed: Promise<void>[] = [];
+  Live.prototype.connect = async (params) => {
+    callbacks = params.callbacks;
+    return {
+      close: () => {},
+      sendToolResponse: () => { toolResponses++; },
+    } as unknown as Session;
+  };
+  try {
+    const client = new GeminiLiveClientSDK('auth_tokens/test', {
+      onEvent: (event) => {
+        if (event.type !== 'tool_call') return;
+        completed.push(new Promise((resolve) => {
+          queueMicrotask(() => { void handler(event.name, event.args, event.id).then(resolve); });
+        }));
+      },
+    });
+    await client.connect();
+    const call = { id: 'call-1', name: 'conclude_viva', args: {
+      score: 8, summary: 'done', strong_points: [], areas_of_improvement: [],
+    } };
+    callbacks!.onmessage?.({ toolCall: { functionCalls: [call, { ...call, id: 'call-2' }] } } as unknown as LiveServerMessage);
+    await Promise.all(completed);
+    assert.equal(writes, 1);
+    assert.equal(playbackCompletions, 1);
+    assert.equal(toolResponses, 0);
+    assert.equal(conclusionPending.current, true);
+    assert.equal(finished, 0);
+    pipeline.createPlaybackCallbacks().onPlayEnd?.();
+    assert.equal(finished, 1);
+    client.disconnect();
+  } finally {
+    Live.prototype.connect = originalConnect;
+    useVivaStore.getState().resetSession();
+  }
 });

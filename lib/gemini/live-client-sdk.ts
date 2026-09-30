@@ -17,6 +17,9 @@ const debug =
 
 export interface GeminiLiveEventHandlers {
     onEvent?: (event: GeminiEvent) => void;
+    // Compatibility callbacks still drive existing audio and lifecycle owners.
+    // New protocol consumers use onEvent; do not handle the same fact in both.
+    // Remove these callbacks when the session hook has fully migrated.
     onConnected?: () => void;
     onDisconnected?: () => void;
     onError?: (error: Error) => void;

@@ -9,16 +9,22 @@ export interface AssembledTranscript {
     completion: 'protocol' | 'local' | 'open';
 }
 
-type Stream = { active?: AssembledTranscript; preview?: string };
+type OutputStream = { active?: AssembledTranscript };
+type InputStream = {
+    preview?: AssembledTranscript;
+    pendingCanonical?: AssembledTranscript;
+};
 
 /**
  * Owns local transcript identity for one Live connection. Interim input is a
- * replaceable hypothesis; canonical input/output fragments append verbatim.
- * Gemini supplies no segment ID, so this cannot deduplicate arbitrary replay.
+ * replaceable hypothesis. Canonical input messages have no documented delta or
+ * utterance identity, so each message is preserved as a separate local segment.
+ * Output fragments append within the model turn. Arbitrary replay cannot be
+ * deduplicated without a server segment ID.
  */
 export class TranscriptAssembler {
-    private input: Stream = {};
-    private output: Stream = {};
+    private input: InputStream = {};
+    private output: OutputStream = {};
     constructor(
         private emit: (entry: AssembledTranscript) => void,
         private makeId: () => string = () => crypto.randomUUID(),
@@ -30,30 +36,49 @@ export class TranscriptAssembler {
     }
 
     accept(event: Extract<GeminiEvent, { type: 'transcription' }>): void {
-        const stream = event.source === 'output' ? this.output : this.input;
         if (event.source === 'interim_input') {
             if (event.text !== undefined) {
-                stream.preview = event.text;
-                if (!stream.active) stream.active = this.create('input');
-                // A canonical delta, once received, owns the displayed text.
-                if (
-                    stream.active.source === 'input' &&
-                    !stream.active.isFinal &&
-                    !stream.active.text
-                ) {
-                    this.emit({ ...stream.active, text: event.text });
-                }
+                if (!this.input.preview) this.input.preview = this.create('input');
+                this.input.preview = { ...this.input.preview, text: event.text };
+                this.emit({ ...this.input.preview });
             }
             return;
         }
+        if (event.source === 'input') {
+            this.acceptInput(event);
+            return;
+        }
+        const stream = this.output;
         if (event.text !== undefined && event.text.length > 0) {
-            if (!stream.active) stream.active = this.create(event.source);
+            if (!stream.active) stream.active = this.create('output');
             stream.active.text += event.text;
-            stream.preview = undefined;
             this.emit({ ...stream.active });
         }
         if (event.finished === true && stream.active)
             this.finish(stream, 'protocol');
+    }
+
+    private acceptInput(event: Extract<GeminiEvent, { type: 'transcription' }>): void {
+        if (event.text !== undefined && event.text.length > 0) {
+            // Replace a hypothesis with authoritative text. Without a wire ID
+            // or a delta/snapshot contract, joining two canonical messages
+            // could duplicate a correction or merge separate utterances.
+            const entry = {
+                ...(this.input.preview ?? this.create('input')),
+                text: event.text,
+            };
+            this.input.preview = undefined;
+            this.input.pendingCanonical = entry;
+            this.emit({ ...entry });
+        }
+        if (event.finished === true && this.input.pendingCanonical) {
+            this.emit({
+                ...this.input.pendingCanonical,
+                isFinal: true,
+                completion: 'protocol',
+            });
+            this.input.pendingCanonical = undefined;
+        }
     }
 
     /** Turn completion closes output locally, never the independent student stream. */
@@ -76,10 +101,10 @@ export class TranscriptAssembler {
         };
     }
 
-    private finish(stream: Stream, completion: 'protocol' | 'local'): void {
+    private finish(stream: OutputStream, completion: 'protocol' | 'local'): void {
         const active = stream.active;
         if (!active) return;
-        const text = active.text || stream.preview || '';
+        const text = active.text;
         if (text)
             this.emit({
                 ...active,
@@ -88,6 +113,5 @@ export class TranscriptAssembler {
                 completion,
             });
         stream.active = undefined;
-        stream.preview = undefined;
     }
 }
