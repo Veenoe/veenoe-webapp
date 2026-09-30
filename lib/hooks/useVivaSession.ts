@@ -170,8 +170,18 @@ export function useVivaSession() {
         abandonSession,
         isConclusionSavingRef,
         onTerminalCallAccepted: () => audioPlayerRef.current?.completeTurn(),
+        onConclusionRejected: () => {
+          // The rejected call still ends the spoken response; no turnComplete is promised.
+          audioPipeline.completeTurn(() => audioPlayerRef.current?.completeTurn());
+        },
+        onConclusionFailure: () => {
+          setSessionState(SessionState.ERROR);
+          setConversationState(ConversationState.LISTENING);
+          cleanupResources();
+          void abandonSession(true).catch(() => { });
+        },
       }),
-    [setError, finishConclusion, getToken, abandonSession],
+    [setError, finishConclusion, getToken, abandonSession, audioPipeline, setConversationState, setSessionState, cleanupResources],
   );
 
   // Start audio pipeline
@@ -443,10 +453,15 @@ export function useVivaSession() {
 
   // Request conclusion from AI
   const requestConclusion = useCallback(async () => {
-    if (geminiClientRef.current && store.sessionState === SessionState.ACTIVE) {
+    const current = useVivaStore.getState();
+    if (
+      current.sessionState === SessionState.CONCLUDING ||
+      isConclusionSavingRef.current || current.conclusionData
+    ) return;
+    if (geminiClientRef.current && current.sessionState === SessionState.ACTIVE) {
       console.log("[useVivaSession] User requested end. Prompting AI...");
       const accepted = geminiClientRef.current.sendText(
-        "The user needs to leave now. Please immediately evaluate the session so far and call the conclude_viva tool with your feedback.",
+        "The session must end now. First speak a brief, warm thank-you and goodbye in the current language (English unless the student explicitly requested Hindi). Then call the existing conclude_viva tool once with the report based on this session. Do not ask another question or generate a second report.",
       );
       if (accepted) {
         setSessionState(SessionState.CONCLUDING);
@@ -458,7 +473,7 @@ export function useVivaSession() {
     } catch {
       // Keep the page available for a retry; expiry reconciliation is the fallback.
     }
-  }, [store.sessionState, abandonSession, setSessionState]);
+  }, [abandonSession, setSessionState]);
 
   // Toggle mute
   const toggleMute = useCallback(() => {

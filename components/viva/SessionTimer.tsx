@@ -6,15 +6,13 @@
 "use client";
 
 import { useSessionTimer } from "@/lib/hooks/useSessionTimer";
-import { Progress } from "@/components/ui/progress";
-import { Clock, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
  * Session timer component with countdown and progress bar
  */
-export function SessionTimer() {
-    const { formattedTime, isWarning, isUrgent } = useSessionTimer();
+export function SessionTimer({ onTimeLimit }: { onTimeLimit: () => void }) {
+    const { formattedTime, isWarning, isUrgent } = useSessionTimer(onTimeLimit);
 
     return (
         <div className="flex flex-col items-center justify-center p-4">
