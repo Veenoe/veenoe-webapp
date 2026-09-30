@@ -51,7 +51,7 @@ export default function VivaResultPage() {
         );
     }
 
-    const { score, summary, strong_points, areas_of_improvement } = session.feedback;
+    const { score, summary, strong_points, areas_of_improvement, next_steps, coverage_note } = session.feedback;
 
     return (
         <div className="min-h-screen bg-background p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -66,12 +66,19 @@ export default function VivaResultPage() {
                 />
 
                 {/* Score & Summary Grid */}
+                {coverage_note && <p className="text-sm text-muted-foreground">{coverage_note}</p>}
                 <div className="grid md:grid-cols-3 gap-6">
                     <ScoreCard score={score} />
                     <SummaryCard summary={summary} />
                 </div>
 
                 {/* Detailed Analysis Grid */}
+                {!!next_steps?.length && <FeedbackCard
+                    title="What to practise next"
+                    points={next_steps}
+                    variant="success"
+                    emptyMessage=""
+                />}
                 <div className="grid md:grid-cols-2 gap-6">
                     <FeedbackCard
                         title="Strong Points"

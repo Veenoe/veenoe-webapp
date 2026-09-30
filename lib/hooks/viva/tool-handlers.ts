@@ -21,6 +21,25 @@ export interface ToolHandlerDependencies {
     abandonSession?: () => Promise<void>;
     isConclusionSavingRef?: React.MutableRefObject<boolean>;
     onTerminalCallAccepted?: () => void;
+    onConclusionRejected?: () => void;
+    onConclusionFailure?: () => void;
+}
+
+function conclusionValidationIssue(args: Record<string, unknown>, id?: string): string | null {
+    if (!id) return 'call_id';
+    if (typeof args.score !== 'number' || !Number.isInteger(args.score) || args.score < 0 || args.score > 10) return 'score';
+    if (typeof args.summary !== 'string' || !args.summary.trim() || args.summary.length > 2000) return 'summary';
+    for (const field of ['strong_points', 'areas_of_improvement']) {
+        const values = args[field];
+        if (!Array.isArray(values) || values.length > 5 || !values.every(
+            (value) => typeof value === 'string' && value.trim().length > 0 && value.trim().length <= 600,
+        )) return field;
+    }
+    if (args.next_steps !== undefined && (!Array.isArray(args.next_steps) || args.next_steps.length > 3 || !args.next_steps.every(
+        (value) => typeof value === 'string' && value.trim().length > 0 && value.trim().length <= 600,
+    ))) return 'next_steps';
+    if (args.coverage_note != null && (typeof args.coverage_note !== 'string' || !args.coverage_note.trim() || args.coverage_note.trim().length > 600)) return 'coverage_note';
+    return null;
 }
 
 /**
@@ -36,7 +55,7 @@ export function createToolHandler(deps: ToolHandlerDependencies) {
     } = deps;
     const saveConclusion = deps.saveConclusion ?? concludeViva;
     let conclusionSessionId: string | null = null;
-    let conclusionStatus: 'idle' | 'saving' | 'saved' = 'idle';
+    let conclusionStatus: 'idle' | 'saving' | 'saved' | 'failed' = 'idle';
     const cancelled = new Set<string>();
     let cancellationSessionId: string | null = null;
     const syncSession = () => {
@@ -66,23 +85,6 @@ export function createToolHandler(deps: ToolHandlerDependencies) {
         if (!currentSessionId) return;
 
         if (toolName === 'conclude_viva') {
-            if (
-                !id ||
-                typeof args.score !== 'number' ||
-                !Number.isFinite(args.score) ||
-                typeof args.summary !== 'string' ||
-                !Array.isArray(args.strong_points) ||
-                !args.strong_points.every(
-                    (value) => typeof value === 'string',
-                ) ||
-                !Array.isArray(args.areas_of_improvement) ||
-                !args.areas_of_improvement.every(
-                    (value) => typeof value === 'string',
-                )
-            ) {
-                setError('Invalid conclusion request from voice service.');
-                return;
-            }
             if (conclusionSessionId !== currentSessionId) {
                 conclusionSessionId = currentSessionId;
                 conclusionStatus = 'idle';
@@ -90,6 +92,21 @@ export function createToolHandler(deps: ToolHandlerDependencies) {
             // Gemini may emit the tool again after an interruption. Only one
             // backend write should decide the feedback for a given session.
             if (conclusionStatus !== 'idle') return;
+            const issue = conclusionValidationIssue(args, id);
+            if (issue || !id) {
+                const field = issue ?? 'call_id';
+                // Only fixed field names are logged, never report contents.
+                console.warn('[ToolHandler] Conclusion rejected:', field);
+                deps.onConclusionRejected?.();
+                if (deps.onConclusionFailure) {
+                    conclusionStatus = 'failed';
+                    setError('Could not save the session report. Please start a new session.');
+                    deps.onConclusionFailure();
+                } else {
+                    setError('Invalid conclusion request from voice service.');
+                }
+                return;
+            }
             conclusionStatus = 'saving';
             if (deps.isConclusionSavingRef)
                 deps.isConclusionSavingRef.current = true;
@@ -119,6 +136,8 @@ export function createToolHandler(deps: ToolHandlerDependencies) {
                     summary: args.summary as string,
                     strong_points: args.strong_points as string[],
                     areas_of_improvement: args.areas_of_improvement as string[],
+                    ...(args.next_steps !== undefined ? { next_steps: args.next_steps as string[] } : {}),
+                    ...(args.coverage_note != null ? { coverage_note: args.coverage_note as string } : {}),
                 });
                 if (deps.isConclusionSavingRef)
                     deps.isConclusionSavingRef.current = false;

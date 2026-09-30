@@ -16,6 +16,8 @@ Function calls retain server IDs. Calls without IDs or valid conclusion argument
 
 GoAway and resumption metadata are exposed without logging handles. `resumable: false` is preserved, and the consumed message index stays a string. VEENOE-23 owns reconnect, token refresh, replay, and persisted resumption state; parsing an update does not mean resumption is operational.
 
+Conclusion generates and saves one report through the existing tool with score, summary, strengths, areas for improvement, next steps and coverage note. Older calls may omit the new fields. Extra calls are ignored before payload validation once that session is saving or saved, including malformed duplicates. Final audio drains before disconnect. An invalid conclusion closes the spoken-response boundary and exits through the existing abandonment/completion check; if the backend already completed the session, that check opens its saved report. Validation diagnostics contain fixed field paths only, never report contents. Timer expiry requests the same spoken closing and conclusion as the end-session button, rather than merely changing the UI state. The guidance is stored with the existing report; no second report generation is requested.
+
 ## Manual live QA (pending)
 
 Use a normal account and the existing anonymous Voice Diagnostics panel. Record browser/OS, speaker and microphone, frontend/backend revisions, and telemetry JSON without transcripts, audio, or credentials.

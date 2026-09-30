@@ -1,6 +1,6 @@
 /**
  * Custom React Hook for Session Timer
- * Manages the 10-minute countdown timer with warnings
+ * Manages the session countdown and requests the normal conclusion at expiry.
  */
 
 "use client";
@@ -18,14 +18,11 @@ const URGENT_THRESHOLD = 60; // 1 minute in seconds
 /**
  * Hook for managing the session timer
  */
-export function useSessionTimer() {
+export function useSessionTimer(onTimeLimit: () => void) {
     const {
         timeRemaining,
         sessionState,
-        timerWarningShown,
-        setTimeRemaining,
-        setTimerWarning,
-        setSessionState,
+        sessionDurationMinutes,
     } = useVivaStore();
 
     /**
@@ -67,37 +64,32 @@ export function useSessionTimer() {
         }
 
         const interval = setInterval(() => {
-            setTimeRemaining(Math.max(0, timeRemaining - 1));
-
-            // Show warning at 2 minutes
-            if (timeRemaining === WARNING_THRESHOLD && !timerWarningShown) {
-                setTimerWarning(true);
-                // You can trigger a toast notification here
-            }
-
-            // Auto-conclude at 0
-            if (timeRemaining <= 0) {
-                setSessionState(SessionState.CONCLUDING);
-                clearInterval(interval);
-            }
+            advanceSessionTimer(onTimeLimit);
         }, 1000);
 
         return () => clearInterval(interval);
     }, [
         sessionState,
-        timeRemaining,
-        timerWarningShown,
-        setTimeRemaining,
-        setTimerWarning,
-        setSessionState,
+        onTimeLimit,
     ]);
 
     return {
         timeRemaining,
         formattedTime: formatTime(timeRemaining),
         timerStatus: getTimerStatus(timeRemaining),
-        progress: getProgress(timeRemaining, 10),
+        progress: getProgress(timeRemaining, sessionDurationMinutes),
         isWarning: timeRemaining <= WARNING_THRESHOLD,
         isUrgent: timeRemaining <= URGENT_THRESHOLD,
     };
+}
+
+/** Read current state so an expired timer cannot race a completed/paused session. */
+export function advanceSessionTimer(onTimeLimit: () => void): void {
+    const state = useVivaStore.getState();
+    if (state.sessionState !== SessionState.ACTIVE) return;
+    const remaining = Math.max(0, state.timeRemaining - 1);
+    state.setTimeRemaining(remaining);
+    if (remaining <= WARNING_THRESHOLD && !state.timerWarningShown)
+        state.setTimerWarning(true);
+    if (remaining === 0) onTimeLimit();
 }

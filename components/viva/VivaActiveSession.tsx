@@ -66,7 +66,7 @@ export function VivaActiveSession({ vivaSession }: VivaActiveSessionProps) {
             <div className="flex flex-col items-center justify-center min-h-[80vh] space-y-8 max-w-4xl mx-auto w-full animate-in fade-in duration-500">
                 {/* Timer */}
                 <div className="w-full flex justify-center">
-                    <SessionTimer />
+                    <SessionTimer onTimeLimit={requestConclusion} />
                 </div>
 
                 {/* Visualizer */}

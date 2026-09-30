@@ -28,6 +28,8 @@ export interface VivaFeedback {
     summary: string;
     strong_points: string[];
     areas_of_improvement: string[];
+    next_steps?: string[];
+    coverage_note?: string | null;
 }
 
 // Session Object
@@ -49,6 +51,8 @@ export interface ConcludeVivaRequest {
     summary: string;
     strong_points: string[];
     areas_of_improvement: string[];
+    next_steps?: string[];
+    coverage_note?: string | null;
 }
 
 export interface ConcludeVivaResponse {
