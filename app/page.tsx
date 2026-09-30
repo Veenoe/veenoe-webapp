@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { HeroSection } from "@/components/about/HeroSection";
+import Hero17 from "@/components/ui/hero-17";
+import { getHeroHeadline } from "@/lib/hero-headlines";
 
 export default async function Home() {
   const { userId } = await auth();
@@ -9,11 +10,5 @@ export default async function Home() {
     redirect("/viva");
   }
 
-  return (
-    // The <main> tag is semantic. The HeroSection component
-    // handles its own full-screen layout, so this is all we need.
-    <main className="h-full">
-      <HeroSection />
-    </main>
-  );
+  return <main><Hero17 headline={getHeroHeadline()} /></main>;
 }
