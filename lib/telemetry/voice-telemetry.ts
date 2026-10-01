@@ -642,9 +642,19 @@ export class VoiceTelemetry {
 
   // --- Gemini Response Measurements ---
 
+  public onAutomaticKickoff(accepted: boolean): void {
+    this.recordDiagnosticEvent(accepted ? "automatic_kickoff_sent" : "automatic_kickoff_failed");
+  }
+
   public onGeminiAudioChunkReceived(): void {
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
 
+    if (this.totalOutputChunks === 0) {
+      // The automatic opening has no student input packet; measure from initialization
+      // rather than assigning it a misleading input-to-response turnaround.
+      const latency = calculateElapsedMs(this.sessionInitStartTime, now);
+      this.recordDiagnosticEvent("session_init_to_first_gemini_audio", `${latency}ms`);
+    }
     this.totalOutputChunks++;
     this.turnOutputChunkCount++;
 

@@ -442,3 +442,19 @@ test("privacy guarantees: voice analytics events and snapshots never contain PII
     }
   }
 });
+
+
+test("automatic kickoff and initialization-to-first-audio diagnostics are session scoped", () => {
+  const telemetry = new VoiceTelemetry();
+  telemetry.onSessionInitStart();
+  telemetry.onAutomaticKickoff(true);
+  telemetry.onGeminiAudioChunkReceived();
+  telemetry.onGeminiAudioChunkReceived();
+  const events = telemetry.getSnapshot().recentEvents;
+  assert.equal(events.filter(event => event.name === "automatic_kickoff_sent").length, 1);
+  assert.equal(events.filter(event => event.name === "session_init_to_first_gemini_audio").length, 1);
+  telemetry.onSessionInitStart();
+  assert.equal(telemetry.getSnapshot().recentEvents.some(event => event.name === "session_init_to_first_gemini_audio"), false);
+  telemetry.onAutomaticKickoff(false);
+  assert.equal(telemetry.getSnapshot().recentEvents.some(event => event.name === "automatic_kickoff_failed"), true);
+});
