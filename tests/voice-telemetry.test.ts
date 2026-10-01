@@ -442,3 +442,95 @@ test("privacy guarantees: voice analytics events and snapshots never contain PII
     }
   }
 });
+
+
+test("automatic kickoff and initialization-to-first-audio diagnostics are session scoped", () => {
+  const telemetry = new VoiceTelemetry();
+  telemetry.onSessionInitStart();
+  telemetry.onAutomaticKickoff(true);
+  telemetry.onGeminiAudioChunkReceived();
+  telemetry.onGeminiAudioChunkReceived();
+  const events = telemetry.getSnapshot().recentEvents;
+  assert.equal(events.filter(event => event.name === "automatic_kickoff_sent").length, 1);
+  assert.equal(events.filter(event => event.name === "session_init_to_first_gemini_audio").length, 1);
+  telemetry.onSessionInitStart();
+  assert.equal(telemetry.getSnapshot().recentEvents.some(event => event.name === "session_init_to_first_gemini_audio"), false);
+  telemetry.onAutomaticKickoff(false);
+  assert.equal(telemetry.getSnapshot().recentEvents.some(event => event.name === "automatic_kickoff_failed"), true);
+});
+
+
+test("production startup analytics record send outcome, received audio and rendered playback once per session", (t) => {
+  const globalObj = globalThis as unknown as Record<string, unknown>;
+  const originalWindow = globalObj.window;
+  const originalKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  globalObj.window = {};
+  process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_dummy_key";
+  let now = 100;
+  t.mock.method(performance, "now", () => now);
+  t.mock.method(posthog, "init", () => {});
+  const captured: Array<Record<string, unknown>> = [];
+  t.mock.method(posthog, "capture", (event: string, properties: Record<string, unknown>) => {
+    if (event === "voice_startup") captured.push(properties);
+  });
+
+  try {
+    const telemetry = new VoiceTelemetry();
+    telemetry.onSessionInitStart("gemini-3.8-live", "balanced-v1");
+    const firstId = telemetry.getSnapshot().telemetrySessionId;
+    now = 120;
+    telemetry.onAutomaticKickoff(true);
+    telemetry.onAutomaticKickoff(true);
+    now = 150;
+    telemetry.onGeminiAudioChunkReceived();
+    now = 170;
+    telemetry.onGeminiAudioChunkReceived();
+    telemetry.onPlaybackStarted();
+    telemetry.onPlaybackStarted();
+    telemetry.onTurnComplete();
+    now = 200;
+    telemetry.onGeminiAudioChunkReceived();
+    telemetry.onPlaybackStarted();
+    assert.deepEqual(captured, [
+      { telemetry_session_id: firstId, model_name: "gemini-3.8-live", vad_profile: "balanced-v1",
+        startup_stage: "kickoff", kickoff_send_accepted: true },
+      { telemetry_session_id: firstId, model_name: "gemini-3.8-live", vad_profile: "balanced-v1",
+        startup_stage: "first_audio", kickoff_send_accepted: true,
+        session_init_to_first_gemini_audio_ms: 50 },
+      { telemetry_session_id: firstId, model_name: "gemini-3.8-live", vad_profile: "balanced-v1",
+        startup_stage: "first_playback", kickoff_send_accepted: true,
+        session_init_to_first_gemini_audio_ms: 50, session_init_to_first_playback_ms: 70 },
+    ]);
+    telemetry.onSessionEnded();
+    telemetry.onSessionEnded();
+    assert.equal(captured.length, 3);
+
+    now = 300;
+    telemetry.onSessionInitStart();
+    const secondId = telemetry.getSnapshot().telemetrySessionId;
+    assert.notEqual(secondId, firstId);
+    telemetry.onAutomaticKickoff(false);
+    telemetry.onAutomaticKickoff(false);
+    telemetry.onSessionEnded();
+    assert.deepEqual(captured[3], {
+      telemetry_session_id: secondId, startup_stage: "kickoff", kickoff_send_accepted: false,
+    });
+    assert.equal(captured.length, 4);
+
+    now = 400;
+    telemetry.onSessionInitStart();
+    telemetry.onAutomaticKickoff(true);
+    now = 430;
+    telemetry.onGeminiAudioChunkReceived();
+    now = 440;
+    telemetry.onPlaybackStarted();
+    assert.equal(captured[5].session_init_to_first_gemini_audio_ms, 30);
+    assert.equal(captured[6].session_init_to_first_playback_ms, 40);
+    assert.equal(captured.length, 7);
+  } finally {
+    if (originalWindow === undefined) delete globalObj.window;
+    else globalObj.window = originalWindow;
+    if (originalKey === undefined) delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    else process.env.NEXT_PUBLIC_POSTHOG_KEY = originalKey;
+  }
+});

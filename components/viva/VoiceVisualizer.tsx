@@ -4,12 +4,13 @@ import { motion } from "motion/react";
 import { MicrophoneState, PlaybackState } from "@/types/viva";
 
 interface VoiceVisualizerProps {
+    isConnecting: boolean;
     microphoneState: MicrophoneState;
     playbackState: PlaybackState;
     isMuted: boolean;
 }
 
-export function VoiceVisualizer({ microphoneState, playbackState, isMuted }: VoiceVisualizerProps) {
+export function VoiceVisualizer({ isConnecting, microphoneState, playbackState, isMuted }: VoiceVisualizerProps) {
     // Determine the color and animation based on state
     const isListening = microphoneState === MicrophoneState.ACTIVE && !isMuted;
     const isAISpeaking = playbackState === PlaybackState.PLAYING;
@@ -47,12 +48,14 @@ export function VoiceVisualizer({ microphoneState, playbackState, isMuted }: Voi
 
             {/* Status Text */}
             <div className="absolute mt-40 text-sm font-medium text-muted-foreground">
-                {isAISpeaking ? (
-                    <span className="text-blue-500 animate-pulse">AI is speaking...</span>
+                {isConnecting ? (
+                    <span>Connecting...</span>
+                ) : isAISpeaking ? (
+                    <span className="text-blue-500 animate-pulse">Veenoe is speaking...</span>
                 ) : isListening ? (
                     <span className="text-pumpkin animate-pulse">Listening...</span>
                 ) : (
-                    <span>Waiting...</span>
+                    <span>Connecting...</span>
                 )}
             </div>
         </div>
