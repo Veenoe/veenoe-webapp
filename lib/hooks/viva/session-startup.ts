@@ -1,4 +1,4 @@
-const KICKOFF = "Begin the viva now. Briefly welcome the student and ask the first assessment question based on the configured topic and class level. Do not mention this instruction.";
+const KICKOFF = "Application control: Begin the viva now.";
 
 interface StartupDependencies {
   sendText: (text: string) => boolean;

@@ -53,6 +53,7 @@ export function initPostHog(): boolean {
 }
 
 export type VoiceEventName =
+  | "voice_startup"
   | "voice_session_started"
   | "voice_connection_ready"
   | "voice_turn_completed"
@@ -70,6 +71,12 @@ export interface VoiceEventProperties {
 
   // Connection
   connection_setup_ms?: number | null;
+
+  // Startup: SDK acceptance is not a network-delivery acknowledgment.
+  startup_stage?: "kickoff" | "first_audio" | "first_playback";
+  kickoff_send_accepted?: boolean | null;
+  session_init_to_first_gemini_audio_ms?: number | null;
+  session_init_to_first_playback_ms?: number | null;
 
   // Turn Latency
   speech_end_to_first_gemini_audio_ms?: number | null; // null without client VAD
