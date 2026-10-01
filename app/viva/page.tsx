@@ -6,7 +6,6 @@ import { startVivaSession, setTokenGetter } from "@/lib/api/axios";
 import { VivaActiveSession } from "@/components/viva/VivaActiveSession";
 import { VivaConfigForm } from "@/components/viva/VivaConfigForm";
 import { VivaConfigData } from "@/lib/hooks/viva/useVivaSessionConfig";
-import { VivaInfoDialog } from "@/components/viva/VivaInfoDialog";
 import { VoiceDiagnosticsPanel } from "@/components/viva/VoiceDiagnosticsPanel";
 import { initPostHog } from "@/lib/analytics/posthog";
 import { useUser, useAuth } from "@clerk/nextjs";
@@ -18,7 +17,6 @@ export default function VivaRoomPage() {
 
     // Pre-session configuration state
     const [showConfig, setShowConfig] = useState(true);
-    const [showInfoDialog, setShowInfoDialog] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -61,22 +59,13 @@ export default function VivaRoomPage() {
 
             vivaSession.setSessionData(response);
             setShowConfig(false);
-            setShowInfoDialog(true);
+            await vivaSession.initializeSession();
 
         } catch (err) {
             console.error("Failed to start session:", err);
             setError(err instanceof Error ? err.message : "Failed to start session");
         } finally {
             setIsStarting(false);
-        }
-    };
-
-    const handleConfirmStart = async () => {
-        try {
-            setShowInfoDialog(false);
-            await vivaSession.initializeSession();
-        } catch (err) {
-            console.error("Failed to connect to Gemini:", err);
         }
     };
 
@@ -87,11 +76,6 @@ export default function VivaRoomPage() {
                     onSubmit={handleConfigSubmit}
                     isSubmitting={isStarting}
                     error={error}
-                />
-            ) : showInfoDialog ? (
-                <VivaInfoDialog
-                    open={showInfoDialog}
-                    onConfirm={handleConfirmStart}
                 />
             ) : (
                 <div className="p-4 flex-1 flex flex-col relative">
