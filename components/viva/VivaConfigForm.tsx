@@ -116,7 +116,7 @@ export function VivaConfigForm({ onSubmit, isSubmitting, error }: VivaConfigForm
                                     Starting...
                                 </>
                             ) : (
-                                "Next"
+                                "Start Viva"
                             )}
                         </Button>
                     </form>

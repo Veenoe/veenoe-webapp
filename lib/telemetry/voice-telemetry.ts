@@ -214,6 +214,9 @@ export class VoiceTelemetry {
   private geminiConnectedTime: number | null = null;
   private geminiSetupCompleteTime: number | null = null;
   private connectionSetupMs: number | null = null;
+  private kickoffSendAccepted: boolean | null = null;
+  private sessionInitToFirstGeminiAudioMs: number | null = null;
+  private sessionInitToFirstPlaybackMs: number | null = null;
 
   // Session-wide counters
   private totalInputPackets = 0;
@@ -344,6 +347,9 @@ export class VoiceTelemetry {
     this.geminiConnectedTime = null;
     this.geminiSetupCompleteTime = null;
     this.connectionSetupMs = null;
+    this.kickoffSendAccepted = null;
+    this.sessionInitToFirstGeminiAudioMs = null;
+    this.sessionInitToFirstPlaybackMs = null;
     this.lastCompletedTurnMetrics = null;
 
     this.currentTurn = 0;
@@ -642,9 +648,35 @@ export class VoiceTelemetry {
 
   // --- Gemini Response Measurements ---
 
+  private captureStartup(stage: VoiceEventProperties["startup_stage"]): void {
+    captureVoiceEvent("voice_startup", {
+      telemetry_session_id: this.sessionId,
+      model_name: this.modelName,
+      vad_profile: this.vadProfile,
+      startup_stage: stage,
+      kickoff_send_accepted: this.kickoffSendAccepted,
+      session_init_to_first_gemini_audio_ms: this.sessionInitToFirstGeminiAudioMs,
+      session_init_to_first_playback_ms: this.sessionInitToFirstPlaybackMs,
+    });
+  }
+
+  public onAutomaticKickoff(accepted: boolean): void {
+    if (this.kickoffSendAccepted !== null) return;
+    this.kickoffSendAccepted = accepted;
+    this.recordDiagnosticEvent(accepted ? "automatic_kickoff_sent" : "automatic_kickoff_failed");
+    this.captureStartup("kickoff");
+  }
+
   public onGeminiAudioChunkReceived(): void {
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
 
+    if (this.totalOutputChunks === 0) {
+      // The automatic opening has no student input packet; measure from initialization
+      // rather than assigning it a misleading input-to-response turnaround.
+      this.sessionInitToFirstGeminiAudioMs = calculateElapsedMs(this.sessionInitStartTime, now);
+      this.recordDiagnosticEvent("session_init_to_first_gemini_audio", `${this.sessionInitToFirstGeminiAudioMs}ms`);
+      this.captureStartup("first_audio");
+    }
     this.totalOutputChunks++;
     this.turnOutputChunkCount++;
 
@@ -676,6 +708,11 @@ export class VoiceTelemetry {
 
   public onPlaybackStarted(): void {
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (this.sessionInitToFirstPlaybackMs === null && this.sessionInitStartTime !== null) {
+      // Worklet playback start is the closest browser-observable point to hearing audio.
+      this.sessionInitToFirstPlaybackMs = calculateElapsedMs(this.sessionInitStartTime, now);
+      this.captureStartup("first_playback");
+    }
     if (this.turnFirstPlaybackStartTime === null) {
       this.turnFirstPlaybackStartTime = now;
 
