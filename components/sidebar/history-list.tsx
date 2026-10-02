@@ -2,7 +2,8 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { MessageSquare, MoreHorizontal, Pencil, Trash2, History, Mic, BookOpen } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { History, Mic, BookOpen } from "lucide-react"
 import { useHistory, useRenameSession, useDeleteSession } from "@/lib/hooks/use-history"
 import {
     SidebarGroup,
@@ -10,29 +11,24 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-    SidebarMenuAction,
+    SidebarMenuLabel,
     SidebarMenuSkeleton,
     useSidebar,
 } from "@/components/ui/sidebar"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { SessionActionsMenu } from "@/components/sidebar/session-actions-menu"
 import { Input } from "@/components/ui/input"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 export function HistoryList() {
     const { data: historyData, isLoading } = useHistory()
     const { mutate: renameSession } = useRenameSession()
     const { mutate: deleteSession } = useDeleteSession()
-    const { state } = useSidebar()
+    const { state, isMobile, setOpen, setOpenMobile } = useSidebar()
+    const pathname = usePathname()
 
     const [editingId, setEditingId] = React.useState<string | null>(null)
     const [editValue, setEditValue] = React.useState("")
 
-    const isCollapsed = state === "collapsed"
+    const isCollapsed = !isMobile && state === "collapsed"
 
     const handleRenameStart = (id: string, currentTitle: string) => {
         setEditingId(id)
@@ -56,9 +52,9 @@ export function HistoryList() {
             <SidebarGroup>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton tooltip="Your Sessions">
+                        <SidebarMenuButton tooltip="Your Sessions" aria-label="Show your sessions" onClick={() => setOpen(true)}>
                             <History className="text-muted-foreground" />
-                            <span>Your Sessions</span>
+                            <SidebarMenuLabel>Your Sessions</SidebarMenuLabel>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
@@ -72,7 +68,7 @@ export function HistoryList() {
                 <SidebarGroupLabel>Your Sessions</SidebarGroupLabel>
                 <SidebarMenu>
                     {Array.from({ length: 5 }).map((_, index) => (
-                        <SidebarMenuItem key={index}>
+                        <SidebarMenuItem key={index} hoverable={false}>
                             <SidebarMenuSkeleton showIcon />
                         </SidebarMenuItem>
                     ))}
@@ -87,9 +83,10 @@ export function HistoryList() {
             <SidebarMenu>
                 {(historyData?.sessions || []).map((session) => (
                     <SidebarMenuItem key={session.viva_session_id}>
-                        <SidebarMenuButton asChild isActive={false} className="group-data-[collapsible=icon]:!p-2">
-                            <Link href={`/v/${session.viva_session_id}`} onClick={(e) => {
+                        <SidebarMenuButton asChild isActive={pathname === `/v/${session.viva_session_id}`} className="group-data-[collapsible=icon]:!p-2">
+                            <Link href={`/v/${session.viva_session_id}`} aria-current={pathname === `/v/${session.viva_session_id}` ? "page" : undefined} onClick={(e) => {
                                 if (editingId === session.viva_session_id) e.preventDefault()
+                                else if (isMobile) setOpenMobile(false)
                             }}>
                                 {getSessionIcon(session.session_type)}
                                 {editingId === session.viva_session_id ? (
@@ -105,29 +102,16 @@ export function HistoryList() {
                                         onClick={(e) => e.preventDefault()}
                                     />
                                 ) : (
-                                    <span>{session.title || session.topic || "Untitled Session"}</span>
+                                    <SidebarMenuLabel>{session.title || session.topic || "Untitled Session"}</SidebarMenuLabel>
                                 )}
                             </Link>
                         </SidebarMenuButton>
                         {!editingId && (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <SidebarMenuAction showOnHover>
-                                        <MoreHorizontal />
-                                        <span className="sr-only">More</span>
-                                    </SidebarMenuAction>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className="w-48" side="right" align="start">
-                                    <DropdownMenuItem onClick={() => handleRenameStart(session.viva_session_id, session.title)}>
-                                        <Pencil className="text-muted-foreground mr-2 h-4 w-4" />
-                                        <span>Rename</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => deleteSession(session.viva_session_id)}>
-                                        <Trash2 className="text-muted-foreground mr-2 h-4 w-4" />
-                                        <span>Delete</span>
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                            <SessionActionsMenu
+                                title={session.title || session.topic || "Untitled Session"}
+                                onRename={() => handleRenameStart(session.viva_session_id, session.title)}
+                                onDelete={() => deleteSession(session.viva_session_id)}
+                            />
                         )}
                     </SidebarMenuItem>
                 ))}
