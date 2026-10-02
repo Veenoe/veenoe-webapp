@@ -1,0 +1,1629 @@
+{
+  "classes": [
+    {
+      "id": "class-9",
+      "classLevel": 9,
+      "subjects": [
+        {
+          "id": "mathematics",
+          "name": "Mathematics",
+          "chapters": [
+            {
+              "id": "ch-01-coordinate-geometry",
+              "name": "Coordinate Geometry",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "cartesian-plane",
+                  "name": "Cartesian plane",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "distance-formula",
+                  "name": "Distance formula",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "section-formula",
+                  "name": "Section formula",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-02-introduction-to-polynomials",
+              "name": "Introduction to Polynomials",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "algebraic-expressions",
+                  "name": "Algebraic expressions",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "definition-and-degree-of-a-polynomial",
+                  "name": "Definition and degree of a polynomial",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "linear-polynomials-and-applications",
+                  "name": "Linear polynomials and applications",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "linear-growth-and-decay",
+                  "name": "Linear growth and decay",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-03-number-systems",
+              "name": "Number Systems",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "rational-and-irrational-numbers",
+                  "name": "Rational and irrational numbers",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "real-numbers",
+                  "name": "Real numbers",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "number-line",
+                  "name": "Number line",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-04-exploring-algebraic-identities",
+              "name": "Exploring Algebraic Identities",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "revisiting-algebraic-identities",
+                  "name": "Revisiting algebraic identities",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "visualising-identities-using-geometric-models",
+                  "name": "Visualising identities using geometric models",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "factorisation-using-identities",
+                  "name": "Factorisation using identities",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "more-identities-and-applications",
+                  "name": "More identities and applications",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-05-circles",
+              "name": "Circles",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "tangents",
+                  "name": "Tangents",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "angles-in-circles",
+                  "name": "Angles in circles",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "chords",
+                  "name": "Chords",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-06-mensuration-area-and-perimeter",
+              "name": "Mensuration: Area and Perimeter",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "perimeter-of-shapes",
+                  "name": "Perimeter of shapes",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "circumference-and-pi",
+                  "name": "Circumference and pi",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "arc-length",
+                  "name": "Arc length",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "areas-of-rectangles-parallelograms-and-triangles",
+                  "name": "Areas of rectangles, parallelograms and triangles",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-07-introduction-to-probability",
+              "name": "Introduction to Probability",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "probability-and-randomness",
+                  "name": "Probability and randomness",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "probability-scale",
+                  "name": "Probability scale",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "empirical-probability",
+                  "name": "Empirical probability",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "theoretical-probability",
+                  "name": "Theoretical probability",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-08-sequences-and-progressions",
+              "name": "Sequences and Progressions",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "sequences",
+                  "name": "Sequences",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "explicit-rule",
+                  "name": "Explicit rule",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "recursive-rule",
+                  "name": "Recursive rule",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "arithmetic-progressions",
+                  "name": "Arithmetic progressions",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-09-introduction-to-euclid-s-geometry-axioms-and-postulates",
+              "name": "Introduction to Euclid's Geometry: Axioms and Postulates",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "history-of-geometry",
+                  "name": "History of geometry",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "baudhayana-s-construction-of-a-square",
+                  "name": "Baudhayana's construction of a square",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "euclid-s-definitions",
+                  "name": "Euclid's definitions",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "axioms-of-measurement",
+                  "name": "Axioms of measurement",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-10-lines-and-angles",
+              "name": "Lines and Angles",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "types-of-angles",
+                  "name": "Types of angles",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "parallel-lines",
+                  "name": "Parallel lines",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "intersecting-lines",
+                  "name": "Intersecting lines",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-11-triangles-congruence-theorems",
+              "name": "Triangles: Congruence Theorems",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "applications-of-triangles",
+                  "name": "Applications of triangles",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "conditions-of-congruence-and-proofs",
+                  "name": "Conditions of congruence and proofs",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "theorems-on-triangles",
+                  "name": "Theorems on triangles",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "propositions-and-converses",
+                  "name": "Propositions and converses",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-12-quadrilaterals",
+              "name": "Quadrilaterals",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "properties-of-quadrilaterals",
+                  "name": "Properties of quadrilaterals",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "parallelograms",
+                  "name": "Parallelograms",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "angle-sums",
+                  "name": "Angle sums",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-13-linear-equations-in-two-variables",
+              "name": "Linear Equations in Two Variables",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "linear-equations-in-two-variables",
+                  "name": "Linear equations in two variables",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "graphical-representation",
+                  "name": "Graphical representation",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "slope-intercept-form",
+                  "name": "Slope-intercept form",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "pair-of-linear-equations",
+                  "name": "Pair of linear equations",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-14-mensuration-surface-area-and-volume",
+              "name": "Mensuration: Surface Area and Volume",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "surface-areas-and-volumes-of-cuboids-and-cubes",
+                  "name": "Surface areas and volumes of cuboids and cubes",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "right-circular-cylinders",
+                  "name": "Right circular cylinders",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "cones",
+                  "name": "Cones",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "pyramids",
+                  "name": "Pyramids",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-15-statistics",
+              "name": "Statistics",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "mean-median-and-mode",
+                  "name": "Mean median and mode",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "grouped-data",
+                  "name": "Grouped data",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "measures-of-spread",
+                  "name": "Measures of spread",
+                  "difficultyLevel": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "science",
+          "name": "Science",
+          "chapters": [
+            {
+              "id": "ch-01-exploration-entering-the-world-of-secondary-science",
+              "name": "Exploration: Entering the World of Secondary Science",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "scientific-method",
+                  "name": "Scientific method",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "experiments",
+                  "name": "Experiments",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "evidence",
+                  "name": "Evidence",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-02-cell-the-building-block-of-life",
+              "name": "Cell: The Building Block of Life",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "cell-membrane",
+                  "name": "Cell membrane",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "nucleus",
+                  "name": "Nucleus",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "cell-organelles",
+                  "name": "Cell organelles",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "plant-and-animal-cells",
+                  "name": "Plant and animal cells",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-03-tissues-in-action",
+              "name": "Tissues in Action",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "plant-tissues",
+                  "name": "Plant tissues",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "animal-tissues",
+                  "name": "Animal tissues",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "functions-of-tissues",
+                  "name": "Functions of tissues",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-04-describing-motion-around-us",
+              "name": "Describing Motion Around Us",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "speed-and-velocity",
+                  "name": "Speed and velocity",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "acceleration",
+                  "name": "Acceleration",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "distance-time-graphs",
+                  "name": "Distance-time graphs",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-05-exploring-mixtures-and-their-separation",
+              "name": "Exploring Mixtures and their Separation",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "solutions",
+                  "name": "Solutions",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "mixtures",
+                  "name": "Mixtures",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "separation-methods",
+                  "name": "Separation methods",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-06-how-forces-affect-motion",
+              "name": "How Forces Affect Motion",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "newton-s-laws",
+                  "name": "Newton's laws",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "inertia",
+                  "name": "Inertia",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "momentum",
+                  "name": "Momentum",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-07-work-energy-and-simple-machines",
+              "name": "Work, Energy, and Simple Machines",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "work",
+                  "name": "Work",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "kinetic-and-potential-energy",
+                  "name": "Kinetic and potential energy",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "simple-machines",
+                  "name": "Simple machines",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-08-journey-inside-the-atom",
+              "name": "Journey Inside the Atom",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "electrons-protons-and-neutrons",
+                  "name": "Electrons protons and neutrons",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "atomic-number",
+                  "name": "Atomic number",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "isotopes",
+                  "name": "Isotopes",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-09-atomic-foundations-of-matter",
+              "name": "Atomic Foundations of Matter",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "atoms-and-molecules",
+                  "name": "Atoms and molecules",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "chemical-formulae",
+                  "name": "Chemical formulae",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "atomic-mass",
+                  "name": "Atomic mass",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-10-sound-waves-characteristics-and-applications",
+              "name": "Sound Waves: Characteristics and Applications",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "frequency-and-pitch",
+                  "name": "Frequency and pitch",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "amplitude-and-loudness",
+                  "name": "Amplitude and loudness",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "echoes",
+                  "name": "Echoes",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-11-reproduction-how-life-continues",
+              "name": "Reproduction: How Life Continues",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "sexual-reproduction",
+                  "name": "Sexual reproduction",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "asexual-reproduction",
+                  "name": "Asexual reproduction",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "plant-reproduction",
+                  "name": "Plant reproduction",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-12-patterns-in-life-diversity-and-classification",
+              "name": "Patterns in Life: Diversity and Classification",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "classification",
+                  "name": "Classification",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "five-kingdoms",
+                  "name": "Five kingdoms",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "biodiversity",
+                  "name": "Biodiversity",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-13-earth-as-a-system-energy-matter-and-life",
+              "name": "Earth as a System: Energy, Matter, and Life",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "water-cycle",
+                  "name": "Water cycle",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "carbon-cycle",
+                  "name": "Carbon cycle",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "energy-flow",
+                  "name": "Energy flow",
+                  "difficultyLevel": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "art-education",
+          "name": "Art Education",
+          "chapters": [
+            {
+              "id": "ch-01-introduction-to-the-history-of-arts",
+              "name": "Introduction to the History of Arts",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-the-stage-is-yours",
+              "name": "The Stage Is Yours",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-symbols-and-metaphors-on-stage",
+              "name": "Symbols and Metaphors on Stage",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-creativity-in-light-and-sound",
+              "name": "Creativity in Light and Sound",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-from-vision-to-performance-direction-and-acting",
+              "name": "From Vision to Performance: Direction and Acting",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-music-and-us",
+              "name": "Music and Us",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-the-science-of-music",
+              "name": "The Science of Music",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-r-ga-and-t-la",
+              "name": "Rāga and Tāla",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-music-travels-around-the-world",
+              "name": "Music Travels Around the World",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-components-of-dance",
+              "name": "Components of Dance",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-dance-as-visual-storytelling",
+              "name": "Dance as Visual Storytelling",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-cultural-connections-through-dance",
+              "name": "Cultural Connections Through Dance",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-13-dance-choreography",
+              "name": "Dance Choreography",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-14-exploring-the-fundamentals-of-visual-arts",
+              "name": "Exploring the Fundamentals of Visual Arts",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-15-mediums-and-techniques-in-visual-art",
+              "name": "Mediums and Techniques in Visual Art",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-16-visual-composition",
+              "name": "Visual Composition",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-17-branches-of-visual-arts",
+              "name": "Branches of Visual Arts",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "computational-thinking-and-ai",
+          "name": "Computational Thinking and AI",
+          "chapters": [
+            {
+              "id": "ch-01-ai-reflection-project-cycle-and-ethics",
+              "name": "AI Reflection, Project Cycle and Ethics",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "ai-reflection",
+                  "name": "AI Reflection",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "problem-scoping",
+                  "name": "Problem Scoping",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "data-acquisition",
+                  "name": "Data Acquisition",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "data-exploration",
+                  "name": "Data Exploration",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-02-data-literacy",
+              "name": "Data Literacy",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-math-for-ai-statistics-probability",
+              "name": "Math for AI (Statistics & Probability)",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-introduction-to-generative-ai",
+              "name": "Introduction to Generative AI",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-introduction-to-python",
+              "name": "Introduction to Python",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "input-and-output",
+                  "name": "Input and Output",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "variables-arithmetic-operators-expressions-and-data-types",
+                  "name": "Variables, Arithmetic Operators, Expressions and Data Types",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "flow-of-control-and-conditions",
+                  "name": "Flow of Control and Conditions",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "lists",
+                  "name": "Lists",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-06-communication-skills-i",
+              "name": "Communication Skills-I",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-self-management-skills-i",
+              "name": "Self-Management Skills-I",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-ict-skills-i",
+              "name": "ICT Skills-I",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-entrepreneurial-skills-i",
+              "name": "Entrepreneurial Skills-I",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-green-skills-i",
+              "name": "Green Skills-I",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "computer-applications",
+          "name": "Computer Applications",
+          "chapters": [
+            {
+              "id": "ch-01-basics-of-information-technology",
+              "name": "Basics of Information Technology",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-cyber-safety",
+              "name": "Cyber-safety",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-office-tools",
+              "name": "Office Tools",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "english",
+          "name": "English",
+          "chapters": [
+            {
+              "id": "ch-01-how-i-taught-my-grandmother-to-read",
+              "name": "How I Taught My Grandmother to Read",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-the-pot-maker",
+              "name": "The Pot Maker",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-winds-of-change",
+              "name": "Winds of Change",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-vitamin-m",
+              "name": "Vitamin-M",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-the-world-of-limitless-possibilities",
+              "name": "The World of Limitless Possibilities",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-twin-melodies",
+              "name": "Twin Melodies",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-carrier-of-words",
+              "name": "Carrier of Words",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-follow-that-dream",
+              "name": "Follow That Dream",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "hindi",
+          "name": "Hindi",
+          "chapters": [
+            {
+              "id": "ch-01-lesson-2a74c11c1f4d",
+              "name": "दो बैलों की कथा",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-lesson-4376ae2dad2a",
+              "name": "क्या लिखूँ?",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-lesson-53df8bc1614a",
+              "name": "संवादहीन",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-lesson-da8c1d1b1865",
+              "name": "ऐसी भी बातें होती हैं (लता मंगेशकर से साक्षात्कार)",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-lesson-be80def616f1",
+              "name": "आखिरी चट्टान तक",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-lesson-eb5f2fb4a225",
+              "name": "रीढ़ की हड्डी",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-lesson-77ff8502016a",
+              "name": "मैं और मेरा देश",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-lesson-dbf114af04d9",
+              "name": "पद",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-lesson-d0a2c5f3258d",
+              "name": "राम-लक्ष्मण-परशुराम संवाद",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-lesson-ea8426dfcf79",
+              "name": "भारति, जय, विजयकरो!",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-lesson-1b247342a87a",
+              "name": "झाँसी की रानी",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-lesson-7b92dd0961ca",
+              "name": "घर की याद",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "home-science",
+          "name": "Home Science",
+          "chapters": [
+            {
+              "id": "ch-01-concept-and-scope-of-home-science",
+              "name": "Concept and Scope of Home Science",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-human-growth-and-development-i",
+              "name": "Human Growth and Development – I",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-family-and-values",
+              "name": "Family and Values",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-food-nutrition-and-health",
+              "name": "Food, Nutrition and Health",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-fibre-and-fabric",
+              "name": "Fibre and Fabric",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-resource-management",
+              "name": "Resource Management",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-measures-of-safety-and-management-of-emergencies",
+              "name": "Measures of Safety and Management of Emergencies",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "interdisciplinary-area",
+          "name": "Interdisciplinary Area",
+          "chapters": []
+        },
+        {
+          "id": "painting",
+          "name": "Painting",
+          "chapters": [
+            {
+              "id": "ch-01-fundamentals-of-visual-arts",
+              "name": "Fundamentals of Visual Arts",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "elements",
+                  "name": "Elements",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-02-methods-and-materials-of-painting",
+              "name": "Methods and Materials of Painting",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "tools",
+                  "name": "Tools",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "poster-colours",
+                  "name": "Poster Colours",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "water-colours",
+                  "name": "Water Colours",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "oil-pastels",
+                  "name": "Oil Pastels",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-03-story-of-indian-art",
+              "name": "Story of Indian Art",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "wizards-dance-bhimbetka",
+                  "name": "Wizard’s Dance — Bhimbetka",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "yakshayakshi-ramkinker-baij",
+                  "name": "Yaksha–Yakshi — Ramkinker Baij",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "sun-temple-konark",
+                  "name": "Sun Temple — Konark",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "alpana-rangoli-and-mandana",
+                  "name": "Alpana, Rangoli and Mandana",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-04-still-life",
+              "name": "Still Life",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-portfolio-assessment",
+              "name": "Portfolio Assessment",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "physical-education-and-well-being",
+          "name": "Physical Education and Well-being",
+          "chapters": [
+            {
+              "id": "ch-01-physical-education-and-well-being",
+              "name": "Physical Education and Well-being",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-history-and-culture-of-physical-education-in-india",
+              "name": "History and Culture of Physical Education in India",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-careers-in-physical-education",
+              "name": "Careers in Physical Education",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-fitness-and-its-components",
+              "name": "Fitness and its Components",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-understanding-our-body",
+              "name": "Understanding Our Body",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-cardiorespiratory-system",
+              "name": "Cardiorespiratory System",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-growth-development-and-maturation",
+              "name": "Growth, Development, and Maturation",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-first-aid",
+              "name": "First Aid",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-olympic-values",
+              "name": "Olympic Values",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-the-ancient-olympic-games",
+              "name": "The Ancient Olympic Games",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-the-modern-olympic-games",
+              "name": "The Modern Olympic Games",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-sports-and-inclusivity",
+              "name": "Sports and Inclusivity",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-13-sports-and-disability",
+              "name": "Sports and Disability",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-14-disability-etiquettes-respecting-everyone-with-dignity",
+              "name": "Disability Etiquettes: Respecting Everyone with Dignity",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-15-young-athlete",
+              "name": "Young Athlete",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-16-women-in-sports",
+              "name": "Women in Sports",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-17-age-is-just-a-number",
+              "name": "Age is Just a Number",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-18-indigenous-martial-arts-and-sport",
+              "name": "Indigenous Martial Arts and Sport",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-19-combat-sports",
+              "name": "Combat Sports",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-20-outdoor-sports",
+              "name": "Outdoor Sports",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-21-samagra-sv-sthya-yoga-for-holistic-health",
+              "name": "Samagra Svāsthya (Yoga for Holistic Health)",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-22-yogamaya-j-vana-lifestyle-for-holistic-health",
+              "name": "Yogamaya Jīvana (Lifestyle for Holistic Health)",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-23-yoga-for-personal-excellence",
+              "name": "Yoga for Personal Excellence",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "sanskrit",
+          "name": "Sanskrit",
+          "chapters": [
+            {
+              "id": "ch-01-lesson-4b55dc2bd3f1",
+              "name": "सत्यं शिवं सुन्दरं संस्कृतम्",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-lesson-9c6f6897b6e5",
+              "name": "सुखस्य मूलं धर्मः धर्मस्य मूलम् अर्थः",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-lesson-d9b1bb9db59c",
+              "name": "आत्मवत्सर्वभूतेषु यः पश्यति सः पण्डितः",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-lesson-4c0377b397b4",
+              "name": "न खलु वयस्तेजसो हेतुः",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-lesson-5bb493a5d2de",
+              "name": "एषा स्या कृतकबुद्धिः मानवबुद्धेः सहकरी",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-lesson-8a8dee7941c9",
+              "name": "मनःपूतं समाचरेत्",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-lesson-b83ccee409f4",
+              "name": "उपायं चिन्तयेत् प्राज्ञस्तथापायं च चिन्तयेत्",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-lesson-9aa690a7c5bf",
+              "name": "अन्नाद् आनन्दं प्रति",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-lesson-c10f4adbbc77",
+              "name": "कृतं प्रतिकृतं भूयादेष धर्मः सनातनः",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-lesson-c4aa97870262",
+              "name": "णमो अरिहन्ताणम्",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-lesson-235bbf08c5a5",
+              "name": "वर्णोच्चारण-शिक्षा २",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "social-science",
+          "name": "Social Science",
+          "chapters": [
+            {
+              "id": "ch-01-understanding-social-science",
+              "name": "Understanding Social Science",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-shaping-of-the-earth-s-surface",
+              "name": "Shaping of the Earth’s Surface",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-atmosphere-and-climate",
+              "name": "Atmosphere and Climate",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-early-humans-and-beginning-of-civilisation",
+              "name": "Early Humans and Beginning of Civilisation",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-state-and-society-up-to-1000-ce",
+              "name": "State and Society up to 1000 CE",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-democracy",
+              "name": "Democracy",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-elections",
+              "name": "Elections",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-building-blocks-in-economics-the-problem-of-choice",
+              "name": "Building Blocks in Economics: The Problem of Choice",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-the-price-puzzle-what-drives-the-market",
+              "name": "The Price Puzzle: What Drives the Market",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "vocational-education",
+          "name": "Vocational Education",
+          "chapters": [
+            {
+              "id": "ch-01-introduction-to-agricultural-practices",
+              "name": "Introduction to Agricultural Practices",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-rooftop-gardening",
+              "name": "Rooftop Gardening",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-precision-farming",
+              "name": "Precision Farming",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-shaping-materials",
+              "name": "Shaping Materials",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-construction",
+              "name": "Construction",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-apparel",
+              "name": "Apparel",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-personal-and-lifestyle-services",
+              "name": "Personal and Lifestyle Services",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-healthcare",
+              "name": "Healthcare",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-tourism",
+              "name": "Tourism",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "urdu",
+          "name": "Urdu",
+          "chapters": [
+            {
+              "id": "ch-01-lesson",
+              "name": "پنچایت",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-lesson",
+              "name": "ماموں اجمیری",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-lesson",
+              "name": "غالب کے خطوط",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-lesson",
+              "name": "اجنتا اور ایلورا",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-lesson",
+              "name": "مالی خواندگی",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-lesson",
+              "name": "میاں نصیر الدین",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-lesson",
+              "name": "جگ میں آ کر ادھر ادھر دیکھا",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-lesson",
+              "name": "اشک آنکھوں میں کب نہیں آتا",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-lesson",
+              "name": "تیر کھانے کی ہوس ہے تو جگر پیدا کر",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-lesson",
+              "name": "اللہ اگر توفیق نہ دے انسان کے بس کا کام نہیں",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-lesson",
+              "name": "درانتی کا ایک سین",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-lesson",
+              "name": "انتظار",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-13-lesson",
+              "name": "عورت",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-14-lesson",
+              "name": "آغاز داستان (سحرالبیان)",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-15-lesson",
+              "name": "ذہن کا کوئی نور پاش خیال",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,3952 @@
+{
+  "classes": [
+    {
+      "id": "class-12",
+      "classLevel": 12,
+      "subjects": [
+        {
+          "id": "mathematics",
+          "name": "Mathematics",
+          "chapters": [
+            {
+              "id": "ch-01-relations-and-functions",
+              "name": "Relations and Functions",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "types-of-relations",
+                  "name": "Types of relations",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "types-of-functions",
+                  "name": "Types of functions",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "composition-of-functions",
+                  "name": "Composition of functions",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-02-inverse-trigonometric-functions",
+              "name": "Inverse Trigonometric Functions",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "basic-concepts",
+                  "name": "Basic Concepts",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "properties-of-inverse-trigonometric-functions",
+                  "name": "Properties of Inverse Trigonometric Functions",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-03-matrices",
+              "name": "Matrices",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "types-of-matrices",
+                  "name": "Types of matrices",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "matrix-operations",
+                  "name": "Matrix operations",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "inverse-of-a-matrix",
+                  "name": "Inverse of a matrix",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-04-determinants",
+              "name": "Determinants",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "properties-of-determinants",
+                  "name": "Properties of determinants",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "minors-and-cofactors",
+                  "name": "Minors and cofactors",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "solving-linear-equations",
+                  "name": "Solving linear equations",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-05-continuity-and-differentiability",
+              "name": "Continuity and Differentiability",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "continuity",
+                  "name": "Continuity",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "differentiability",
+                  "name": "Differentiability",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "exponential-and-logarithmic-functions",
+                  "name": "Exponential and Logarithmic Functions",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "logarithmic-differentiation",
+                  "name": "Logarithmic Differentiation",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-06-application-of-derivatives",
+              "name": "Application of Derivatives",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "rate-of-change-of-quantities",
+                  "name": "Rate of Change of Quantities",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "increasing-and-decreasing-functions",
+                  "name": "Increasing and Decreasing Functions",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "maxima-and-minima",
+                  "name": "Maxima and Minima",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-07-integrals",
+              "name": "Integrals",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "indefinite-integrals",
+                  "name": "Indefinite integrals",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "definite-integrals",
+                  "name": "Definite integrals",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "methods-of-integration",
+                  "name": "Methods of integration",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-08-application-of-integrals",
+              "name": "Application of Integrals",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "introduction",
+                  "name": "Introduction",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "area-under-simple-curves",
+                  "name": "Area under Simple Curves",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-09-differential-equations",
+              "name": "Differential Equations",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "order-and-degree",
+                  "name": "Order and degree",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "separation-of-variables",
+                  "name": "Separation of variables",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "linear-differential-equations",
+                  "name": "Linear differential equations",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-10-vector-algebra",
+              "name": "Vector Algebra",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "introduction",
+                  "name": "Introduction",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "some-basic-concepts",
+                  "name": "Some Basic Concepts",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "types-of-vectors",
+                  "name": "Types of Vectors",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "addition-of-vectors",
+                  "name": "Addition of Vectors",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-11-three-dimensional-geometry",
+              "name": "Three Dimensional Geometry",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "introduction",
+                  "name": "Introduction",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "direction-cosines-and-direction-ratios-of-a-line",
+                  "name": "Direction Cosines and Direction Ratios of a Line",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "equation-of-a-line-in-space",
+                  "name": "Equation of a Line in Space",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "angle-between-two-lines",
+                  "name": "Angle between Two Lines",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-12-linear-programming",
+              "name": "Linear Programming",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "constraints",
+                  "name": "Constraints",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "feasible-region",
+                  "name": "Feasible region",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "optimisation",
+                  "name": "Optimisation",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-13-probability",
+              "name": "Probability",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "sample-space",
+                  "name": "Sample space",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "events",
+                  "name": "Events",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "calculating-probability",
+                  "name": "Calculating probability",
+                  "difficultyLevel": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "accountancy",
+          "name": "Accountancy",
+          "chapters": [
+            {
+              "id": "ch-01-accounting-for-partnership-basic-concepts",
+              "name": "Accounting for Partnership: Basic Concepts",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "profit-sharing",
+                  "name": "Profit sharing",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "capital-accounts",
+                  "name": "Capital accounts",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "interest-on-capital",
+                  "name": "Interest on capital",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-02-reconstitution-of-a-partnership-firm-admission-of-a-partner",
+              "name": "Reconstitution of a Partnership Firm – Admission of a Partner",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-reconstitution-of-a-partnership-firm-retirement-death-of-a-partner",
+              "name": "Reconstitution of a Partnership Firm – Retirement/Death of a Partner",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-dissolution-of-partnership-firm",
+              "name": "Dissolution of Partnership Firm",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-accounting-for-share-capital",
+              "name": "Accounting for Share Capital",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "issue-of-shares",
+                  "name": "Issue of shares",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "share-forfeiture",
+                  "name": "Share forfeiture",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "reissue-of-shares",
+                  "name": "Reissue of shares",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-06-issue-and-redemption-of-debentures",
+              "name": "Issue and Redemption of Debentures",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-financial-statements-of-a-company",
+              "name": "Financial Statements of a Company",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-analysis-of-financial-statements",
+              "name": "Analysis of Financial Statements",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-accounting-ratios",
+              "name": "Accounting Ratios",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "liquidity-ratios",
+                  "name": "Liquidity ratios",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "profitability-ratios",
+                  "name": "Profitability ratios",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "solvency-ratios",
+                  "name": "Solvency ratios",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-04-cash-flow-statement",
+              "name": "Cash Flow Statement",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "operating-activities",
+                  "name": "Operating activities",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "investing-activities",
+                  "name": "Investing activities",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "financing-activities",
+                  "name": "Financing activities",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-11-computerised-accounting-system",
+              "name": "Computerised Accounting System",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "applied-mathematics",
+          "name": "Applied Mathematics",
+          "chapters": [
+            {
+              "id": "ch-01-numbers-quantification-and-numerical-applications",
+              "name": "Numbers, Quantification and Numerical Applications",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-algebra",
+              "name": "Algebra",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-calculus",
+              "name": "Calculus",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-probability-distributions",
+              "name": "Probability Distributions",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-inferential-statistics",
+              "name": "Inferential Statistics",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-time-based-data",
+              "name": "Time-based Data",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-financial-mathematics",
+              "name": "Financial Mathematics",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-linear-programming",
+              "name": "Linear Programming",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "constraints",
+                  "name": "Constraints",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "feasible-region",
+                  "name": "Feasible region",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "optimisation",
+                  "name": "Optimisation",
+                  "difficultyLevel": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "biology",
+          "name": "Biology",
+          "chapters": [
+            {
+              "id": "ch-01-sexual-reproduction-in-flowering-plants",
+              "name": "Sexual Reproduction in Flowering Plants",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "pollination",
+                  "name": "Pollination",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "double-fertilisation",
+                  "name": "Double fertilisation",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "seed-formation",
+                  "name": "Seed formation",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-02-human-reproduction",
+              "name": "Human Reproduction",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "reproductive-systems",
+                  "name": "Reproductive Systems",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "gametogenesis",
+                  "name": "Gametogenesis",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "fertilisation",
+                  "name": "Fertilisation",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "pregnancy",
+                  "name": "Pregnancy",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-03-reproductive-health",
+              "name": "Reproductive Health",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "contraception",
+                  "name": "Contraception",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "sexually-transmitted-infections",
+                  "name": "Sexually transmitted infections",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "infertility",
+                  "name": "Infertility",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-04-principles-of-inheritance-and-variation",
+              "name": "Principles of Inheritance and Variation",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "mendel-s-laws",
+                  "name": "Mendel's laws",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "genetic-crosses",
+                  "name": "Genetic crosses",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "chromosomal-disorders",
+                  "name": "Chromosomal disorders",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-05-molecular-basis-of-inheritance",
+              "name": "Molecular Basis of Inheritance",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "dna-structure",
+                  "name": "DNA structure",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "dna-replication",
+                  "name": "DNA replication",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "transcription-and-translation",
+                  "name": "Transcription and translation",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-06-evolution",
+              "name": "Evolution",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "natural-selection",
+                  "name": "Natural selection",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "evidence-of-evolution",
+                  "name": "Evidence of evolution",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "hardy-weinberg-principle",
+                  "name": "Hardy-Weinberg principle",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-07-human-health-and-disease",
+              "name": "Human Health and Disease",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "immunity",
+                  "name": "Immunity",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "infectious-diseases",
+                  "name": "Infectious diseases",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "vaccination",
+                  "name": "Vaccination",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-08-microbes-in-human-welfare",
+              "name": "Microbes in Human Welfare",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "fermentation",
+                  "name": "Fermentation",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "antibiotics",
+                  "name": "Antibiotics",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "sewage-treatment",
+                  "name": "Sewage treatment",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-09-biotechnology-principles-and-processes",
+              "name": "Biotechnology: Principles and Processes",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "recombinant-dna",
+                  "name": "Recombinant DNA",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "pcr",
+                  "name": "PCR",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "cloning-vectors",
+                  "name": "Cloning vectors",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-10-biotechnology-and-its-applications",
+              "name": "Biotechnology and its Applications",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "genetically-modified-crops",
+                  "name": "Genetically modified crops",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "gene-therapy",
+                  "name": "Gene therapy",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "biopharmaceuticals",
+                  "name": "Biopharmaceuticals",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-11-organisms-and-populations",
+              "name": "Organisms and Populations",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "population-growth",
+                  "name": "Population growth",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "species-interactions",
+                  "name": "Species interactions",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "adaptations",
+                  "name": "Adaptations",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-12-ecosystem",
+              "name": "Ecosystem",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "food-webs",
+                  "name": "Food webs",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "energy-flow",
+                  "name": "Energy flow",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "ecological-pyramids",
+                  "name": "Ecological pyramids",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-13-biodiversity-and-conservation",
+              "name": "Biodiversity and Conservation",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "types-of-biodiversity",
+                  "name": "Types of biodiversity",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "threats-to-biodiversity",
+                  "name": "Threats to biodiversity",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "conservation",
+                  "name": "Conservation",
+                  "difficultyLevel": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "biotechnology",
+          "name": "Biotechnology",
+          "chapters": [
+            {
+              "id": "ch-01-recombinant-dna-technology",
+              "name": "Recombinant DNA Technology",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-protein-structure-and-engineering",
+              "name": "Protein Structure and Engineering",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-genomics-proteomics-and-bioinformatics",
+              "name": "Genomics, Proteomics and Bioinformatics",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-microbial-cell-culture-and-its-applications",
+              "name": "Microbial Cell Culture and its Applications",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-plant-cell-culture-and-applications",
+              "name": "Plant Cell Culture and Applications",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-animal-cell-culture-and-applications",
+              "name": "Animal Cell Culture and Applications",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "business-studies",
+          "name": "Business Studies",
+          "chapters": [
+            {
+              "id": "ch-01-nature-and-significance-of-management",
+              "name": "Nature and Significance of Management",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-principles-of-management",
+              "name": "Principles of Management",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-business-environment",
+              "name": "Business Environment",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-planning",
+              "name": "Planning",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-organising",
+              "name": "Organising",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-staffing",
+              "name": "Staffing",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-directing",
+              "name": "Directing",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-controlling",
+              "name": "Controlling",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-financial-management",
+              "name": "Financial Management",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-financial-markets",
+              "name": "Financial Markets",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-marketing",
+              "name": "Marketing",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-consumer-protection",
+              "name": "Consumer Protection",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "chemistry",
+          "name": "Chemistry",
+          "chapters": [
+            {
+              "id": "ch-01-solutions",
+              "name": "Solutions",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "concentration",
+                  "name": "Concentration",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "raoult-s-law",
+                  "name": "Raoult's law",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "colligative-properties",
+                  "name": "Colligative properties",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-02-electrochemistry",
+              "name": "Electrochemistry",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "electrochemical-cells",
+                  "name": "Electrochemical cells",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "nernst-equation",
+                  "name": "Nernst equation",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "electrolysis",
+                  "name": "Electrolysis",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-03-chemical-kinetics",
+              "name": "Chemical Kinetics",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "rate-of-reaction",
+                  "name": "Rate of reaction",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "order-of-reaction",
+                  "name": "Order of reaction",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "activation-energy",
+                  "name": "Activation energy",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-04-the-d-and-f-block-elements",
+              "name": "The d- and f-Block Elements",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "transition-elements",
+                  "name": "Transition elements",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "oxidation-states",
+                  "name": "Oxidation states",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "lanthanoids",
+                  "name": "Lanthanoids",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-05-coordination-compounds",
+              "name": "Coordination Compounds",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "ligands",
+                  "name": "Ligands",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "nomenclature",
+                  "name": "Nomenclature",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "isomerism",
+                  "name": "Isomerism",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-06-haloalkanes-and-haloarenes",
+              "name": "Haloalkanes and Haloarenes",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "nucleophilic-substitution",
+                  "name": "Nucleophilic substitution",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "reactivity",
+                  "name": "Reactivity",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "preparation-and-properties",
+                  "name": "Preparation and properties",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-07-alcohols-phenols-and-ethers",
+              "name": "Alcohols, Phenols and Ethers",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "preparation",
+                  "name": "Preparation",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "chemical-reactions",
+                  "name": "Chemical reactions",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "acidity-of-phenols",
+                  "name": "Acidity of phenols",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-08-aldehydes-ketones-and-carboxylic-acids",
+              "name": "Aldehydes, Ketones and Carboxylic Acids",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "carbonyl-compounds",
+                  "name": "Carbonyl compounds",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "nucleophilic-addition",
+                  "name": "Nucleophilic addition",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "acidity",
+                  "name": "Acidity",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-09-amines",
+              "name": "Amines",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "classification",
+                  "name": "Classification",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "basicity",
+                  "name": "Basicity",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "diazonium-salts",
+                  "name": "Diazonium salts",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-10-biomolecules",
+              "name": "Biomolecules",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "carbohydrates",
+                  "name": "Carbohydrates",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "proteins",
+                  "name": "Proteins",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "nucleic-acids",
+                  "name": "Nucleic acids",
+                  "difficultyLevel": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "computer-science",
+          "name": "Computer Science",
+          "chapters": [
+            {
+              "id": "ch-01-exception-handling-in-python",
+              "name": "Exception Handling in Python",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-file-handling-in-python",
+              "name": "File Handling in Python",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "text-files",
+                  "name": "Text files",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "binary-files",
+                  "name": "Binary files",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "csv-files",
+                  "name": "CSV files",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-03-stack",
+              "name": "Stack",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-queue",
+              "name": "Queue",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-sorting",
+              "name": "Sorting",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-searching",
+              "name": "Searching",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-understanding-data",
+              "name": "Understanding Data",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-database-concepts",
+              "name": "Database Concepts",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "tables-and-keys",
+                  "name": "Tables and keys",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "relational-databases",
+                  "name": "Relational databases",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "database-management",
+                  "name": "Database management",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-09-structured-query-language-sql",
+              "name": "Structured Query Language (SQL)",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "select-queries",
+                  "name": "SELECT queries",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "filtering-and-sorting",
+                  "name": "Filtering and sorting",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "joins",
+                  "name": "Joins",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-02-computer-networks",
+              "name": "Computer Networks",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "network-types",
+                  "name": "Network types",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "network-devices",
+                  "name": "Network devices",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "protocols",
+                  "name": "Protocols",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-11-data-communication",
+              "name": "Data Communication",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-security-aspects",
+              "name": "Security Aspects",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-13-project-based-learning",
+              "name": "Project Based Learning",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "dance",
+          "name": "Dance",
+          "chapters": [
+            {
+              "id": "ch-01-kathak",
+              "name": "Kathak",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "theory",
+                  "name": "Theory",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "practical",
+                  "name": "Practical",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-02-bharatnatyam",
+              "name": "Bharatnatyam",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "theory",
+                  "name": "Theory",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "practical",
+                  "name": "Practical",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-03-kuchipudi",
+              "name": "Kuchipudi",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "theory",
+                  "name": "Theory",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "practical",
+                  "name": "Practical",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-04-odissi",
+              "name": "Odissi",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "theory",
+                  "name": "Theory",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "practical",
+                  "name": "Practical",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-05-manipuri",
+              "name": "Manipuri",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "theory",
+                  "name": "Theory",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "practical",
+                  "name": "Practical",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-06-kathakali",
+              "name": "Kathakali",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "theory",
+                  "name": "Theory",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "practical",
+                  "name": "Practical",
+                  "difficultyLevel": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "economics",
+          "name": "Economics",
+          "chapters": [
+            {
+              "id": "ch-01-introduction",
+              "name": "Introduction",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-national-income-accounting",
+              "name": "National Income Accounting",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "gdp",
+                  "name": "GDP",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "real-and-nominal-gdp",
+                  "name": "Real and nominal GDP",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "national-income-methods",
+                  "name": "National income methods",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-02-money-and-banking",
+              "name": "Money and Banking",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "functions-of-money",
+                  "name": "Functions of money",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "commercial-banks",
+                  "name": "Commercial banks",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "central-bank",
+                  "name": "Central bank",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-04-income-determination",
+              "name": "Income Determination",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "aggregate-demand",
+                  "name": "Aggregate demand",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "multiplier",
+                  "name": "Multiplier",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "equilibrium-income",
+                  "name": "Equilibrium income",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-05-the-government-budget-and-the-economy",
+              "name": "The Government Budget and the Economy",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-open-economy-macroeconomics",
+              "name": "Open Economy Macroeconomics",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-indian-economy-on-the-eve-of-independence",
+              "name": "Indian Economy on the Eve of Independence",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-indian-economy-19501990",
+              "name": "Indian Economy 1950–1990",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-liberalisation-privatisation-and-globalisation-an-appraisal",
+              "name": "Liberalisation, Privatisation and Globalisation: An Appraisal",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-human-capital-formation-in-india",
+              "name": "Human Capital Formation in India",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-rural-development",
+              "name": "Rural Development",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-employment-growth-informalisation-and-other-issues",
+              "name": "Employment: Growth, Informalisation and Other Issues",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-13-environment-and-sustainable-development",
+              "name": "Environment and Sustainable Development",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-14-comparative-development-experiences-of-india-and-its-neighbours",
+              "name": "Comparative Development Experiences of India and its Neighbours",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "engineering-graphics",
+          "name": "Engineering Graphics",
+          "chapters": [
+            {
+              "id": "ch-01-isometric-projection-of-solids",
+              "name": "Isometric Projection of Solids",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-machine-drawing",
+              "name": "Machine Drawing",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "english-core",
+          "name": "English Core",
+          "chapters": [
+            {
+              "id": "ch-01-the-last-lesson",
+              "name": "The Last Lesson",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-lost-spring",
+              "name": "Lost Spring",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-deep-water",
+              "name": "Deep Water",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-the-rattrap",
+              "name": "The Rattrap",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-indigo",
+              "name": "Indigo",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-poets-and-pancakes",
+              "name": "Poets and Pancakes",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-the-interview",
+              "name": "The Interview",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-going-places",
+              "name": "Going Places",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-my-mother-at-sixty-six",
+              "name": "My Mother at Sixty-Six",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-keeping-quiet",
+              "name": "Keeping Quiet",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-a-thing-of-beauty",
+              "name": "A Thing of Beauty",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-a-roadside-stand",
+              "name": "A Roadside Stand",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-13-aunt-jennifer-s-tigers",
+              "name": "Aunt Jennifer’s Tigers",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-14-the-third-level",
+              "name": "The Third Level",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-15-the-tiger-king",
+              "name": "The Tiger King",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-16-journey-to-the-end-of-the-earth",
+              "name": "Journey to the End of the Earth",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-17-the-enemy",
+              "name": "The Enemy",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-18-on-the-face-of-it",
+              "name": "On the Face of It",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-19-memories-of-childhood",
+              "name": "Memories of Childhood",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "english-elective",
+          "name": "English Elective",
+          "chapters": [
+            {
+              "id": "ch-01-i-sell-my-dreams",
+              "name": "I Sell my Dreams",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-eveline",
+              "name": "Eveline",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-a-wedding-in-brownsville",
+              "name": "A Wedding in Brownsville",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-a-lecture-upon-the-shadow",
+              "name": "A Lecture Upon the Shadow",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-poems-by-milton",
+              "name": "Poems by Milton",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-poems-by-blake",
+              "name": "Poems by Blake",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-kubla-khan",
+              "name": "Kubla Khan",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-trees",
+              "name": "Trees",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-the-wild-swans-of-coole",
+              "name": "The Wild Swans of Coole",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-time-and-time-again",
+              "name": "Time and Time Again",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-freedom",
+              "name": "Freedom",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-the-mark-on-the-wall",
+              "name": "The Mark on the Wall",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-13-film-making",
+              "name": "Film-making",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-14-why-the-novel-matters",
+              "name": "Why the Novel Matters",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-15-the-argumentative-indian",
+              "name": "The Argumentative Indian",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-16-chandalika",
+              "name": "Chandalika",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-17-a-tiger-for-malgudi",
+              "name": "A Tiger for Malgudi",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-18-the-financial-expert",
+              "name": "The Financial Expert",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "entrepreneurship",
+          "name": "Entrepreneurship",
+          "chapters": [
+            {
+              "id": "ch-01-entrepreneurial-opportunity",
+              "name": "Entrepreneurial Opportunity",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-entrepreneurial-planning",
+              "name": "Entrepreneurial Planning",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-enterprise-marketing",
+              "name": "Enterprise Marketing",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-enterprise-growth-strategies",
+              "name": "Enterprise Growth Strategies",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-business-arithmetic",
+              "name": "Business Arithmetic",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-resource-mobilization",
+              "name": "Resource Mobilization",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "fine-arts",
+          "name": "Fine Arts",
+          "chapters": [
+            {
+              "id": "ch-01-the-rajasthani-school-of-miniature-painting",
+              "name": "The Rajasthani School of Miniature Painting",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-pahari-school-of-miniature-painting",
+              "name": "Pahari School of Miniature Painting",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-the-mughal-school-of-miniature-painting",
+              "name": "The Mughal School of Miniature Painting",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-deccan-schools-of-miniature-painting",
+              "name": "Deccan Schools of Miniature Painting",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-the-bengal-school-of-painting",
+              "name": "The Bengal School of Painting",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-the-modern-trends-in-indian-art",
+              "name": "The Modern Trends in Indian Art",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-painting",
+              "name": "Painting",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "practical",
+                  "name": "Practical",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-08-graphics",
+              "name": "Graphics",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "practical",
+                  "name": "Practical",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-09-sculpture",
+              "name": "Sculpture",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "practical",
+                  "name": "Practical",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-10-applied-art-commercial-art",
+              "name": "Applied Art (Commercial Art)",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "practical",
+                  "name": "Practical",
+                  "difficultyLevel": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "geography",
+          "name": "Geography",
+          "chapters": [
+            {
+              "id": "ch-01-human-geography-nature-and-scope",
+              "name": "Human Geography: Nature and Scope",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-the-world-population-distribution-density-and-growth",
+              "name": "The World Population Distribution, Density and Growth",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-human-development",
+              "name": "Human Development",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-primary-activities",
+              "name": "Primary Activities",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-secondary-activities",
+              "name": "Secondary Activities",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-tertiary-activities",
+              "name": "Tertiary Activities",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-transport-and-communication",
+              "name": "Transport and Communication",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-international-trade",
+              "name": "International Trade",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-population-distribution-density-growth-and-composition",
+              "name": "Population Distribution, Density, Growth and Composition",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-human-settlements",
+              "name": "Human Settlements",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-land-resources-and-agriculture",
+              "name": "Land Resources and Agriculture",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-water-resources",
+              "name": "Water Resources",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "water-scarcity",
+                  "name": "Water scarcity",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "rainwater-harvesting",
+                  "name": "Rainwater harvesting",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "dams",
+                  "name": "Dams",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-13-mineral-and-energy-resources",
+              "name": "Mineral and Energy Resources",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-14-planning-and-sustainable-development-in-indian-context",
+              "name": "Planning and Sustainable Development in Indian Context",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-15-transport-and-communication-india",
+              "name": "Transport and Communication — India",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-16-international-trade-india",
+              "name": "International Trade — India",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-17-geographical-perspective-on-selected-issues-and-problems",
+              "name": "Geographical Perspective on Selected Issues and Problems",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-18-data-its-source-and-compilation",
+              "name": "Data — Its Source and Compilation",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-19-data-processing",
+              "name": "Data Processing",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-20-graphical-representation-of-data",
+              "name": "Graphical Representation of Data",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-21-spatial-information-technology",
+              "name": "Spatial Information Technology",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "hindi-core",
+          "name": "Hindi Core",
+          "chapters": [
+            {
+              "id": "ch-01-lesson-94ad9aa5471a",
+              "name": "आत्मपरिचय",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-lesson-1ff124537e0c",
+              "name": "एक गीत",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-lesson-21e73870def6",
+              "name": "पतंग",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-lesson-abeb6b719133",
+              "name": "कविता के बहाने",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-lesson-22b0c95dd6d6",
+              "name": "बात सीधी थी पर",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-lesson-1116197ae182",
+              "name": "कैमरे में बंद अपाहिज",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-lesson-a7ea109df4ea",
+              "name": "उषा",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-lesson-f6ea45d3d5bd",
+              "name": "बादल राग",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-lesson-acb801124d3e",
+              "name": "कवितावली (उत्तर कांड से)",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-lesson-efd851e3e2b7",
+              "name": "लक्ष्मण-मूर्छा और राम का विलाप",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-lesson-dc07aa97cd36",
+              "name": "रुबाइयाँ",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-lesson-1f44202e73f4",
+              "name": "छोटा मेरा खेत",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-13-lesson-6c1af000a56e",
+              "name": "बगुलों के पंख",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-14-lesson-90aa8c29c039",
+              "name": "भक्तिन",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-15-lesson-cc284d851f2a",
+              "name": "बाज़ार दर्शन",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-16-lesson-914edd010ff1",
+              "name": "काले मेघा पानी दे",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-17-lesson-034a0bd27914",
+              "name": "पहलवान की ढोलक",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-18-lesson-3347339d224d",
+              "name": "शिरीष के फूल",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-19-lesson-497575377cd8",
+              "name": "श्रम विभाजन और जाति-प्रथा",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-20-lesson-976a7180f981",
+              "name": "मेरी कल्पना का आदर्श समाज",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-21-lesson-51bdb4f2776b",
+              "name": "सिल्वर वैडिंग",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-22-lesson-933b625352b9",
+              "name": "जूझ",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-23-lesson-9697d2b9abf6",
+              "name": "अतीत में दबे पाँव",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "hindi-elective",
+          "name": "Hindi Elective",
+          "chapters": [
+            {
+              "id": "ch-01-lesson-66a600b39eae",
+              "name": "देवसेना का गीत",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-lesson-59d9a596bcd5",
+              "name": "कार्नेलिया का गीत",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-lesson-8b20b60f1a5d",
+              "name": "सरोज स्मृति",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-lesson-0db325639daa",
+              "name": "यह दीप अकेला",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-lesson-b2476be65905",
+              "name": "मैंने देखा, एक बूँद",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-lesson-c12931bf0ef9",
+              "name": "बनारस",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-lesson-2bb7075e2335",
+              "name": "दिशा",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-lesson-80ce91710648",
+              "name": "वसंत आया",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-lesson-a8d551850b06",
+              "name": "तोड़ो",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-lesson-e6fa27c2a635",
+              "name": "भरत-राम का प्रेम",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-lesson-fbc1d4dd8fe7",
+              "name": "पद — तुलसीदास",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-lesson-3587bbe49e0b",
+              "name": "बारहमासा",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-13-lesson-5feb6c38bbe0",
+              "name": "पद — विद्यापति",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-14-lesson-8cea10b3db57",
+              "name": "कवित्त",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-15-lesson-6a24cb30d8fd",
+              "name": "प्रेमघन की छाया-स्मृति",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-16-lesson-377e034a19a6",
+              "name": "सुमिरिनी के मनके",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-17-lesson-c383d628381a",
+              "name": "संवदिया",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-18-lesson-bdb5e5972b49",
+              "name": "गांधी, नेहरू और यास्सेर अराफात",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-19-lesson-f75ea1e36962",
+              "name": "शेर",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-20-lesson-64d2ea87e5b5",
+              "name": "पहचान",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-21-lesson-1fa1af6d67d4",
+              "name": "चार हाथ",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-22-lesson-54b1266ec4ea",
+              "name": "साझा",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-23-lesson-49a3aba3d49b",
+              "name": "जहाँ कोई वापसी नहीं",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-24-lesson-7029b07b48dc",
+              "name": "दूसरा देवदास",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-25-lesson-6c04ff1fa0df",
+              "name": "कुटज",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-26-lesson-574617e85429",
+              "name": "सूरदास की झोंपड़ी",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-27-lesson-3ff4a8f914b3",
+              "name": "आरोहण",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-28-lesson-7a9415d06221",
+              "name": "अपना मालवा — खाऊ-उजाड़ू सभ्यता में",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "history",
+          "name": "History",
+          "chapters": [
+            {
+              "id": "ch-01-bricks-beads-and-bones",
+              "name": "Bricks, Beads and Bones",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-kings-farmers-and-towns",
+              "name": "Kings, Farmers and Towns",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-kinship-caste-and-class",
+              "name": "Kinship, Caste and Class",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-thinkers-beliefs-and-buildings",
+              "name": "Thinkers, Beliefs and Buildings",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-through-the-eyes-of-travellers",
+              "name": "Through the Eyes of Travellers",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-bhakti-sufi-traditions",
+              "name": "Bhakti-Sufi Traditions",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-an-imperial-capital-vijayanagar",
+              "name": "An Imperial Capital — Vijayanagar",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-peasants-zamindars-and-the-state",
+              "name": "Peasants, Zamindars and the State",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-colonialism-and-the-countryside",
+              "name": "Colonialism and the Countryside",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-rebels-and-the-raj",
+              "name": "Rebels and the Raj",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-mahatma-gandhi-and-the-nationalist-movement",
+              "name": "Mahatma Gandhi and the Nationalist Movement",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-framing-the-constitution",
+              "name": "Framing the Constitution",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "home-science",
+          "name": "Home Science",
+          "chapters": [
+            {
+              "id": "ch-01-work-livelihood-and-career",
+              "name": "Work, Livelihood and Career",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-clinical-nutrition-and-dietetics",
+              "name": "Clinical Nutrition and Dietetics",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-public-nutrition-and-health",
+              "name": "Public Nutrition and Health",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-food-processing-and-technology",
+              "name": "Food Processing and Technology",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-food-quality-and-food-safety",
+              "name": "Food Quality and Food Safety",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-early-childhood-care-and-education",
+              "name": "Early Childhood Care and Education",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-management-of-support-services-institutions-and-programmes-for-children-youth-and-elderly",
+              "name": "Management of Support Services, Institutions and Programmes for Children, Youth and Elderly",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-design-for-fabric-and-apparel",
+              "name": "Design for Fabric and Apparel",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-fashion-design-and-merchandising",
+              "name": "Fashion Design and Merchandising",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-production-and-quality-control-in-the-garment-industry",
+              "name": "Production and Quality Control in the Garment Industry",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-care-and-maintenance-of-fabrics-in-institutions",
+              "name": "Care and Maintenance of Fabrics in Institutions",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-hospitality-management",
+              "name": "Hospitality Management",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-13-consumer-education-and-protection",
+              "name": "Consumer Education and Protection",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-communication-and-extension",
+              "name": "Communication and Extension",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "informatics-practices",
+          "name": "Informatics Practices",
+          "chapters": [
+            {
+              "id": "ch-01-querying-and-sql-functions",
+              "name": "Querying and SQL Functions",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-01-data-handling-using-pandas-i",
+              "name": "Data Handling using Pandas – I",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "series",
+                  "name": "Series",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "dataframes",
+                  "name": "DataFrames",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "data-selection",
+                  "name": "Data selection",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-03-data-handling-using-pandas-ii",
+              "name": "Data Handling using Pandas - II",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-plotting-data-using-matplotlib",
+              "name": "Plotting Data using Matplotlib",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "line-charts",
+                  "name": "Line charts",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "bar-charts",
+                  "name": "Bar charts",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "histograms",
+                  "name": "Histograms",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-05-internet-and-web",
+              "name": "Internet and Web",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-societal-impacts",
+              "name": "Societal Impacts",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-project-based-learning",
+              "name": "Project Based Learning",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "knowledge-tradition-practices-india",
+          "name": "Knowledge Tradition - Practices India",
+          "chapters": [
+            {
+              "id": "ch-01-agriculture-a-survey",
+              "name": "Agriculture: A Survey",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-architecture-a-survey",
+              "name": "Architecture: A Survey",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-dance-a-survey",
+              "name": "Dance: A Survey",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-education-systems-and-practices-a-survey",
+              "name": "Education Systems and Practices: A Survey",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-ethics-individual-and-social",
+              "name": "Ethics: Individual and Social",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-martial-arts-tradition-a-survey",
+              "name": "Martial Arts Tradition: A Survey",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-language-and-grammar",
+              "name": "Language and Grammar",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "legal-studies",
+          "name": "Legal Studies",
+          "chapters": [
+            {
+              "id": "ch-01-judiciary",
+              "name": "Judiciary",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-alternative-dispute-resolution-in-india",
+              "name": "Alternative Dispute Resolution in India",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-law-of-contract",
+              "name": "Law of Contract",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-law-of-torts",
+              "name": "Law of Torts",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-law-of-property",
+              "name": "Law of Property",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-intellectual-property-law",
+              "name": "Intellectual Property Law",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-law-and-sustainable-development",
+              "name": "Law and Sustainable Development",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-forms-of-legal-entities",
+              "name": "Forms of Legal Entities",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-criminal-laws-in-india",
+              "name": "Criminal Laws in India",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-human-rights-in-india",
+              "name": "Human Rights in India",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-human-rights-violations-complaint-mechanism",
+              "name": "Human Rights Violations — Complaint Mechanism",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-international-law",
+              "name": "International Law",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-13-legal-profession-in-india",
+              "name": "Legal Profession in India",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-14-legal-services",
+              "name": "Legal Services",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "ncc",
+          "name": "NCC",
+          "chapters": [
+            {
+              "id": "ch-01-national-integration-and-awareness",
+              "name": "National Integration and Awareness",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-drill",
+              "name": "Drill",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-weapon-training",
+              "name": "Weapon Training",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-personality-development-and-leadership",
+              "name": "Personality Development and Leadership",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-disaster-management",
+              "name": "Disaster Management",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-social-awareness-and-community-development",
+              "name": "Social Awareness and Community Development",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-health-and-hygiene",
+              "name": "Health and Hygiene",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-adventure-training-and-obstacle-training",
+              "name": "Adventure Training and Obstacle Training",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-environment-awareness-and-conservation",
+              "name": "Environment Awareness and Conservation",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-army-armed-forces",
+              "name": "Army — Armed Forces",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-army-map-reading",
+              "name": "Army — Map Reading",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-army-field-craft-and-battle-craft",
+              "name": "Army — Field Craft and Battle Craft",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-13-army-introduction-to-infantry-weapons-and-equipment",
+              "name": "Army — Introduction to Infantry Weapons and Equipment",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-14-army-military-history",
+              "name": "Army — Military History",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-15-army-communication",
+              "name": "Army — Communication",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-16-navy-naval-orientation-and-service-subjects",
+              "name": "Navy — Naval Orientation and Service Subjects",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-17-navy-naval-warfare-and-its-components",
+              "name": "Navy — Naval Warfare and its Components",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-18-navy-naval-communication",
+              "name": "Navy — Naval Communication",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-19-navy-navigation",
+              "name": "Navy — Navigation",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-20-navy-seamanship",
+              "name": "Navy — Seamanship",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-21-navy-boat-work",
+              "name": "Navy — Boat Work",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-22-navy-fire-fighting-flooding-and-damage-control",
+              "name": "Navy — Fire Fighting, Flooding and Damage Control",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-23-navy-ship-and-boat-modeling",
+              "name": "Navy — Ship and Boat Modeling",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-24-air-force-general-service-knowledge",
+              "name": "Air Force — General Service Knowledge",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-25-air-force-air-campaigns",
+              "name": "Air Force — Air Campaigns",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-26-air-force-aircraft-recognition",
+              "name": "Air Force — Aircraft Recognition",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-27-air-force-principles-of-flight",
+              "name": "Air Force — Principles of Flight",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-28-air-force-airmanship",
+              "name": "Air Force — Airmanship",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-29-air-force-navigation",
+              "name": "Air Force — Navigation",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-30-air-force-meteorology",
+              "name": "Air Force — Meteorology",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-31-air-force-aero-engines",
+              "name": "Air Force — Aero Engines",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-32-air-force-air-frames",
+              "name": "Air Force — Air Frames",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-33-air-force-instruments",
+              "name": "Air Force — Instruments",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-34-air-force-aero-modeling",
+              "name": "Air Force — Aero-modeling",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "physical-education",
+          "name": "Physical Education",
+          "chapters": [
+            {
+              "id": "ch-01-management-of-sporting-events",
+              "name": "Management of Sporting Events",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-children-and-women-in-sports",
+              "name": "Children and Women in Sports",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-yoga-as-preventive-measure-for-lifestyle-disease",
+              "name": "Yoga as Preventive Measure for Lifestyle Disease",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-physical-education-and-sports-for-cwsn",
+              "name": "Physical Education and Sports for CWSN",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-sports-and-nutrition",
+              "name": "Sports and Nutrition",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-test-and-measurement-in-sports",
+              "name": "Test and Measurement in Sports",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-physiology-and-injuries-in-sports",
+              "name": "Physiology and Injuries in Sports",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-biomechanics-and-sports",
+              "name": "Biomechanics and Sports",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-psychology-and-sports",
+              "name": "Psychology and Sports",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-training-in-sports",
+              "name": "Training in Sports",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "physics",
+          "name": "Physics",
+          "chapters": [
+            {
+              "id": "ch-01-electric-charges-and-fields",
+              "name": "Electric Charges and Fields",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "coulomb-s-law",
+                  "name": "Coulomb's law",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "electric-field",
+                  "name": "Electric field",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "gauss-s-law",
+                  "name": "Gauss's law",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-02-electrostatic-potential-and-capacitance",
+              "name": "Electrostatic Potential and Capacitance",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "electric-potential",
+                  "name": "Electric potential",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "capacitors",
+                  "name": "Capacitors",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "capacitance",
+                  "name": "Capacitance",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-03-current-electricity",
+              "name": "Current Electricity",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "ohm-s-law",
+                  "name": "Ohm s law",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "kirchhoff-s-laws",
+                  "name": "Kirchhoff's laws",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "resistivity",
+                  "name": "Resistivity",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-04-moving-charges-and-magnetism",
+              "name": "Moving Charges and Magnetism",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "magnetic-force",
+                  "name": "Magnetic force",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "biot-savart-law",
+                  "name": "Biot-Savart law",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "ampere-s-law",
+                  "name": "Ampere's law",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-05-magnetism-and-matter",
+              "name": "Magnetism and Matter",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "bar-magnets",
+                  "name": "Bar Magnets",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "earths-magnetism",
+                  "name": "Earth’s Magnetism",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "magnetic-materials",
+                  "name": "Magnetic Materials",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-06-electromagnetic-induction",
+              "name": "Electromagnetic Induction",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "faraday-s-law",
+                  "name": "Faraday's law",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "lenz-s-law",
+                  "name": "Lenz's law",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "induced-emf",
+                  "name": "Induced emf",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-07-alternating-current",
+              "name": "Alternating Current",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "ac-circuits",
+                  "name": "AC circuits",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "reactance",
+                  "name": "Reactance",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "transformers",
+                  "name": "Transformers",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-08-electromagnetic-waves",
+              "name": "Electromagnetic Waves",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "electromagnetic-spectrum",
+                  "name": "Electromagnetic spectrum",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "wave-properties",
+                  "name": "Wave properties",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "uses-of-electromagnetic-waves",
+                  "name": "Uses of electromagnetic waves",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-09-ray-optics-and-optical-instruments",
+              "name": "Ray Optics and Optical Instruments",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "reflection-and-refraction",
+                  "name": "Reflection and refraction",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "lens-formula",
+                  "name": "Lens formula",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "optical-instruments",
+                  "name": "Optical instruments",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-10-wave-optics",
+              "name": "Wave Optics",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "interference",
+                  "name": "Interference",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "diffraction",
+                  "name": "Diffraction",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "polarisation",
+                  "name": "Polarisation",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-11-dual-nature-of-radiation-and-matter",
+              "name": "Dual Nature of Radiation and Matter",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "photoelectric-effect",
+                  "name": "Photoelectric effect",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "matter-waves",
+                  "name": "Matter waves",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "de-broglie-wavelength",
+                  "name": "de Broglie wavelength",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-12-atoms",
+              "name": "Atoms",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "atomic-models",
+                  "name": "Atomic models",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "bohr-model",
+                  "name": "Bohr model",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "atomic-spectra",
+                  "name": "Atomic spectra",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-13-nuclei",
+              "name": "Nuclei",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "radioactivity",
+                  "name": "Radioactivity",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "binding-energy",
+                  "name": "Binding energy",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "fission-and-fusion",
+                  "name": "Fission and fusion",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-14-semiconductor-electronics-materials-devices-and-simple-circuits",
+              "name": "Semiconductor Electronics: Materials, Devices and Simple Circuits",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "semiconductors",
+                  "name": "Semiconductors",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "p-n-junction",
+                  "name": "p-n junction",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "rectifiers",
+                  "name": "Rectifiers",
+                  "difficultyLevel": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "political-science",
+          "name": "Political Science",
+          "chapters": [
+            {
+              "id": "ch-01-the-end-of-bipolarity",
+              "name": "The End of Bipolarity",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-contemporary-centres-of-power",
+              "name": "Contemporary Centres of Power",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-contemporary-south-asia",
+              "name": "Contemporary South Asia",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-international-organizations",
+              "name": "International Organizations",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-security-in-the-contemporary-world",
+              "name": "Security in the Contemporary World",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-environment-and-natural-resources",
+              "name": "Environment and Natural Resources",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-globalisation",
+              "name": "Globalisation",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-challenges-of-nation-building",
+              "name": "Challenges of Nation Building",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-era-of-one-party-dominance",
+              "name": "Era of One-Party Dominance",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-politics-of-planned-development",
+              "name": "Politics of Planned Development",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-india-s-external-relations",
+              "name": "India’s External Relations",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-challenges-to-and-restoration-of-the-congress-system",
+              "name": "Challenges to and Restoration of the Congress System",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-13-the-crisis-of-democratic-order",
+              "name": "The Crisis of Democratic Order",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-14-regional-aspirations",
+              "name": "Regional Aspirations",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-15-recent-developments-in-indian-politics",
+              "name": "Recent Developments in Indian Politics",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "psychology",
+          "name": "Psychology",
+          "chapters": [
+            {
+              "id": "ch-01-variations-in-psychological-attributes",
+              "name": "Variations in Psychological Attributes",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-self-and-personality",
+              "name": "Self and Personality",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-meeting-life-challenges",
+              "name": "Meeting Life Challenges",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-psychological-disorders",
+              "name": "Psychological Disorders",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-therapeutic-approaches",
+              "name": "Therapeutic Approaches",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-attitude-and-social-cognition",
+              "name": "Attitude and Social Cognition",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-social-influence-and-group-processes",
+              "name": "Social influence and group processes",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "sanskrit-core",
+          "name": "Sanskrit Core",
+          "chapters": [
+            {
+              "id": "ch-01-lesson-614cfd6ea61c",
+              "name": "अनुशासनम्",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-lesson-90c6930ada78",
+              "name": "मातुराज्ञा गरीयसी",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-lesson-703aa79f5ef6",
+              "name": "प्रजानुरञ्जको नृपः",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-lesson-b805a683efac",
+              "name": "दौवारिकस्य निष्ठा",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-lesson-66a3aa8780a3",
+              "name": "सूक्ति-सौरभम्",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-lesson-88de6c266d57",
+              "name": "नैकेनापि समं गता वसुमती",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-lesson-cb22f3a7cc96",
+              "name": "हल्दीघाटी",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-lesson-88b3efdfffe0",
+              "name": "मदालसा",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-lesson-7a175bd0f1d0",
+              "name": "कार्याकार्यव्यवस्थितिः",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-lesson-2ffdff94ea3a",
+              "name": "विद्यास्थानानि",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "sanskrit-elective",
+          "name": "Sanskrit Elective",
+          "chapters": [
+            {
+              "id": "ch-01-lesson-96d9135b563d",
+              "name": "विद्ययामृतमश्नुते",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-lesson-b2d7d1d039e2",
+              "name": "रघुकौत्ससंवादः",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-lesson-bb218235f1b6",
+              "name": "बालकौतुकम्",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-lesson-f605162eb031",
+              "name": "कर्मगौरवम्",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-lesson-bfe2be4d8833",
+              "name": "शुकनासोपदेशः",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-lesson-67cc29ef6144",
+              "name": "सूक्तिसुधा",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-lesson-b4283e41ff3c",
+              "name": "विक्रमस्यौदार्यम्",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-lesson-a91be620573e",
+              "name": "कार्यं वा साधयेयं, देहं वा पातयेयम्",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-lesson-4484983787f1",
+              "name": "दीनबन्धुः श्रीनारायणः",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-lesson-2d7691716927",
+              "name": "योगस्य वैशिष्ट्यम्",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-lesson-6ea6a07fb685",
+              "name": "कथं शब्दानुशासनं कर्तव्यम्",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "sociology",
+          "name": "Sociology",
+          "chapters": [
+            {
+              "id": "ch-01-introducing-indian-society",
+              "name": "Introducing Indian Society",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-the-demographic-structure-of-the-indian-society",
+              "name": "The Demographic Structure of the Indian Society",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-social-institutions-continuity-and-change",
+              "name": "Social Institutions: Continuity and Change",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-patterns-of-social-inequality-and-exclusion",
+              "name": "Patterns of Social Inequality and Exclusion",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-the-challenges-of-cultural-diversity",
+              "name": "The Challenges of Cultural Diversity",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-structural-change",
+              "name": "Structural Change",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-cultural-change",
+              "name": "Cultural Change",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-change-and-development-in-rural-society",
+              "name": "Change and Development in Rural Society",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-change-and-development-in-industrial-society",
+              "name": "Change and Development in Industrial Society",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-social-movements",
+              "name": "Social Movements",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "urdu-core",
+          "name": "Urdu Core",
+          "chapters": [
+            {
+              "id": "ch-01-lesson-f20a74606d63",
+              "name": "میگھالیہ",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-lesson-2be6d1ec0764",
+              "name": "دعوت",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-lesson-d7f103fd5209",
+              "name": "گاؤں کی لاج",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-lesson-9109af2dfa50",
+              "name": "بے مثال گلوکارہ — لتا منگیشکر",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-lesson-aedf41b02947",
+              "name": "چچا چھکن نے خط لکھا",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-lesson-0bfbe7241299",
+              "name": "ذرا فون کر لوں",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-lesson-26a1642f5e39",
+              "name": "خط",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-lesson-15f1c5f3184f",
+              "name": "پھول والوں کی سیر",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-lesson-f96235ac7dcc",
+              "name": "آگرہ بازار",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-lesson-dd7e53b3f08d",
+              "name": "چھٹی چپاتیاں",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-lesson-e8df11e3e53a",
+              "name": "اپنے گھر کا حال",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "urdu-elective",
+          "name": "Urdu Elective",
+          "chapters": [
+            {
+              "id": "ch-01-lesson-523cf128c064",
+              "name": "منشی ہرگوپال تفتہ کے نام",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-lesson-d8046d9d8a0e",
+              "name": "خودی — ایک مطالعہ",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-lesson-8bf59d889706",
+              "name": "لے",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-lesson-3cbe868bc18d",
+              "name": "فوٹوگرافر",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-lesson-79e6977c033f",
+              "name": "سکون کی نیند",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-lesson-8a017483136e",
+              "name": "روشنی (انتخاب)",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-lesson-faa6667f744f",
+              "name": "اس آباد خرابے میں (انتخاب)",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-lesson-c5c15ba3f637",
+              "name": "پودے (انتخاب)",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-lesson-a8ca0924b477",
+              "name": "مچھر",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-lesson-965d81e6b1ba",
+              "name": "زرد پھولوں کی بہار (انتخاب)",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-lesson-c37a7bd0dd66",
+              "name": "کلیم الدین احمد",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-lesson-bd53fb44f438",
+              "name": "اب بھاگتے ہیں سایہ عشق بتاں سے ہم",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-13-lesson-36adcc1d7538",
+              "name": "اول شب وہ بزم کی رونق شمع بھی تھی پروانہ بھی",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-14-lesson-b25a68fd6dbc",
+              "name": "زندگی ہے تو بہرحال بسر بھی ہوگی",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-15-lesson-6212c9c4a69e",
+              "name": "جب لگیں زخم تو قاتل کو دعا دی جائے",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-16-lesson-1fc211556a0c",
+              "name": "یہ شب، یہ خیال و خواب تیرے",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-17-lesson-7a91908d3eb2",
+              "name": "زباں کاٹ لی سماعت سے تھک گئے ہوئے",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-18-lesson-f61623d7f761",
+              "name": "گوہر میں",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-19-lesson-f841a16344a4",
+              "name": "روح ارضی آدم کا استقبال کرتی ہے",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-20-lesson-a5ebe3e6fe5e",
+              "name": "ارتقا",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-21-lesson-9bc1bb8d0cb0",
+              "name": "زندگی سے ڈرتے ہو",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-22-lesson-a06bbbf7556f",
+              "name": "یادنگر",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-23-lesson-ca18b2ef2abe",
+              "name": "گل کی موت",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-24-lesson-9911552ed7fe",
+              "name": "جم جم",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-25-lesson-c5e8236388e9",
+              "name": "نازل",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

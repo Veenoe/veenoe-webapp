@@ -2,126 +2,168 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { VoiceSelector } from "@/components/viva/VoiceSelector";
 import { Loader2, AlertCircle } from "lucide-react";
 
-import { useVivaSessionConfig, VivaConfigData } from "@/lib/hooks/viva/useVivaSessionConfig";
+import {
+  useVivaSessionConfig,
+  VivaConfigData,
+} from "@/lib/hooks/viva/useVivaSessionConfig";
 import { NameConfigField } from "./NameConfigField";
 import { ClassLevelSelector } from "./ClassLevelSelector";
+import { CurriculumFields } from "./CurriculumFields";
+import { canStartViva } from "@/lib/curriculum/selection";
 
 interface VivaConfigFormProps {
-    onSubmit: (data: VivaConfigData) => Promise<void>;
-    isSubmitting: boolean;
-    error: string | null;
+  onSubmit: (data: VivaConfigData) => Promise<void>;
+  isSubmitting: boolean;
+  error: string | null;
 }
 
 /**
- * The Main Controller Component for the Viva Configuration Form.
- * 
- * Architecture:
- * - Logic: Delegated to `useVivaSessionConfig` hook (Headless).
- * - UI: Delegates complex sections to `NameConfigField` and `ClassLevelSelector`.
- * - Layout: Orchestrates the overall grid and submit button.
+ * Compose the original Quick Setup card with curriculum choices.
+ * The hook owns profile and selection state; this form owns presentation and
+ * disables submission until a named student and valid single chapter are ready.
+ * The caller handles session creation and supplies its loading/error state.
  */
-export function VivaConfigForm({ onSubmit, isSubmitting, error }: VivaConfigFormProps) {
-    // 1. Initialize Headless Logic
-    const { state, actions } = useVivaSessionConfig(onSubmit);
+export function VivaConfigForm({
+  onSubmit,
+  isSubmitting,
+  error,
+}: VivaConfigFormProps) {
+  // 1. Initialize Headless Logic
+  const { state, choices, actions } = useVivaSessionConfig(onSubmit);
+  const canStart =
+    state.isLoaded &&
+    state.isCurriculumLoaded &&
+    canStartViva(state.selection, state.studentName, isSubmitting);
 
-    // 2. Handle Hydration / Loading State
-    if (!state.isMounted) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center p-4">
-                <Card className="w-full max-w-2xl border-border shadow-lg">
-                    <CardHeader>
-                        <CardTitle className="text-2xl">Quick Setup</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex justify-center py-8">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
-    // 3. Render Form
+  // 2. Handle Hydration / Loading State
+  if (!state.isLoaded) {
     return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-4">
-            <Card className="w-full max-w-2xl border-border shadow-lg">
-                <CardHeader>
-                    <CardTitle className="text-2xl">Quick Setup</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={actions.handleSubmit} className="space-y-4">
-
-                        {/* Modular Component: Name Input */}
-                        <NameConfigField
-                            studentName={state.studentName}
-                            isEditing={state.isEditingName}
-                            tempName={state.tempName}
-                            isSaving={state.isSavingName}
-                            isLoaded={state.isLoaded}
-                            onTempNameChange={actions.setTempName}
-                            onSave={actions.handleSaveName}
-                            onCancel={actions.cancelEditingName}
-                            onEditStart={actions.startEditingName}
-                        />
-
-                        {/* Standard Field: Topic */}
-                        <div className="space-y-2">
-                            <Label htmlFor="topic">Topic *</Label>
-                            <Input
-                                id="topic"
-                                value={state.topic}
-                                onChange={(e) => actions.setTopic(e.target.value)}
-                                placeholder="e.g., Python, History, Biology"
-                                required
-                            />
-                        </div>
-
-                        {/* Modular Component: Class Selector */}
-                        <ClassLevelSelector
-                            classLevel={state.classLevel}
-                            isOtherClass={state.isOtherClass}
-                            otherClassValue={state.otherClassValue}
-                            onClassChange={actions.handleClassChange}
-                            onOtherValueChange={actions.handleOtherClassChange}
-                        />
-
-                        {/* Standard Component: Voice Selector */}
-                        <VoiceSelector
-                            value={state.voiceName}
-                            onValueChange={actions.setVoiceName}
-                        />
-
-                        {/* Error Handling */}
-                        {error && (
-                            <Alert variant="destructive">
-                                <AlertCircle className="h-4 w-4" />
-                                <AlertDescription>{error}</AlertDescription>
-                            </Alert>
-                        )}
-
-                        {/* Submit Action */}
-                        <Button
-                            type="submit"
-                            className="w-full bg-pumpkin hover:bg-pumpkin-600"
-                            disabled={isSubmitting || !state.studentName}
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Starting...
-                                </>
-                            ) : (
-                                "Start Viva"
-                            )}
-                        </Button>
-                    </form>
-                </CardContent>
-            </Card>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl border-border shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-2xl">Quick Setup</CardTitle>
+          </CardHeader>
+          <CardContent className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </div>
     );
+  }
+
+  // 3. Render Form
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-2xl border-border shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl">Quick Setup</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form
+            onSubmit={(event) => {
+              if (!canStart) {
+                event.preventDefault();
+                return;
+              }
+              void actions.handleSubmit(event);
+            }}
+            className="space-y-4"
+          >
+            {/* Modular Component: Name Input */}
+            <NameConfigField
+              studentName={state.studentName}
+              isEditing={state.isEditingName}
+              tempName={state.tempName}
+              isSaving={state.isSavingName || isSubmitting}
+              isLoaded={state.isLoaded && !isSubmitting}
+              onTempNameChange={actions.setTempName}
+              onSave={actions.handleSaveName}
+              onCancel={actions.cancelEditingName}
+              onEditStart={actions.startEditingName}
+            />
+
+            {/* Modular Component: Class Selector */}
+            <ClassLevelSelector
+              classLevel={String(state.selection.classLevel)}
+              isOtherClass={false}
+              otherClassValue=""
+              onClassChange={actions.handleClassChange}
+              onOtherValueChange={() => {}}
+              classLevels={choices.classLevels}
+              disabled={isSubmitting}
+            />
+
+            <CurriculumFields
+              selection={state.selection}
+              choices={choices}
+              onSelect={actions.selectCurriculum}
+              disabled={isSubmitting || !state.isCurriculumLoaded}
+            />
+
+            {!state.isCurriculumLoaded && !state.curriculumError && (
+              <p role="status" className="text-sm text-muted-foreground">
+                Loading subjects…
+              </p>
+            )}
+            {state.curriculumError && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  {state.curriculumError}{" "}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={actions.retryCurriculum}
+                    disabled={isSubmitting}
+                  >
+                    Retry
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Standard Component: Voice Selector */}
+            <VoiceSelector
+              value={state.voiceName}
+              onValueChange={actions.setVoiceName}
+              disabled={isSubmitting}
+            />
+
+            {state.nameError && (
+              <Alert variant="destructive">
+                <AlertDescription>{state.nameError}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Error Handling */}
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Submit Action */}
+            <Button
+              type="submit"
+              className="w-full bg-pumpkin hover:bg-pumpkin-600"
+              disabled={!canStart}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Starting...
+                </>
+              ) : (
+                "Start Viva"
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
