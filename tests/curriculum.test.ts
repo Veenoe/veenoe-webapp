@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import test, { before } from "node:test";
 import source from "../data/curriculum/ncert-cbse-2026-27.json";
 import {
   curriculum,
   createCurriculumSelectors,
+  createClassCatalogCache,
+  CATALOG_ID,
+  CATALOG_VERSION,
 } from "../lib/curriculum/selectors";
 import {
   initialSelection,
@@ -16,7 +19,16 @@ import {
 } from "../lib/curriculum/selection";
 import type { CurriculumSelectionState } from "../lib/curriculum/selection";
 
-const subject = curriculum.getSubjects(7).find((s) => s.id === "science")!;
+// Tests explicitly preload all classes; the application loads only its chosen class.
+before(async () => {
+  await Promise.all(
+    curriculum.getClassLevels().map((level) => curriculum.loadClass(level)),
+  );
+});
+
+const subject = createCurriculumSelectors(source)
+  .getSubjects(7)
+  .find((s) => s.id === "science")!;
 const chapters = subject.chapters.slice(1, 3);
 const selected = (): CurriculumSelectionState => ({
   classLevel: 7,
@@ -131,6 +143,8 @@ test("choosing a chapter replaces the previous choice and preserves a repeated c
   state = selectionReducer(state, { type: "chapter", value: chapters[0].id });
   assert.deepEqual(state, selected());
   assert.equal(canStartViva(state, "Student"), true);
+  assert.equal(canStartViva(state, ""), false);
+  assert.equal(canStartViva(state, "   "), false);
   assert.equal(getSelectionView(state).nextAction, "Ready when you are");
   state = selectionReducer(state, {
     type: "custom-topic",
@@ -326,7 +340,7 @@ test("stale, duplicated or invalid selections cannot start", () => {
   );
 });
 
-test("request includes one chapter and its topics but no catalog metadata or difficulty", () => {
+test("request includes catalog identity and one chapter without difficulty", () => {
   const state = selectionReducer(selected(), {
     type: "custom-topic",
     chapterId: chapters[0].id,
@@ -340,6 +354,8 @@ test("request includes one chapter and its topics but no catalog metadata or dif
   assert.deepEqual(request.curriculum_selection, context);
   assert.equal(request.topic, `${chapters[0].name}: Testing lemon juice`);
   assert.deepEqual(keys(context), [
+    "catalog_id",
+    "catalog_version",
     "chapters",
     "class_level",
     "subject_id",
@@ -387,4 +403,80 @@ test("topic confirmation applies presets and custom topics together and rejects 
     selectionReducer(confirmed, { type: "topics", value: state.chapters[0] }),
     state,
   );
+});
+
+test("class catalog loads only requested classes, deduplicates requests and retries failures", async () => {
+  const calls: number[] = [];
+  let fail = true;
+  const cache = createClassCatalogCache(
+    {
+      5: async () => {
+        calls.push(5);
+        return { default: { classes: [source.classes[0]] } };
+      },
+      7: async () => {
+        calls.push(7);
+        if (fail) throw new Error("offline");
+        return { default: { classes: [source.classes[2]] } };
+      },
+    },
+    [5, 7],
+  );
+  assert.deepEqual(cache.getSubjects(5), []);
+  await Promise.all([cache.loadClass(5), cache.loadClass(5)]);
+  assert.deepEqual(calls, [5]);
+  assert.ok(cache.getSubjects(5).length);
+  assert.deepEqual(cache.getSubjects(7), []);
+  await assert.rejects(cache.loadClass(7));
+  fail = false;
+  await cache.loadClass(7);
+  assert.ok(cache.getSubjects(7).length);
+  assert.deepEqual(calls, [5, 7, 7]);
+  await assert.rejects(cache.loadClass(12));
+});
+
+test("a class chunk cannot populate a different class", async () => {
+  const cache = createClassCatalogCache(
+    { 7: async () => ({ default: { classes: [source.classes[0]] } }) },
+    [7],
+  );
+  await assert.rejects(cache.loadClass(7), /Unexpected class catalog/);
+  assert.deepEqual(cache.getSubjects(7), []);
+});
+
+test("class chunks and the manifest exactly match the source catalog", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const { createHash } = await import("node:crypto");
+  const sortKeys = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(sortKeys);
+    if (value !== null && typeof value === "object")
+      return Object.fromEntries(
+        Object.entries(value)
+          .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+          .map(([key, item]) => [key, sortKeys(item)]),
+      );
+    return value;
+  };
+  // Match Python's ensure_ascii serialization used to stamp the packaged server catalog.
+  const canonical = JSON.stringify(sortKeys(source)).replace(
+    /[\u007f-\uffff]/g,
+    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
+  assert.equal(CATALOG_ID, "ncert-cbse");
+  assert.equal(
+    CATALOG_VERSION,
+    "sha256-" + createHash("sha256").update(canonical).digest("hex"),
+  );
+  for (const grade of source.classes) {
+    const chunk = JSON.parse(
+      await readFile(
+        new URL(
+          `../data/curriculum/class-${grade.classLevel}.json`,
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+    assert.deepEqual(chunk, { classes: [grade] });
+  }
 });

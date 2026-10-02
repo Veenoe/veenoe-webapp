@@ -226,17 +226,24 @@ function TopicsField({
                   event.preventDefault();
                   addCustomTopic();
                 }
-                // Route focus explicitly because menu keyboard navigation skips its embedded input.
-                if (event.key === "Tab" || event.key === "ArrowDown") {
+                // Tab must never target disabled Add; Shift+Tab returns to the trigger.
+                if (event.key === "Tab" && event.shiftKey) {
                   event.preventDefault();
-                  event.currentTarget
-                    .closest('[role="menu"]')
-                    ?.querySelector<HTMLElement>(
-                      event.key === "Tab"
-                        ? '[aria-label="Add custom topic"]'
-                        : '[role="menuitemcheckbox"]',
-                    )
-                    ?.focus();
+                  setOpen(false);
+                } else if (event.key === "Tab" || event.key === "ArrowDown") {
+                  event.preventDefault();
+                  const menu = event.currentTarget.closest('[role="menu"]');
+                  const addButton = menu?.querySelector<HTMLButtonElement>(
+                    '[aria-label="Add custom topic"]',
+                  );
+                  const firstOption = menu?.querySelector<HTMLElement>(
+                    '[role="menuitemcheckbox"]',
+                  );
+                  const target =
+                    event.key === "Tab" && addButton && !addButton.disabled
+                      ? addButton
+                      : firstOption;
+                  target?.focus();
                 }
                 // Keep typing out of menu typeahead while preserving Escape to dismiss.
                 if (event.key !== "Escape" && event.key !== "Tab")

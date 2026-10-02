@@ -1,5 +1,5 @@
-/** Read the frontend-owned catalog through parent-scoped, read-only selectors. */
-import source from "../../data/curriculum/ncert-cbse-2026-27.json";
+/** Read class catalog chunks through parent-scoped, read-only selectors. */
+import manifest from "../../data/curriculum/manifest.json";
 import type {
   CurriculumClass,
   CurriculumSubject,
@@ -93,4 +93,71 @@ export function createCurriculumSelectors(data: unknown) {
     getTopics,
   };
 }
-export const curriculum = createCurriculumSelectors(source);
+export const CATALOG_ID = manifest.catalog_id;
+export const CATALOG_VERSION = manifest.catalog_version;
+
+const classLoaders: Record<number, () => Promise<{ default: unknown }>> = {
+  5: () => import("../../data/curriculum/class-5.json"),
+  6: () => import("../../data/curriculum/class-6.json"),
+  7: () => import("../../data/curriculum/class-7.json"),
+  8: () => import("../../data/curriculum/class-8.json"),
+  9: () => import("../../data/curriculum/class-9.json"),
+  10: () => import("../../data/curriculum/class-10.json"),
+  11: () => import("../../data/curriculum/class-11.json"),
+  12: () => import("../../data/curriculum/class-12.json"),
+};
+
+/** Cache class chunks independently; failed loads can be retried without a page reload. */
+export function createClassCatalogCache(
+  loaders: typeof classLoaders,
+  classLevels: readonly number[],
+) {
+  const loaded = new Map<
+    number,
+    ReturnType<typeof createCurriculumSelectors>
+  >();
+  const pending = new Map<number, Promise<void>>();
+  const empty = createCurriculumSelectors(null);
+  const forClass = (classLevel: number) => loaded.get(classLevel) ?? empty;
+  return {
+    async loadClass(classLevel: number): Promise<void> {
+      if (loaded.has(classLevel)) return;
+      if (!classLevels.includes(classLevel) || !loaders[classLevel])
+        throw new Error("Unsupported class");
+      let request = pending.get(classLevel);
+      if (!request) {
+        request = loaders[classLevel]()
+          .then((module) => {
+            const selectors = createCurriculumSelectors(module.default);
+            if (
+              selectors.getClassLevels().length !== 1 ||
+              selectors.getClassLevels()[0] !== classLevel
+            )
+              throw new Error("Unexpected class catalog");
+            loaded.set(classLevel, selectors);
+          })
+          .finally(() => pending.delete(classLevel));
+        pending.set(classLevel, request);
+      }
+      await request;
+    },
+    getClassLevels: () => [...classLevels],
+    getSubjectCatalog: (classLevel: number) =>
+      forClass(classLevel).getSubjectCatalog(classLevel),
+    getSubjects: (classLevel: number) =>
+      forClass(classLevel).getSubjects(classLevel),
+    getChapters: (path: { classLevel: number; subjectId: string }) =>
+      forClass(path.classLevel).getChapters(path),
+    getTopics: (path: {
+      classLevel: number;
+      subjectId: string;
+      chapterId: string;
+    }) => forClass(path.classLevel).getTopics(path),
+  };
+}
+
+/** Only the small manifest is eager; selecting a class loads its separate chunk. */
+export const curriculum = createClassCatalogCache(
+  classLoaders,
+  manifest.classLevels,
+);

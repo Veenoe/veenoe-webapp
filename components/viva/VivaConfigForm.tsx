@@ -36,6 +36,7 @@ export function VivaConfigForm({
   const { state, choices, actions } = useVivaSessionConfig(onSubmit);
   const canStart =
     state.isLoaded &&
+    state.isCurriculumLoaded &&
     canStartViva(state.selection, state.studentName, isSubmitting);
 
   // 2. Handle Hydration / Loading State
@@ -100,8 +101,29 @@ export function VivaConfigForm({
               selection={state.selection}
               choices={choices}
               onSelect={actions.selectCurriculum}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !state.isCurriculumLoaded}
             />
+
+            {!state.isCurriculumLoaded && !state.curriculumError && (
+              <p role="status" className="text-sm text-muted-foreground">
+                Loading subjects…
+              </p>
+            )}
+            {state.curriculumError && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  {state.curriculumError}{" "}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={actions.retryCurriculum}
+                    disabled={isSubmitting}
+                  >
+                    Retry
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Standard Component: Voice Selector */}
             <VoiceSelector

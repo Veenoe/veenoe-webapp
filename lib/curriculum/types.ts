@@ -28,10 +28,13 @@ export interface CurriculumClass {
 /**
  * Resolved selection shared by the webapp and backend API.
  * New vivas contain exactly one chapter; empty topics means the entire chapter.
- * Names accompany IDs so the backend can build a prompt without loading the catalog.
+ * Names support display; the backend resolves catalog names from IDs before use.
+ * Catalog identity describes a dataset revision, not an official textbook edition.
  * Difficulty is kept in the catalog and is not sent to the session.
  */
 export interface CurriculumSelection {
+  catalog_id: string;
+  catalog_version: string;
   class_level: number;
   subject_id: string;
   subject_name: string;

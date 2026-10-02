@@ -30,12 +30,21 @@ export function useVivaSessionConfig(
 ) {
   const { user, isLoaded } = useUser();
   const [selection, dispatch] = useReducer(selectionReducer, initialSelection);
+  const [catalogLoad, setCatalogLoad] = useState<{
+    classLevel: number;
+    error: string | null;
+  } | null>(null);
+  const [catalogRetry, setCatalogRetry] = useState(0);
+  const isCurriculumLoaded =
+    catalogLoad?.classLevel === selection.classLevel && !catalogLoad.error;
+  const curriculumError =
+    catalogLoad?.classLevel === selection.classLevel ? catalogLoad.error : null;
   const [voiceName, setVoiceName] = useState("Kore");
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState("");
   const [isSavingName, setIsSavingName] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
-  const studentName = user?.fullName || user?.firstName || "Student";
+  const studentName = user?.fullName?.trim() || user?.firstName?.trim() || "";
 
   // Preserve the existing storage key; ignore saved classes absent from the active catalog.
   useEffect(() => {
@@ -47,6 +56,27 @@ export function useVivaSessionConfig(
       /* Storage may be unavailable; the default class still works. */
     }
   }, []);
+
+  // Late responses may populate the cache, but cannot mark a different class ready.
+  useEffect(() => {
+    let cancelled = false;
+    curriculum
+      .loadClass(selection.classLevel)
+      .then(() => {
+        if (!cancelled)
+          setCatalogLoad({ classLevel: selection.classLevel, error: null });
+      })
+      .catch(() => {
+        if (!cancelled)
+          setCatalogLoad({
+            classLevel: selection.classLevel,
+            error: "Could not load subjects. Please try again.",
+          });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selection.classLevel, catalogRetry]);
 
   /** Apply the class immediately; persistence is optional and cannot block setup. */
   const handleClassChange = (value: string) => {
@@ -82,6 +112,7 @@ export function useVivaSessionConfig(
     if (
       !resolvedSelection ||
       !isLoaded ||
+      !isCurriculumLoaded ||
       !user ||
       !canStartViva(selection, studentName)
     )
@@ -98,6 +129,8 @@ export function useVivaSessionConfig(
     choices: getSelectionView(selection),
     state: {
       selection,
+      isCurriculumLoaded,
+      curriculumError,
       studentName,
       isLoaded,
       isEditingName,
@@ -108,6 +141,10 @@ export function useVivaSessionConfig(
     },
     actions: {
       dispatch,
+      retryCurriculum: () => {
+        setCatalogLoad(null);
+        setCatalogRetry((attempt) => attempt + 1);
+      },
       selectCurriculum,
       setVoiceName,
       setTempName,

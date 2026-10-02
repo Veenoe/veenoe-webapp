@@ -1,5 +1,5 @@
 /** Selection rules shared by the setup form and its unconfirmed topic dropdown. */
-import { curriculum } from "./selectors";
+import { curriculum, CATALOG_ID, CATALOG_VERSION } from "./selectors";
 import type { CurriculumSelection } from "./types";
 import type { VivaStartRequest } from "../../types/viva";
 
@@ -203,6 +203,8 @@ export function getCurriculumSelection(
     chapters.push({ id: chapter.id, name: chapter.name, topics });
   }
   return {
+    catalog_id: CATALOG_ID,
+    catalog_version: CATALOG_VERSION,
     class_level: selection.classLevel,
     subject_id: subject.id,
     subject_name: subject.name,
