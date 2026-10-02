@@ -1,0 +1,950 @@
+{
+  "classes": [
+    {
+      "id": "class-5",
+      "classLevel": 5,
+      "subjects": [
+        {
+          "id": "arts",
+          "name": "Arts",
+          "chapters": [
+            {
+              "id": "ch-01-objects-on-the-move",
+              "name": "Objects on the Move",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-peeping-out-of-the-window",
+              "name": "Peeping Out of the Window",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-picturing-stories",
+              "name": "Picturing Stories",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-imaginary-beings",
+              "name": "Imaginary Beings",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-spreading-the-message",
+              "name": "Spreading the Message",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-create-a-scene",
+              "name": "Create a Scene",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-stitch-it-for-a-story",
+              "name": "Stitch it for a Story",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-time-team-technique",
+              "name": "Time, Team, Technique",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-view-and-review",
+              "name": "View and Review",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-sing-and-play",
+              "name": "Sing and Play",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-music-around-me",
+              "name": "Music Around Me",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-sounds-and-instruments",
+              "name": "Sounds and Instruments",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-13-building-blocks",
+              "name": "Building Blocks",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-14-ideas-and-inspiration",
+              "name": "Ideas and Inspiration",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-15-my-everyday-activities-in-modes-of-dance",
+              "name": "My Everyday Activities in Modes of Dance",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-16-dancing-with-rhythm-and-tempos",
+              "name": "Dancing with Rhythm and Tempos",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-17-dances-of-my-nation",
+              "name": "Dances of My Nation",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-18-my-dance-expresses-emotions-and-narrates-stories",
+              "name": "My Dance Expresses Emotions and Narrates Stories",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-19-my-dance-and-your-dance",
+              "name": "My Dance and Your Dance",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "english",
+          "name": "English",
+          "chapters": [
+            {
+              "id": "ch-01-papa-s-spectacles",
+              "name": "Papa's Spectacles",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-gone-with-the-scooter",
+              "name": "Gone with the Scooter",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-the-rainbow",
+              "name": "The Rainbow",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-the-wise-parrot",
+              "name": "The Wise Parrot",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-the-frog",
+              "name": "The Frog",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-what-a-tank",
+              "name": "What a Tank!",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-gilli-danda",
+              "name": "Gilli Danda",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-the-decision-of-the-panchayat",
+              "name": "The Decision of the Panchayat",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-vocation",
+              "name": "Vocation",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-glass-bangles",
+              "name": "Glass Bangles",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "mathematics",
+          "name": "Mathematics",
+          "chapters": [
+            {
+              "id": "ch-01-we-the-travellers-i",
+              "name": "We the Travellers - I",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "place-value",
+                  "name": "Place value",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "large-numbers",
+                  "name": "Large numbers",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "comparing-numbers",
+                  "name": "Comparing numbers",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-02-fractions",
+              "name": "Fractions",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "equivalent-fractions",
+                  "name": "Equivalent fractions",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "comparing-fractions",
+                  "name": "Comparing fractions",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "adding-fractions",
+                  "name": "Adding fractions",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-03-angles-as-turns",
+              "name": "Angles as Turns",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "right-angles",
+                  "name": "Right angles",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "measuring-angles",
+                  "name": "Measuring angles",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "types-of-angles",
+                  "name": "Types of angles",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-04-we-the-travellers-ii",
+              "name": "We the Travellers - II",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "addition-and-subtraction",
+                  "name": "Addition and subtraction",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "multiplication",
+                  "name": "Multiplication",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "division",
+                  "name": "Division",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-05-far-and-near",
+              "name": "Far and Near",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "measuring-distance",
+                  "name": "Measuring distance",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "units-of-length",
+                  "name": "Units of length",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "estimating-length",
+                  "name": "Estimating length",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-06-the-dairy-farm",
+              "name": "The Dairy Farm",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "multiplication",
+                  "name": "Multiplication",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "division",
+                  "name": "Division",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "word-problems",
+                  "name": "Word problems",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-07-shapes-and-patterns",
+              "name": "Shapes and Patterns",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "two-dimensional-shapes",
+                  "name": "Two-dimensional shapes",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "three-dimensional-shapes",
+                  "name": "Three-dimensional shapes",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "patterns",
+                  "name": "Patterns",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-08-weight-and-capacity",
+              "name": "Weight and Capacity",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "units-of-mass",
+                  "name": "Units of mass",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "units-of-capacity",
+                  "name": "Units of capacity",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "unit-conversion",
+                  "name": "Unit conversion",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-09-coconut-farm",
+              "name": "Coconut Farm",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "multiplication",
+                  "name": "Multiplication",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "grouping-numbers",
+                  "name": "Grouping numbers",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "estimation",
+                  "name": "Estimation",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-10-symmetrical-designs",
+              "name": "Symmetrical Designs",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "lines-of-symmetry",
+                  "name": "Lines of symmetry",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "mirror-images",
+                  "name": "Mirror images",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "symmetrical-shapes",
+                  "name": "Symmetrical shapes",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-11-grandmother-s-quilt",
+              "name": "Grandmother's Quilt",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "area",
+                  "name": "Area",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "tiling",
+                  "name": "Tiling",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "measuring-surfaces",
+                  "name": "Measuring surfaces",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-12-racing-seconds",
+              "name": "Racing Seconds",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "reading-clocks",
+                  "name": "Reading clocks",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "units-of-time",
+                  "name": "Units of time",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "elapsed-time",
+                  "name": "Elapsed time",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-13-animal-jumps",
+              "name": "Animal Jumps",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "number-line",
+                  "name": "Number line",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "addition-and-subtraction",
+                  "name": "Addition and subtraction",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "number-patterns",
+                  "name": "Number patterns",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-14-maps-and-locations",
+              "name": "Maps and Locations",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "directions",
+                  "name": "Directions",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "reading-maps",
+                  "name": "Reading maps",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "map-scale",
+                  "name": "Map scale",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-15-data-through-pictures",
+              "name": "Data Through Pictures",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "pictographs",
+                  "name": "Pictographs",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "reading-charts",
+                  "name": "Reading charts",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "comparing-data",
+                  "name": "Comparing data",
+                  "difficultyLevel": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "the-world-around-us",
+          "name": "The World Around Us",
+          "chapters": [
+            {
+              "id": "ch-01-water-the-essence-of-life",
+              "name": "Water - The Essence of Life",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "sources-of-water",
+                  "name": "Sources of water",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "saving-water",
+                  "name": "Saving water",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "clean-drinking-water",
+                  "name": "Clean drinking water",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-02-journey-of-a-river",
+              "name": "Journey of a River",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "river-sources",
+                  "name": "River sources",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "river-pollution",
+                  "name": "River pollution",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "uses-of-rivers",
+                  "name": "Uses of rivers",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-03-the-mystery-of-food",
+              "name": "The Mystery of Food",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "balanced-diet",
+                  "name": "Balanced diet",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "food-sources",
+                  "name": "Food sources",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "food-preservation",
+                  "name": "Food preservation",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-04-our-school-a-happy-place",
+              "name": "Our School - A Happy Place",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-our-vibrant-country",
+              "name": "Our Vibrant Country",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-some-unique-places",
+              "name": "Some Unique Places",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-energy-how-things-work",
+              "name": "Energy - How Things Work",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "sources-of-energy",
+                  "name": "Sources of energy",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "renewable-energy",
+                  "name": "Renewable energy",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "saving-energy",
+                  "name": "Saving energy",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-08-clothes-how-things-are-made",
+              "name": "Clothes - How Things are Made",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "natural-fibres",
+                  "name": "Natural fibres",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "weaving",
+                  "name": "Weaving",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "making-fabric",
+                  "name": "Making fabric",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-09-rhythms-of-nature",
+              "name": "Rhythms of Nature",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "seasons",
+                  "name": "Seasons",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "day-and-night",
+                  "name": "Day and night",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "weather",
+                  "name": "Weather",
+                  "difficultyLevel": null
+                }
+              ]
+            },
+            {
+              "id": "ch-10-earth-our-shared-home",
+              "name": "Earth - Our Shared Home",
+              "difficultyLevel": null,
+              "topics": [
+                {
+                  "id": "habitats",
+                  "name": "Habitats",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "pollution",
+                  "name": "Pollution",
+                  "difficultyLevel": null
+                },
+                {
+                  "id": "protecting-nature",
+                  "name": "Protecting nature",
+                  "difficultyLevel": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "hindi",
+          "name": "Hindi",
+          "chapters": [
+            {
+              "id": "ch-01-lesson-40b1f3cc393f",
+              "name": "किरन",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-lesson-a2c9b9887d82",
+              "name": "न्याय की कुर्सी",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-lesson-f86549bfc84b",
+              "name": "चाँद का कुरता",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-lesson-7fc44fbb3470",
+              "name": "साङ्केन",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-lesson-c35048e7a0b9",
+              "name": "सुंदरिया",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-lesson-a9b20d18c983",
+              "name": "चतुर चित्रकार",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-lesson-828d85ff4a2d",
+              "name": "मेरा बचपन",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-lesson-c69b36fb43fd",
+              "name": "काजीरंगा राष्ट्रीय उद्यान की यात्रा",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-lesson-490515de6e55",
+              "name": "न्याय",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-lesson-9bcd9eb576a3",
+              "name": "तीन मछलियाँ",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-lesson-44f53ec284b6",
+              "name": "हमारे ये कलामंदिर",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-lesson-b35f508c7d8a",
+              "name": "गंगा की कहानी",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "physical-education-and-well-being",
+          "name": "Physical Education and Well-being",
+          "chapters": [
+            {
+              "id": "ch-01-throwing-and-catching",
+              "name": "Throwing and Catching",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-kicking-and-receiving",
+              "name": "Kicking and Receiving",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-strike-the-object",
+              "name": "Strike the Object",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-little-steps",
+              "name": "Little Steps",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-local-and-traditional-games",
+              "name": "Local and Traditional Games",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-yoga-for-daily-life",
+              "name": "Yoga for Daily Life",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-yoga-sadhana",
+              "name": "Yoga Sadhana",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        },
+        {
+          "id": "urdu",
+          "name": "Urdu",
+          "chapters": [
+            {
+              "id": "ch-01-lesson-baccf1c6c725",
+              "name": "خدا کی قدرت",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-02-lesson-72a95f590072",
+              "name": "تالاب کا بھوت",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-03-lesson-85521c9b0cb4",
+              "name": "گرو نانک",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-04-lesson-c8c3eeeab301",
+              "name": "راہ میں بن جاؤں",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-05-lesson-b732c2116af9",
+              "name": "چچا چھکن کی عینک",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-06-lesson-64b7bc39bea6",
+              "name": "کبڈی",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-07-lesson-1879de53b21d",
+              "name": "شہد کی مکھی",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-08-lesson-b5fc8e53c193",
+              "name": "چار دوست",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-09-lesson-609104192b1d",
+              "name": "ڈیجیٹل دادی",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-10-lesson-2c9563da108b",
+              "name": "گنگا",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-11-lesson-96b725fb2204",
+              "name": "ٹیولپ گارڈن",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-12-lesson-a69df7219017",
+              "name": "چاچے سگے",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-13-lesson-cdf99e60afb0",
+              "name": "چلیے سنبھل سنبھل کر",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-14-lesson-d6896ec7b552",
+              "name": "تیاری میں ہی سمجھ داری ہے",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-15-lesson-8ea9eaa3f325",
+              "name": "کیپٹن حنیف الدین",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-16-lesson-207725424502",
+              "name": "اپنی حفاظت آپ",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-17-lesson-e48a8f1d8f10",
+              "name": "مٹھی بھر جان",
+              "difficultyLevel": null,
+              "topics": []
+            },
+            {
+              "id": "ch-18-lesson-c1bef710387f",
+              "name": "ٹوپی والا اور بندر",
+              "difficultyLevel": null,
+              "topics": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

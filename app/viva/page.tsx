@@ -9,80 +9,83 @@ import { VivaConfigData } from "@/lib/hooks/viva/useVivaSessionConfig";
 import { VoiceDiagnosticsPanel } from "@/components/viva/VoiceDiagnosticsPanel";
 import { initPostHog } from "@/lib/analytics/posthog";
 import { useUser, useAuth } from "@clerk/nextjs";
+import { mapVivaRequest } from "@/lib/curriculum/selection";
 
+/** Connect confirmed setup to authenticated session creation and the live-session UI. */
 export default function VivaRoomPage() {
-    const vivaSession = useVivaSession();
-    const { user } = useUser();
-    const { getToken } = useAuth();
+  const vivaSession = useVivaSession();
+  const { user } = useUser();
+  const { getToken } = useAuth();
 
-    // Pre-session configuration state
-    const [showConfig, setShowConfig] = useState(true);
-    const [isStarting, setIsStarting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+  // Pre-session configuration state
+  const [showConfig, setShowConfig] = useState(true);
+  const [isStarting, setIsStarting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        initPostHog();
-    }, []);
+  useEffect(() => {
+    initPostHog();
+  }, []);
 
-    const handleConfigSubmit = async (data: VivaConfigData) => {
-        setError(null);
+  /** Create backend session metadata before connecting audio; expose startup failures in setup. */
+  const handleConfigSubmit = async (data: VivaConfigData) => {
+    setError(null);
 
-        if (!user) {
-            setError("You must be logged in to start a session.");
-            return;
-        }
+    if (!user) {
+      setError("You must be logged in to start a session.");
+      return;
+    }
 
-        if (!data.studentName.trim() || !data.topic.trim() || !data.classLevel.trim()) {
-            setError("Please fill in all required fields");
-            return;
-        }
+    if (
+      !data.studentName.trim() ||
+      !data.topic.trim() ||
+      !data.classLevel.trim()
+    ) {
+      setError("Please fill in all required fields");
+      return;
+    }
 
-        setIsStarting(true);
+    setIsStarting(true);
 
-        try {
-            // Configure auth token getter to avoid race conditions
-            setTokenGetter(() => getToken());
+    try {
+      // Configure auth token getter to avoid race conditions
+      setTokenGetter(() => getToken());
 
-            // Reset previous session state to prevent "ghost" messages
-            vivaSession.resetSession();
+      // Reset previous session state to prevent "ghost" messages
+      vivaSession.resetSession();
 
-            const response = await startVivaSession({
-                student_name: data.studentName.trim(),
-                // user_id removed - now extracted from JWT on server
-                topic: data.topic.trim(),
-                class_level: data.classLevel,
-                session_type: "viva",
-                voice_name: data.voiceName,
-                enable_thinking: false,
-                thinking_budget: 0,
-            });
+      const response = await startVivaSession(
+        mapVivaRequest(
+          data.studentName,
+          data.voiceName,
+          data.curriculumSelection,
+        ),
+      );
 
-            vivaSession.setSessionData(response);
-            setShowConfig(false);
-            await vivaSession.initializeSession();
+      vivaSession.setSessionData(response);
+      setShowConfig(false);
+      await vivaSession.initializeSession();
+    } catch (err) {
+      console.error("Failed to start session:", err);
+      setError(err instanceof Error ? err.message : "Failed to start session");
+    } finally {
+      setIsStarting(false);
+    }
+  };
 
-        } catch (err) {
-            console.error("Failed to start session:", err);
-            setError(err instanceof Error ? err.message : "Failed to start session");
-        } finally {
-            setIsStarting(false);
-        }
-    };
-
-    return (
-        <div className="min-h-screen bg-background relative flex flex-col">
-            {showConfig ? (
-                <VivaConfigForm
-                    onSubmit={handleConfigSubmit}
-                    isSubmitting={isStarting}
-                    error={error}
-                />
-            ) : (
-                <div className="p-4 flex-1 flex flex-col relative">
-                    <VivaActiveSession vivaSession={vivaSession} />
-                </div>
-            )}
-            <VoiceDiagnosticsPanel />
+  return (
+    <div className="min-h-screen bg-background relative flex flex-col">
+      {showConfig ? (
+        <VivaConfigForm
+          onSubmit={handleConfigSubmit}
+          isSubmitting={isStarting}
+          error={error}
+        />
+      ) : (
+        <div className="p-4 flex-1 flex flex-col relative">
+          <VivaActiveSession vivaSession={vivaSession} />
         </div>
-    );
+      )}
+      <VoiceDiagnosticsPanel />
+    </div>
+  );
 }
