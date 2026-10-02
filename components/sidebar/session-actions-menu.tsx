@@ -102,84 +102,86 @@ export function SessionActionsMenu({ title, onRename, onDelete }: {
       </DropdownMenuTrigger>
       {/* Motion owns unmounting so Radix does not cut off the closing animation. */}
       <DropdownMenuPortal forceMount>
-        <AnimatePresence>
-          {open && (
-            // On narrow screens, opening below the trigger avoids flipping across the session list.
-            <DropdownMenuPrimitive.Content
-              forceMount
-              asChild
-              side={isMobile ? "bottom" : "right"}
-              align={isMobile ? "end" : "start"}
-              sideOffset={8}
-              collisionPadding={12}
-              onKeyDownCapture={() => setKeyboardInteraction(true)}
-              onCloseAutoFocus={(event) => {
-                if (renamingRef.current) {
-                  // The title input takes focus when Rename starts; do not return it to the dots.
-                  event.preventDefault()
-                  renamingRef.current = false
-                }
-              }}
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: reducedMotion ? 1 : 0.94 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: reducedMotion ? 1 : 0.94, pointerEvents: "none" }}
-                transition={reducedMotion ? { duration: 0 } : MENU_SPRING}
-                className="z-50 w-64 max-w-[calc(100vw-1.5rem)] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-2xl border bg-popover text-popover-foreground shadow-xl"
+        <div className="contents">
+          <AnimatePresence>
+            {open && (
+              // On narrow screens, opening below the trigger avoids flipping across the session list.
+              <DropdownMenuPrimitive.Content
+                forceMount
+                asChild
+                side={isMobile ? "bottom" : "right"}
+                align={isMobile ? "end" : "start"}
+                sideOffset={8}
+                collisionPadding={12}
+                onKeyDownCapture={() => setKeyboardInteraction(true)}
+                onCloseAutoFocus={(event) => {
+                  if (renamingRef.current) {
+                    // The title input takes focus when Rename starts; do not return it to the dots.
+                    event.preventDefault()
+                    renamingRef.current = false
+                  }
+                }}
               >
-                <DropdownMenuGroup className="p-2">
-                  <DropdownMenuItem
-                    className="gap-3 rounded-xl px-3 py-2 text-base"
-                    onSelect={() => {
-                      renamingRef.current = true
-                      onRename()
-                    }}
-                  >
-                    <Pencil />
-                    Rename
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator className="m-0" />
-                <DropdownMenuGroup className="relative h-14 overflow-hidden">
-                  <AnimatePresence initial={false} custom={confirming}>
-                    <DeleteRow key={confirming ? "confirm" : "delete"} confirming={confirming} reducedMotion={reducedMotion}>
-                      {confirming ? (
-                        <>
-                          <DropdownMenuPrimitive.Item asChild onSelect={() => {
-                            setOpen(false)
-                            onDelete()
-                          }}>
-                            <button type="button" className={cn(buttonVariants({ variant: "destructive" }), "h-10 flex-1 rounded-xl")}>Yes, Delete</button>
+                <motion.div
+                  initial={{ opacity: 0, scale: reducedMotion ? 1 : 0.94 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: reducedMotion ? 1 : 0.94, pointerEvents: "none" }}
+                  transition={reducedMotion ? { duration: 0 } : MENU_SPRING}
+                  className="z-50 w-64 max-w-[calc(100vw-1.5rem)] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-2xl border bg-popover text-popover-foreground shadow-xl"
+                >
+                  <DropdownMenuGroup className="p-2">
+                    <DropdownMenuItem
+                      className="gap-3 rounded-xl px-3 py-2 text-base"
+                      onSelect={() => {
+                        renamingRef.current = true
+                        onRename()
+                      }}
+                    >
+                      <Pencil />
+                      Rename
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator className="m-0" />
+                  <DropdownMenuGroup className="relative h-14 overflow-hidden">
+                    <AnimatePresence initial={false} custom={confirming}>
+                      <DeleteRow key={confirming ? "confirm" : "delete"} confirming={confirming} reducedMotion={reducedMotion}>
+                        {confirming ? (
+                          <>
+                            <DropdownMenuPrimitive.Item asChild onSelect={() => {
+                              setOpen(false)
+                              onDelete()
+                            }}>
+                              <button type="button" className={cn(buttonVariants({ variant: "destructive" }), "h-10 flex-1 rounded-xl")}>Yes, Delete</button>
+                            </DropdownMenuPrimitive.Item>
+                            <DropdownMenuPrimitive.Item asChild onSelect={(event) => {
+                              event.preventDefault()
+                              returnToDeleteRef.current = true
+                              setConfirming(false)
+                            }}>
+                              <button type="button" ref={cancelRef} className={cn(buttonVariants({ variant: "outline" }), "h-10 flex-1 rounded-xl")}>Cancel</button>
+                            </DropdownMenuPrimitive.Item>
+                          </>
+                        ) : (
+                          <DropdownMenuPrimitive.Item
+                            ref={deleteRef}
+                            className="flex w-full select-none items-center gap-3 rounded-xl px-3 py-2 text-base text-destructive outline-none focus:bg-destructive/10 [&>svg]:size-4 [&>svg]:shrink-0"
+                            onSelect={(event) => {
+                              event.preventDefault()
+                              setConfirming(true)
+                            }}
+                          >
+                            <Trash2 />
+                            Delete
                           </DropdownMenuPrimitive.Item>
-                          <DropdownMenuPrimitive.Item asChild onSelect={(event) => {
-                            event.preventDefault()
-                            returnToDeleteRef.current = true
-                            setConfirming(false)
-                          }}>
-                            <button type="button" ref={cancelRef} className={cn(buttonVariants({ variant: "outline" }), "h-10 flex-1 rounded-xl")}>Cancel</button>
-                          </DropdownMenuPrimitive.Item>
-                        </>
-                      ) : (
-                        <DropdownMenuPrimitive.Item
-                          ref={deleteRef}
-                          className="flex w-full select-none items-center gap-3 rounded-xl px-3 py-2 text-base text-destructive outline-none focus:bg-destructive/10 [&>svg]:size-4 [&>svg]:shrink-0"
-                          onSelect={(event) => {
-                            event.preventDefault()
-                            setConfirming(true)
-                          }}
-                        >
-                          <Trash2 />
-                          Delete
-                        </DropdownMenuPrimitive.Item>
-                      )}
-                    </DeleteRow>
-                  </AnimatePresence>
-                </DropdownMenuGroup>
-              </motion.div>
-            </DropdownMenuPrimitive.Content>
-          )}
-        </AnimatePresence>
+                        )}
+                      </DeleteRow>
+                    </AnimatePresence>
+                  </DropdownMenuGroup>
+                </motion.div>
+              </DropdownMenuPrimitive.Content>
+            )}
+          </AnimatePresence>
+        </div>
       </DropdownMenuPortal>
     </DropdownMenu>
   )

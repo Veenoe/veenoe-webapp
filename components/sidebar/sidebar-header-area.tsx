@@ -1,6 +1,5 @@
 "use client"
 
-import * as React from "react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { MessageSquarePlus, Search } from "lucide-react"
 import Image from "next/image"
@@ -14,12 +13,10 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { SearchDialog } from "./search-dialog"
 
-export function SidebarHeaderArea() {
+export function SidebarHeaderArea({ onSearch }: { onSearch: () => void }) {
   const { state, isMobile, setOpenMobile, motionEnabled } = useSidebar()
   const reducedMotion = useReducedMotion()
-  const [searchOpen, setSearchOpen] = React.useState(false)
   const isExpanded = isMobile || state === "expanded"
   const shouldAnimate = !reducedMotion && motionEnabled
 
@@ -62,7 +59,7 @@ export function SidebarHeaderArea() {
           </SidebarMenuButton>
         </SidebarMenuItem>
         <SidebarMenuItem>
-          <SidebarMenuButton tooltip="Search Sessions" onClick={() => setSearchOpen(true)}>
+          <SidebarMenuButton tooltip="Search Sessions" onClick={onSearch}>
             <SidebarMotionItem className="size-5 [&>svg]:size-full" aria-hidden="true">
               <Search />
             </SidebarMotionItem>
@@ -70,7 +67,6 @@ export function SidebarHeaderArea() {
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
-      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </>
   )
 }

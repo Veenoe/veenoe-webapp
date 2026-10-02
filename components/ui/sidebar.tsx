@@ -34,15 +34,16 @@ const SIDEBAR_WIDTH_ICON = "3.5rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 const SIDEBAR_SPRING = { type: "spring", bounce: 0.12, duration: 0.4 } as const
 const SIDEBAR_ITEM_SPRING = { type: "spring", stiffness: 350, damping: 30 } as const
+type SidebarTransitionOptions = { animate?: boolean }
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
   open: boolean
-  setOpen: (open: boolean) => void
+  setOpen: (open: boolean | ((open: boolean) => boolean), options?: SidebarTransitionOptions) => void
   openMobile: boolean
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
-  toggleSidebar: () => void
+  toggleSidebar: (options?: SidebarTransitionOptions) => void
   motionEnabled: boolean
 }
 
@@ -108,20 +109,23 @@ function SidebarProvider({
   onOpenChange?: (open: boolean) => void
 }) {
   const isMobile = useIsMobile()
-  const [motionEnabled, setMotionEnabled] = React.useState(true)
   const [openMobile, setOpenMobile] = React.useState(false)
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
-  const [_open, _setOpen] = React.useState(defaultOpen)
-  const open = openProp ?? _open
+  const [sidebarState, setSidebarState] = React.useState({ open: defaultOpen, animate: true })
+  const open = openProp ?? sidebarState.open
+  if (openProp !== undefined && sidebarState.open !== openProp) {
+    // An external controlled update starts a new transition with the default motion policy.
+    setSidebarState({ open: openProp, animate: true })
+  }
+  const motionEnabled = sidebarState.animate
   const setOpen = React.useCallback(
-    (value: boolean | ((value: boolean) => boolean)) => {
+    (value: boolean | ((value: boolean) => boolean), options: SidebarTransitionOptions = {}) => {
       const openState = typeof value === "function" ? value(open) : value
+      setSidebarState({ open: openState, animate: options.animate ?? true })
       if (setOpenProp) {
         setOpenProp(openState)
-      } else {
-        _setOpen(openState)
       }
 
       // This sets the cookie to keep the sidebar state.
@@ -131,8 +135,8 @@ function SidebarProvider({
   )
 
   // Helper to toggle the sidebar.
-  const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
+  const toggleSidebar = React.useCallback((options?: SidebarTransitionOptions) => {
+    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open, options)
   }, [isMobile, setOpen, setOpenMobile])
 
   // Adds a keyboard shortcut to toggle the sidebar.
@@ -143,8 +147,7 @@ function SidebarProvider({
         (event.metaKey || event.ctrlKey)
       ) {
         event.preventDefault()
-        setMotionEnabled(false)
-        toggleSidebar()
+        toggleSidebar({ animate: false })
       }
     }
 
@@ -174,7 +177,6 @@ function SidebarProvider({
     <SidebarContext.Provider value={contextValue}>
       <TooltipProvider delayDuration={0}>
         <div
-          onPointerDownCapture={() => setMotionEnabled(true)}
           data-slot="sidebar-wrapper"
           style={
             {
@@ -202,9 +204,11 @@ function Sidebar({
   collapsible = "offcanvas",
   className,
   children,
+  style,
+  onMobileCloseAutoFocus,
   ...props
-}: Omit<HTMLMotionProps<"div">, "children"> & {
-  children?: React.ReactNode
+}: React.ComponentProps<"div"> & {
+  onMobileCloseAutoFocus?: (event: Event) => void
   side?: "left" | "right"
   variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
@@ -222,22 +226,23 @@ function Sidebar({
 
   if (collapsible === "none") {
     return (
-      <motion.div
+      <div
         data-slot="sidebar"
         className={cn(
           "bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col",
           className
         )}
+        style={style}
         {...props}
       >
         {children}
-      </motion.div>
+      </div>
     )
   }
 
   if (isMobile) {
     return (
-      <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
+      <Sheet open={openMobile} onOpenChange={setOpenMobile}>
         <SheetContent
           data-sidebar="sidebar"
           data-slot="sidebar"
@@ -246,9 +251,12 @@ function Sidebar({
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
+              ...style,
             } as React.CSSProperties
           }
           side={side}
+          onCloseAutoFocus={onMobileCloseAutoFocus}
+          {...props}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>
@@ -280,11 +288,8 @@ function Sidebar({
           "group-data-[side=right]:rotate-180"
         )}
       />
-      <motion.div
+      <div
         data-slot="sidebar-container"
-        initial={false}
-        animate={{ width: isCollapsed && collapsible === "icon" ? isInset ? "calc(var(--sidebar-width-icon) + 1rem + 2px)" : collapsedWidth : "var(--sidebar-width)" }}
-        transition={transition}
         className={cn(
           "fixed inset-y-0 z-10 hidden h-svh transition-[left,right] duration-200 ease-out motion-reduce:transition-none md:flex",
           side === "left"
@@ -293,19 +298,23 @@ function Sidebar({
           // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
             ? "p-2"
-            : "group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            : "",
           className
         )}
+        style={style}
         {...props}
       >
-        <div
+        <motion.div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className="bg-sidebar group-data-[variant=floating]:border-sidebar-border flex h-full w-full flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm"
+          initial={false}
+          animate={{ width: isCollapsed && collapsible === "icon" ? "var(--sidebar-width-icon)" : isInset ? "calc(var(--sidebar-width) - 1rem)" : "var(--sidebar-width)" }}
+          transition={transition}
+          className={cn("bg-sidebar group-data-[variant=floating]:border-sidebar-border flex h-full shrink-0 flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm", !isInset && "group-data-[side=left]:border-r group-data-[side=right]:border-l")}
         >
           {children}
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   )
 }
@@ -326,7 +335,7 @@ function SidebarTrigger({
       className={cn("size-7", className)}
       onClick={(event) => {
         onClick?.(event)
-        toggleSidebar()
+        if (!event.defaultPrevented) toggleSidebar({ animate: event.detail !== 0 })
       }}
       {...props}
     >
@@ -345,7 +354,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
       data-slot="sidebar-rail"
       aria-label="Toggle Sidebar"
       tabIndex={-1}
-      onClick={toggleSidebar}
+      onClick={() => toggleSidebar()}
       title="Toggle Sidebar"
       className={cn(
         "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex",
