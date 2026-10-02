@@ -18,6 +18,8 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuLabel,
+  SidebarMotionItem,
   useSidebar,
 } from "@/components/ui/sidebar"
 
@@ -40,18 +42,21 @@ export function NavUser({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
+              aria-label={`Account menu for ${user.name}`}
               className="cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-10 w-10 rounded-lg">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg text-base">
-                  {user.name?.charAt(0)?.toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
+              <SidebarMotionItem className="size-10">
+                <Avatar className="size-10 rounded-lg">
+                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarFallback className="rounded-lg text-base">
+                    {user.name?.charAt(0)?.toUpperCase() || "U"}
+                  </AvatarFallback>
+                </Avatar>
+              </SidebarMotionItem>
+              <SidebarMenuLabel className="grid flex-1 text-left leading-tight">
                 <span className="truncate text-base font-medium">{user.name}</span>
                 <span className="truncate text-sm text-muted-foreground">{user.email}</span>
-              </div>
+              </SidebarMenuLabel>
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent

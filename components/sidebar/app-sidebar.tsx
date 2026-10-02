@@ -8,7 +8,6 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-  useSidebar,
 } from "@/components/ui/sidebar"
 import { useUser } from "@clerk/nextjs"
 import { SidebarHeaderArea } from "@/components/sidebar/sidebar-header-area"
@@ -16,8 +15,6 @@ import { HistoryList } from "@/components/sidebar/history-list"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useUser()
-  const { state } = useSidebar()
-  const isCollapsed = state === "collapsed"
 
   const userData = React.useMemo(() => ({
     name: user?.fullName || "User",
