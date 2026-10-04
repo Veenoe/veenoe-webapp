@@ -18,6 +18,14 @@ GoAway and resumption metadata are exposed without logging handles. `resumable: 
 
 Conclusion generates and saves one report through the existing tool with score, summary, strengths, areas for improvement, next steps and coverage note. Older calls may omit the new fields. Extra calls are ignored before payload validation once that session is saving or saved, including malformed duplicates. Final audio drains before disconnect. An invalid conclusion closes the spoken-response boundary and exits through the existing abandonment/completion check; if the backend already completed the session, that check opens its saved report. Validation diagnostics contain fixed field paths only, never report contents. Timer expiry requests the same spoken closing and conclusion as the end-session button, rather than merely changing the UI state. The guidance is stored with the existing report; no second report generation is requested.
 
+## VEENOE-32 transcript display
+
+The active session shows input and output transcripts in a bounded, keyboard-scrollable panel labelled `You` and `Veenoe`. It renders local segments in receipt order, preserving the assembler's conservative input policy above. New text follows the bottom unless the student scrolls up; returning to the bottom resumes following. Conclusion status does not hide the transcript.
+
+Both speakers remain in the existing in-memory Zustand store until session reset or page reload. No transcript is sent to the application backend, browser storage, S3, DynamoDB, or analytics. Gemini's own Live session context is separate from application persistence. Backend input/output transcription token constraints already enable this feature and need no change.
+
+`transcript-display.test.ts` exercises SDK-shaped events through the real normalizer, assembler, store and display, including preview correction, canonical replacement, separate user segments, interruption, session reset, conclusion visibility and scroll following. Real microphone/Gemini QA remains pending; check the steps below, plus scrolling up while new text arrives and starting a fresh session without prior captions.
+
 ## Manual live QA (pending)
 
 Use a normal account and the existing anonymous Voice Diagnostics panel. Record browser/OS, speaker and microphone, frontend/backend revisions, and telemetry JSON without transcripts, audio, or credentials.

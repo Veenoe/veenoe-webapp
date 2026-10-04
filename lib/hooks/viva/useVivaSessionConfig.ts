@@ -80,7 +80,10 @@ export function useVivaSessionConfig(
 
   /** Apply the class immediately; persistence is optional and cannot block setup. */
   const handleClassChange = (value: string) => {
-    dispatch({ type: "class", value: Number(value) });
+    const classLevel = Number(value);
+    // The select's native form input can emit an empty value during synchronization.
+    if (!curriculum.getClassLevels().includes(classLevel)) return;
+    dispatch({ type: "class", value: classLevel });
     try {
       localStorage.setItem("veenoe_last_class", value);
     } catch {

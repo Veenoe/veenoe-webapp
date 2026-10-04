@@ -79,7 +79,8 @@ export function selectionReducer(
   action: SelectionAction,
 ): CurriculumSelectionState {
   if (action.type === "class")
-    return state.classLevel === action.value
+    return !curriculum.getClassLevels().includes(action.value) ||
+      state.classLevel === action.value
       ? state
       : { ...initialSelection, classLevel: action.value };
   if (action.type === "subject")
