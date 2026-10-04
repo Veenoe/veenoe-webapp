@@ -56,11 +56,6 @@ export function VivaActiveSession({ vivaSession }: VivaActiveSessionProps) {
         }
     };
 
-    // Get the last assistant message to display
-    const lastAssistantMessage = transcripts
-        .filter((t) => t.role === "assistant")
-        .slice(-1)[0]?.text;
-
     return (
         <>
             <div className="flex flex-col items-center justify-center min-h-[80vh] space-y-8 max-w-4xl mx-auto w-full animate-in fade-in duration-500">
@@ -92,7 +87,7 @@ export function VivaActiveSession({ vivaSession }: VivaActiveSessionProps) {
                 <TranscriptDisplay
                     isConnecting={sessionState === SessionState.STARTING}
                     isConcluding={isConcluding}
-                    lastMessage={lastAssistantMessage}
+                    transcripts={transcripts}
                     conversationState={conversationState}
                     playbackState={playbackState}
                 />
