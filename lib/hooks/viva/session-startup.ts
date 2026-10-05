@@ -21,7 +21,11 @@ export function createSessionStartup(deps: StartupDependencies) {
     // through the session hook, and repeated readiness must never resend the turn.
     phase = "opening";
     let accepted = false;
-    try { accepted = deps.sendText(KICKOFF); } catch { /* Same failure path as an unavailable transport. */ }
+    try {
+      accepted = deps.sendText(KICKOFF);
+    } catch {
+      /* Same failure path as an unavailable transport. */
+    }
     if (!accepted) {
       phase = "stopped";
       deps.onFailure();
@@ -33,16 +37,34 @@ export function createSessionStartup(deps: StartupDependencies) {
 
   const playbackDrained = () => {
     // Server turnComplete can arrive while browser audio is still queued.
-    if (phase !== "opening" || !openingTurnComplete || deps.hasPendingAudio()) return;
+    if (phase !== "opening" || !openingTurnComplete || deps.hasPendingAudio())
+      return;
     phase = "listening";
     deps.onListening();
   };
 
   return {
-    sessionReady: () => { sessionReady = true; beginAssessment(); },
-    setupComplete: () => { setupReady = true; beginAssessment(); },
-    turnComplete: () => { openingTurnComplete = true; playbackDrained(); },
+    sessionReady: () => {
+      sessionReady = true;
+      beginAssessment();
+    },
+    setupComplete: () => {
+      setupReady = true;
+      beginAssessment();
+    },
+    turnComplete: () => {
+      openingTurnComplete = true;
+      playbackDrained();
+    },
     playbackDrained,
-    stop: () => { phase = "stopped"; },
+    connectionRestored: () => {
+      // Recovery discards the old playback queue. Its opening may never deliver
+      // another turnComplete, so listening resumes without replaying the kickoff.
+      if (phase === "opening") openingTurnComplete = true;
+      playbackDrained();
+    },
+    stop: () => {
+      phase = "stopped";
+    },
   };
 }
