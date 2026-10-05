@@ -1,4 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+    useInfiniteQuery,
+    useMutation,
+    useQueryClient,
+    type InfiniteData,
+} from '@tanstack/react-query';
 import { useUser, useAuth } from '@clerk/nextjs';
 import { historyService } from '@/lib/api/history';
 import { setAuthToken, APIError } from '@/lib/api/axios';
@@ -28,7 +33,7 @@ function getErrorMessage(err: unknown, action: 'rename' | 'delete'): string {
 
 /**
  * Hook to fetch the authenticated user's viva history.
- * 
+ *
  * Automatically injects the Clerk auth token before making API calls.
  * The server identifies the user from the JWT - no user_id needed.
  */
@@ -36,15 +41,22 @@ export function useHistory() {
     const { user } = useUser();
     const { getToken } = useAuth();
 
-    return useQuery({
+    return useInfiniteQuery({
         queryKey: ['history', user?.id],
-        queryFn: async () => {
+        initialPageParam: undefined as string | undefined,
+        queryFn: async ({ pageParam }) => {
             // Inject auth token before API call
             const token = await getToken();
             setAuthToken(token);
 
-            return historyService.getHistory();
+            return historyService.getHistory(pageParam);
         },
+        getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+        // Flatten only the view; retain pages and cursors for pagination/rollback.
+        select: (data) => ({
+            ...data,
+            sessions: data.pages.flatMap((page) => page.sessions),
+        }),
         enabled: !!user?.id,
         staleTime: 1000 * 60 * 5, // 5 minutes
     });
@@ -56,7 +68,13 @@ export function useRenameSession() {
     const { getToken } = useAuth();
 
     return useMutation({
-        mutationFn: async ({ sessionId, newTitle }: { sessionId: string; newTitle: string }) => {
+        mutationFn: async ({
+            sessionId,
+            newTitle,
+        }: {
+            sessionId: string;
+            newTitle: string;
+        }) => {
             // Inject auth token before API call
             const token = await getToken();
             setAuthToken(token);
@@ -65,27 +83,43 @@ export function useRenameSession() {
         },
 
         onMutate: async ({ sessionId, newTitle }) => {
-            await queryClient.cancelQueries({ queryKey: ['history', user?.id] });
-            const previousHistory = queryClient.getQueryData<HistoryResponse>(['history', user?.id]);
-
-            queryClient.setQueryData<HistoryResponse>(['history', user?.id], (old) => {
-                if (!old) return old;
-                return {
-                    ...old,
-                    sessions: old.sessions.map((session) =>
-                        session.viva_session_id === sessionId
-                            ? { ...session, title: newTitle }
-                            : session
-                    ),
-                };
+            await queryClient.cancelQueries({
+                queryKey: ['history', user?.id],
             });
+            const previousHistory = queryClient.getQueryData<
+                InfiniteData<HistoryResponse>
+            >(['history', user?.id]);
+
+            // Snapshot every loaded page so rollback preserves older sessions and
+            // cursors, even when the edited session is outside the newest page.
+
+            queryClient.setQueryData<InfiniteData<HistoryResponse>>(
+                ['history', user?.id],
+                (old) => {
+                    if (!old) return old;
+                    return {
+                        ...old,
+                        pages: old.pages.map((page) => ({
+                            ...page,
+                            sessions: page.sessions.map((session) =>
+                                session.viva_session_id === sessionId
+                                    ? { ...session, title: newTitle }
+                                    : session,
+                            ),
+                        })),
+                    };
+                },
+            );
 
             return { previousHistory };
         },
 
         onError: (err, _variables, context) => {
             if (context?.previousHistory) {
-                queryClient.setQueryData(['history', user?.id], context.previousHistory);
+                queryClient.setQueryData(
+                    ['history', user?.id],
+                    context.previousHistory,
+                );
             }
             toast.error(getErrorMessage(err, 'rename'));
         },
@@ -97,6 +131,8 @@ export function useRenameSession() {
 }
 
 export function useDeleteSession() {
+    // Preserve page boundaries/cursors during optimistic removal; invalidation
+    // subsequently refreshes server order and fills any resulting page gaps.
     const queryClient = useQueryClient();
     const { user } = useUser();
     const { getToken } = useAuth();
@@ -111,23 +147,39 @@ export function useDeleteSession() {
         },
 
         onMutate: async (sessionId) => {
-            await queryClient.cancelQueries({ queryKey: ['history', user?.id] });
-            const previousHistory = queryClient.getQueryData<HistoryResponse>(['history', user?.id]);
-
-            queryClient.setQueryData<HistoryResponse>(['history', user?.id], (old) => {
-                if (!old) return old;
-                return {
-                    ...old,
-                    sessions: old.sessions.filter((session) => session.viva_session_id !== sessionId),
-                };
+            await queryClient.cancelQueries({
+                queryKey: ['history', user?.id],
             });
+            const previousHistory = queryClient.getQueryData<
+                InfiniteData<HistoryResponse>
+            >(['history', user?.id]);
+
+            queryClient.setQueryData<InfiniteData<HistoryResponse>>(
+                ['history', user?.id],
+                (old) => {
+                    if (!old) return old;
+                    return {
+                        ...old,
+                        pages: old.pages.map((page) => ({
+                            ...page,
+                            sessions: page.sessions.filter(
+                                (session) =>
+                                    session.viva_session_id !== sessionId,
+                            ),
+                        })),
+                    };
+                },
+            );
 
             return { previousHistory };
         },
 
         onError: (err, _sessionId, context) => {
             if (context?.previousHistory) {
-                queryClient.setQueryData(['history', user?.id], context.previousHistory);
+                queryClient.setQueryData(
+                    ['history', user?.id],
+                    context.previousHistory,
+                );
             }
             toast.error(getErrorMessage(err, 'delete'));
         },
