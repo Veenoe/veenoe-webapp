@@ -28,9 +28,6 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
     const [query, setQuery] = React.useState('');
     const inputRef = React.useRef<HTMLInputElement>(null);
 
-    // O(1) Search Optimization: Filter filtered list memoization
-    // Although filter is O(N), for <10k items it's negligible client-side.
-    // We perform filtering only when query or historyData changes.
     const filteredSessions = React.useMemo(() => {
         if (!historyData?.sessions || !query) return [];
         const lowerQuery = query.toLowerCase();
@@ -68,7 +65,9 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
                 <div className="max-h-[300px] overflow-y-auto p-1">
                     {query && filteredSessions.length === 0 && (
                         <div className="py-6 text-center text-sm text-muted-foreground">
-                            No results found.
+                            {hasNextPage
+                                ? 'No matches in loaded sessions.'
+                                : 'No results found.'}
                         </div>
                     )}
                     {(!query || filteredSessions.length > 0) && (
