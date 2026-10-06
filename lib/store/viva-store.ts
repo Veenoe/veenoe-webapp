@@ -34,6 +34,17 @@ interface VivaSessionStore {
   ephemeralToken: string | null;
   googleModel: string | null;
   vadProfile: string | null;
+  googleApiVersion: string;
+  tokenExpiresAt: string | null;
+  newSessionExpiresAt: string | null;
+  sessionDeadlineAt: string | null;
+  sessionResumptionEnabled: boolean;
+  connectionStatus:
+    | "connecting"
+    | "connected"
+    | "reconnecting"
+    | "disconnected";
+  connectionNotice: string | null;
   voiceName: string;
   sessionDurationMinutes: number;
   sessionState: SessionState;
@@ -70,6 +81,7 @@ interface VivaSessionStore {
   setTimeRemaining: (seconds: number) => void;
   setTimerWarning: (shown: boolean) => void;
   setError: (error: string | null) => void;
+  clearLiveCredentials: () => void;
 
   // -- NEW: Action to set conclusion data --
   setConclusionData: (data: ConclusionData | null) => void;
@@ -82,6 +94,13 @@ const initialState = {
   ephemeralToken: null,
   googleModel: null,
   vadProfile: null,
+  googleApiVersion: "v1beta",
+  tokenExpiresAt: null,
+  newSessionExpiresAt: null,
+  sessionDeadlineAt: null,
+  sessionResumptionEnabled: false,
+  connectionStatus: "disconnected" as const,
+  connectionNotice: null,
   voiceName: "Kore",
   sessionDurationMinutes: 5,
   sessionState: SessionState.IDLE,
@@ -105,12 +124,27 @@ export const useVivaStore = create<VivaSessionStore>((set) => ({
       ephemeralToken: data.ephemeral_token,
       googleModel: data.google_model,
       vadProfile: data.vad_profile ?? null,
+      googleApiVersion: data.google_api_version ?? "v1beta",
+      tokenExpiresAt: data.token_expires_at ?? null,
+      newSessionExpiresAt: data.new_session_expires_at ?? null,
+      sessionDeadlineAt: data.session_deadline_at ?? null,
+      sessionResumptionEnabled: data.session_resumption_enabled ?? false,
+      connectionStatus: "connecting",
+      connectionNotice: null,
       voiceName: data.voice_name,
       sessionDurationMinutes: data.session_duration_minutes,
       timeRemaining: data.session_duration_minutes * 60,
     }),
 
   setSessionState: (state) => set({ sessionState: state }),
+  clearLiveCredentials: () =>
+    set({
+      ephemeralToken: null,
+      tokenExpiresAt: null,
+      newSessionExpiresAt: null,
+      sessionResumptionEnabled: false,
+      connectionStatus: "disconnected",
+    }),
 
   setMicrophoneState: (state) => set({ microphoneState: state }),
   setConversationState: (state) => set({ conversationState: state }),
@@ -138,8 +172,8 @@ export const useVivaStore = create<VivaSessionStore>((set) => ({
       return {
         transcripts: existing
           ? state.transcripts.map((item) =>
-            item.id === transcript.id ? { ...item, ...transcript } : item,
-          )
+              item.id === transcript.id ? { ...item, ...transcript } : item,
+            )
           : [...state.transcripts, { ...transcript, timestamp: Date.now() }],
       };
     }),

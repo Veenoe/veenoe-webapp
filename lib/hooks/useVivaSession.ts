@@ -18,12 +18,17 @@ import { voiceTelemetry } from "@/lib/telemetry/voice-telemetry";
 import { createToolHandler } from "./viva/tool-handlers";
 import { createAudioPipeline } from "./viva/audio-pipeline";
 import { createSessionStartup } from "./viva/session-startup";
+import { createLiveRecoveryHandlers } from "./viva/live-recovery-handlers";
 import { abandonViva } from "@/lib/api/axios";
 import {
   applyAbandonOutcome,
   endSessionForMicrophoneFailure,
 } from "./viva/session-lifecycle";
 
+const CONCLUSION_PROMPT =
+  "The session must end now. First speak a brief, warm thank-you and goodbye in the current language (English unless the student explicitly requested Hindi). Then call the existing conclude_viva tool once with the report based on this session. Do not ask another question or generate a second report.";
+
+/** Own resources for one viva; cleanup invalidates pending initialization and transport callbacks. */
 export function useVivaSession() {
   const router = useRouter();
   const { getToken } = useAuth();
@@ -47,7 +52,9 @@ export function useVivaSession() {
     [upsertTranscript],
   );
 
-  const startupRef = useRef<ReturnType<typeof createSessionStartup> | null>(null);
+  const startupRef = useRef<ReturnType<typeof createSessionStartup> | null>(
+    null,
+  );
   const initializationGenerationRef = useRef(0);
   // Retain the attempted Viva ID through teardown; only a new Viva can initialize again.
   const initializedSessionIdRef = useRef<string | null>(null);
@@ -60,10 +67,13 @@ export function useVivaSession() {
   const abandonmentRef = useRef<Promise<void> | null>(null);
   const fatalMicrophoneHandledRef = useRef(false);
   const fatalPlaybackHandledRef = useRef(false);
+  const pendingConclusionRef = useRef(false);
 
   // Cleanup all resources
   const cleanupResources = useCallback(() => {
     initializationGenerationRef.current++;
+    pendingConclusionRef.current = false;
+    useVivaStore.getState().clearLiveCredentials();
     startupRef.current?.stop();
     // Flag as intentional so normal teardown is not counted as an unexpected connection drop
     voiceTelemetry.setIntentionalDisconnect(true);
@@ -147,7 +157,7 @@ export function useVivaSession() {
     setError("Audio playback could not continue. Please try again.");
     setSessionState(SessionState.ERROR);
     cleanupResources();
-    void abandonSession(true).catch(() => { });
+    void abandonSession(true).catch(() => {});
   }, [abandonSession, cleanupResources, setError, setSessionState]);
 
   // Create audio pipeline controller
@@ -177,19 +187,33 @@ export function useVivaSession() {
         getToken,
         abandonSession,
         isConclusionSavingRef,
-        onTerminalCallAccepted: () => audioPlayerRef.current?.completeTurn(),
+        onTerminalCallAccepted: () => {
+          geminiClientRef.current?.stopRecovery();
+          audioPlayerRef.current?.completeTurn();
+        },
         onConclusionRejected: () => {
           // The rejected call still ends the spoken response; no turnComplete is promised.
-          audioPipeline.completeTurn(() => audioPlayerRef.current?.completeTurn());
+          audioPipeline.completeTurn(() =>
+            audioPlayerRef.current?.completeTurn(),
+          );
         },
         onConclusionFailure: () => {
           setSessionState(SessionState.ERROR);
           setConversationState(ConversationState.LISTENING);
           cleanupResources();
-          void abandonSession(true).catch(() => { });
+          void abandonSession(true).catch(() => {});
         },
       }),
-    [setError, finishConclusion, getToken, abandonSession, audioPipeline, setConversationState, setSessionState, cleanupResources],
+    [
+      setError,
+      finishConclusion,
+      getToken,
+      abandonSession,
+      audioPipeline,
+      setConversationState,
+      setSessionState,
+      cleanupResources,
+    ],
   );
 
   // Start audio pipeline
@@ -237,7 +261,11 @@ export function useVivaSession() {
         (level) => voiceTelemetry.onMicrophoneLevel(level),
         (timing) => voiceTelemetry.onMicrophonePacketObserved(timing),
       );
-      if (audioHandlerRef.current !== recorder || fatalMicrophoneHandledRef.current) return;
+      if (
+        audioHandlerRef.current !== recorder ||
+        fatalMicrophoneHandledRef.current
+      )
+        return;
       setMicrophoneState(MicrophoneState.ACTIVE);
       setConversationState(ConversationState.LISTENING);
     } catch (error) {
@@ -259,7 +287,12 @@ export function useVivaSession() {
   const initializeSession = useCallback(async () => {
     const ephemeralToken = useVivaStore.getState().ephemeralToken;
     const sessionId = useVivaStore.getState().sessionId;
-    if (!ephemeralToken || !sessionId || initializedSessionIdRef.current === sessionId) return;
+    if (
+      !ephemeralToken ||
+      !sessionId ||
+      initializedSessionIdRef.current === sessionId
+    )
+      return;
     initializedSessionIdRef.current = sessionId;
     const generation = ++initializationGenerationRef.current;
 
@@ -285,7 +318,11 @@ export function useVivaSession() {
       await audioHandlerRef.current.initialize(() => {
         handleFatalMicrophoneError(new MicrophoneError("ended"));
       });
-      if (generation !== initializationGenerationRef.current || fatalMicrophoneHandledRef.current) return;
+      if (
+        generation !== initializationGenerationRef.current ||
+        fatalMicrophoneHandledRef.current
+      )
+        return;
       const microphoneDiagnostics =
         audioHandlerRef.current.getMicrophoneDiagnostics();
       if (!microphoneDiagnostics) throw new MicrophoneError("ended");
@@ -308,16 +345,28 @@ export function useVivaSession() {
         }),
       );
       await audioPlayerRef.current.initialize();
-      if (generation !== initializationGenerationRef.current || fatalMicrophoneHandledRef.current) return;
+      if (
+        generation !== initializationGenerationRef.current ||
+        fatalMicrophoneHandledRef.current
+      )
+        return;
       voiceTelemetry.onAudioPlayerReady();
 
       // The SDK's socket-open callback can precede its usable Live session.
-      const client = new GeminiLiveClientSDK(
+      const client: GeminiLiveClientSDK = new GeminiLiveClientSDK(
         ephemeralToken,
         {
           onEvent: (event) => {
             if (geminiClientRef.current !== client) return;
             switch (event.type) {
+              case "voice_activity":
+                voiceTelemetry.onVoiceActivity(event.activity);
+                audioPipeline.inputActivity(event.activity);
+                break;
+              case "waiting_for_input":
+                voiceTelemetry.onWaitingForInput();
+                audioPipeline.waitForInput();
+                break;
               case "transcription":
                 transcripts.accept(event);
                 break;
@@ -342,7 +391,7 @@ export function useVivaSession() {
               case "go_away":
                 break; // Notice of future closure; not an abandonment signal.
               case "resumption_update":
-                break; // Exposed by adapter; VEENOE-23 owns resume.
+                break; // The transport owns checkpoints and bounded recovery.
               case "protocol_issue":
                 console.warn("[Viva] Invalid Live field:", event.field);
                 break;
@@ -356,7 +405,21 @@ export function useVivaSession() {
             if (geminiClientRef.current !== client) return;
             voiceTelemetry.onGeminiSetupComplete();
             startup.setupComplete();
+            useVivaStore.setState({ connectionStatus: "connected" });
           },
+          ...createLiveRecoveryHandlers({
+            isCurrent: () => geminiClientRef.current === client,
+            isConclusionSaving: () => isConclusionSavingRef.current,
+            pendingConclusion: pendingConclusionRef,
+            stopPlayback: () => {
+              audioPlayerRef.current?.stop();
+              audioPipeline.reset();
+              setPlaybackState(PlaybackState.IDLE);
+            },
+            closeTranscripts: () => transcripts.connectionClosed(),
+            startup: () => startup,
+            sendConclusion: () => client.sendText(CONCLUSION_PROMPT),
+          }),
           onDisconnected: () => {
             if (geminiClientRef.current !== client) return;
             startup.stop();
@@ -369,16 +432,19 @@ export function useVivaSession() {
                 !isConclusionSavingRef.current &&
                 !useVivaStore.getState().conclusionData)
             ) {
-              void abandonSession().catch(() => { });
+              void abandonSession().catch(() => {});
             }
           },
           onError: (e) => {
             if (geminiClientRef.current !== client) return;
             startup.stop();
             voiceTelemetry.onGeminiError(e);
+            if (useVivaStore.getState().connectionStatus === "reconnecting")
+              voiceTelemetry.onLiveRecovery("failed", "transport");
             setError(e.message);
             const state = useVivaStore.getState().sessionState;
             setSessionState(SessionState.ERROR);
+            cleanupResources();
             if (
               state === SessionState.ACTIVE ||
               state === SessionState.STARTING ||
@@ -386,7 +452,7 @@ export function useVivaSession() {
                 !isConclusionSavingRef.current &&
                 !useVivaStore.getState().conclusionData)
             ) {
-              void abandonSession().catch(() => { });
+              void abandonSession().catch(() => {});
             }
           },
           onReconnectAttempt: (attempt) => {
@@ -424,10 +490,19 @@ export function useVivaSession() {
           },
         },
         googleModel ?? undefined,
+        undefined,
+        {
+          apiVersion: useVivaStore.getState().googleApiVersion,
+          tokenExpiresAt: useVivaStore.getState().tokenExpiresAt,
+          newSessionExpiresAt: useVivaStore.getState().newSessionExpiresAt,
+          sessionDeadlineAt: useVivaStore.getState().sessionDeadlineAt,
+          resumptionEnabled: useVivaStore.getState().sessionResumptionEnabled,
+        },
       );
       const startup = createSessionStartup({
         sendText: (text) => client.sendText(text),
-        hasPendingAudio: () => audioPlayerRef.current?.hasPendingAudio() ?? false,
+        hasPendingAudio: () =>
+          audioPlayerRef.current?.hasPendingAudio() ?? false,
         onKickoff: () => {
           voiceTelemetry.onAutomaticKickoff(true);
           setSessionState(SessionState.ACTIVE);
@@ -438,13 +513,15 @@ export function useVivaSession() {
           setError("Could not start the viva. Please try again.");
           setSessionState(SessionState.ERROR);
           cleanupResources();
-          void abandonSession(true).catch(() => { });
+          void abandonSession(true).catch(() => {});
         },
         onListening: () => {
           // Permission is already granted. Delay capture/forwarding until the opening
           // drains so speaker leakage cannot trigger server VAD and interrupt it.
-          if (geminiClientRef.current === client &&
-              useVivaStore.getState().sessionState === SessionState.ACTIVE)
+          if (
+            geminiClientRef.current === client &&
+            useVivaStore.getState().sessionState === SessionState.ACTIVE
+          )
             void _startAudioPipeline();
         },
       });
@@ -456,7 +533,11 @@ export function useVivaSession() {
       await geminiClientRef.current.connect();
       if (geminiClientRef.current === client) startup.sessionReady();
     } catch (err) {
-      if (generation !== initializationGenerationRef.current || fatalMicrophoneHandledRef.current) return;
+      if (
+        generation !== initializationGenerationRef.current ||
+        fatalMicrophoneHandledRef.current
+      )
+        return;
       if (err instanceof MicrophoneError) {
         handleFatalMicrophoneError(err);
         return;
@@ -466,7 +547,7 @@ export function useVivaSession() {
       }
       setSessionState(SessionState.ERROR);
       cleanupResources();
-      void abandonSession().catch(() => { });
+      void abandonSession().catch(() => {});
     }
   }, [
     setSessionState,
@@ -480,6 +561,7 @@ export function useVivaSession() {
     handleFatalPlaybackError,
     cleanupResources,
     setConversationState,
+    setPlaybackState,
   ]);
 
   // Request conclusion from AI
@@ -487,15 +569,27 @@ export function useVivaSession() {
     const current = useVivaStore.getState();
     if (
       current.sessionState === SessionState.CONCLUDING ||
-      isConclusionSavingRef.current || current.conclusionData
-    ) return;
-    if (geminiClientRef.current && current.sessionState === SessionState.ACTIVE) {
+      isConclusionSavingRef.current ||
+      current.conclusionData
+    )
+      return;
+    if (current.connectionStatus === "reconnecting") {
+      pendingConclusionRef.current = true;
+      return;
+    }
+    if (
+      geminiClientRef.current &&
+      current.sessionState === SessionState.ACTIVE
+    ) {
       console.log("[useVivaSession] User requested end. Prompting AI...");
-      const accepted = geminiClientRef.current.sendText(
-        "The session must end now. First speak a brief, warm thank-you and goodbye in the current language (English unless the student explicitly requested Hindi). Then call the existing conclude_viva tool once with the report based on this session. Do not ask another question or generate a second report.",
-      );
+      const accepted = geminiClientRef.current.sendText(CONCLUSION_PROMPT);
       if (accepted) {
         setSessionState(SessionState.CONCLUDING);
+        return;
+      }
+      // A synchronous send failure may already have started recovery.
+      if (useVivaStore.getState().connectionStatus === "reconnecting") {
+        pendingConclusionRef.current = true;
         return;
       }
     }
@@ -509,6 +603,8 @@ export function useVivaSession() {
   // Toggle mute
   const toggleMute = useCallback(() => {
     store.toggleMute();
+    if (useVivaStore.getState().isMuted)
+      geminiClientRef.current?.endAudioStream();
   }, [store]);
 
   // Cleanup on unmount

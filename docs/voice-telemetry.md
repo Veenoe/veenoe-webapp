@@ -5,6 +5,7 @@
 VEENOE-16 establishes an objective, empirical baseline for Veenoe's real-time voice pipeline before making architectural changes in subsequent Voice v2 tasks (model migration, full-duplex/barge-in, VAD tuning, audio resampling, echo cancellation, playback redesign).
 
 Key questions this telemetry answers:
+
 - How fast does Gemini return the first audio chunk?
 - What is the client playback pipeline delay?
 - How quickly does audio playback cease upon an interruption?
@@ -36,6 +37,7 @@ Voice telemetry is anonymous technical performance telemetry.
 PostHog does not receive student names, emails, Clerk IDs, transcripts, raw audio, or credentials.
 
 PostHog is integrated via `posthog-js` with strict privacy constraints:
+
 - **Autocapture:** Disabled (`autocapture: false`)
 - **Session Replay:** Disabled (`disable_session_recording: true`)
 - **Pageviews:** Disabled (`capture_pageview: false`)
@@ -44,23 +46,48 @@ PostHog is integrated via `posthog-js` with strict privacy constraints:
 
 ### Event Names & Vocabulary
 
-| Event Name | Trigger | Key Properties |
-|---|---|---|
-| `voice_session_started` | Viva session initialized | `telemetry_session_id`, `model_name` |
-| `voice_connection_ready` | Gemini `setup_complete` received | `telemetry_session_id`, `connection_setup_ms`, `model_name` |
-| `voice_turn_completed` | Model turn completed or finished | `turn_number`, `last_input_packet_to_first_gemini_audio_ms`, `first_gemini_audio_to_playback_ms`, `input_packet_count`, `input_bytes`, `packets_per_second`, `output_audio_chunk_count`, `max_playback_queue_ms`, `playback_underrun_count`, `interrupted` |
-| `voice_interruption` | Gemini interruption detected; clear requested without waiting | `turn_number` |
-| `voice_playback_clear_acknowledged` | Matching worklet clear acknowledged | `turn_number`, `clear_request_to_acknowledgment_ms` |
-| `voice_connection_error` | WebSocket / setup error | `telemetry_session_id`, `error_type`, `error_category`, `connection_error_count`, `model_name` |
-| `voice_session_ended` | Session teardown / concluded | `total_input_packets`, `total_input_bytes`, `total_output_chunks`, `disconnect_count`, `connection_error_count` |
+| Event Name                          | Trigger                                                       | Key Properties                                                                                                                                                                                                                                             |
+| ----------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `voice_session_started`             | Viva session initialized                                      | `telemetry_session_id`, `model_name`                                                                                                                                                                                                                       |
+| `voice_connection_ready`            | Gemini `setup_complete` received                              | `telemetry_session_id`, `connection_setup_ms`, `model_name`                                                                                                                                                                                                |
+| `voice_turn_completed`              | Model turn completed or finished                              | `turn_number`, `last_input_packet_to_first_gemini_audio_ms`, `first_gemini_audio_to_playback_ms`, `input_packet_count`, `input_bytes`, `packets_per_second`, `output_audio_chunk_count`, `max_playback_queue_ms`, `playback_underrun_count`, `interrupted` |
+| `voice_interruption`                | Gemini interruption detected; clear requested without waiting | `turn_number`                                                                                                                                                                                                                                              |
+| `voice_playback_clear_acknowledged` | Matching worklet clear acknowledged                           | `turn_number`, `clear_request_to_acknowledgment_ms`                                                                                                                                                                                                        |
+| `voice_connection_error`            | WebSocket / setup error                                       | `telemetry_session_id`, `error_type`, `error_category`, `connection_error_count`, `model_name`                                                                                                                                                             |
+| `voice_session_ended`               | Session teardown / concluded                                  | `total_input_packets`, `total_input_bytes`, `total_output_chunks`, `disconnect_count`, `connection_error_count`                                                                                                                                            |
 
-> **Note on VAD Timestamps:** The current Gemini Live protocol does not deliver client-side VAD speech endpoint markers. As a result, `speech_end_to_first_gemini_audio_ms` is marked unavailable (`null`), and the honest proxy metric `last_input_packet_to_first_gemini_audio_ms` is recorded.
+> **Note on speech timing:** Microphone packets continue through silence, so `last_input_packet_to_first_gemini_audio_ms` is a transport interval, not response latency after the student finishes speaking. The physical speech-end metrics remain unavailable (`null`). When Gemini supplies `voiceActivity`, local diagnostics separately record `serverSpeechEndToFirstGeminiAudioMs` and `serverSpeechEndToFirstPlaybackMs`, measured from receipt of `ACTIVITY_END`. These exclude the input uplink and server VAD detection delay; they do not estimate mouth-to-ear latency. If no boundary arrives, the metrics remain `null`.
+
+### Investigating delayed replies
+
+The local event timeline records `server_speech_start`, `server_speech_end`, and
+`server_waiting_for_input` without audio, transcript text, or credentials. Speech
+end changes the idle conversation indicator to Thinking; waiting for more input
+returns it to Listening. Active playback keeps the Speaking indicator until it
+drains. These signals do not gate microphone forwarding or trigger extra model
+requests.
+
+For a delayed reply, copy diagnostics immediately after that turn and note when
+you finished speaking. Check whether Gemini emitted speech end, whether it asked
+for more input, and how long it took to deliver audio after that boundary. A missing
+speech-end event cannot establish whether Gemini failed to detect silence or
+simply did not emit the optional signal.
+
+The October 6 sample had no reconnects or transport errors, 11 dropped packets
+out of 13,539, one playback underrun, and 424,528 cleared output samples (17.7
+seconds at 24 kHz). Its last-packet intervals cannot explain the reported waits.
+Compared with September 30 (`fa6bc80` web, `d7b1655` backend), microphone capture,
+PCM buffering, model selection, and the `balanced-v1` VAD policy were unchanged;
+the assessment prompt and startup/recovery ownership changed. Repeated questions
+after acknowledgments are addressed in the prompt, but a specific latency-causing
+commit has not been established from this sample.
 
 ---
 
 ## Developer Voice Diagnostics Panel
 
 The developer HUD provides live pipeline metrics and a bounded event timeline:
+
 - **Enabling:** Automatically active when `NODE_ENV !== "production"` or when `NEXT_PUBLIC_VOICE_DIAGNOSTICS=true`.
 - **Location:** Floating badge in the bottom-right corner of `/viva`. Click to expand.
 - **Features:**
@@ -99,6 +126,7 @@ passed to the Gemini SDK, after mute and stale-packet filtering.
 To record baseline measurements before Voice v2 improvements:
 
 ### Scenario 1: Quiet-Room Conversation
+
 1. Ensure a quiet background (< 40 dB ambient noise).
 2. Start a viva session from `/viva`.
 3. Speak a concise answer (~10 seconds) and pause naturally.
@@ -106,11 +134,13 @@ To record baseline measurements before Voice v2 improvements:
 5. In the Diagnostics panel or PostHog, observe `last_input_packet_to_first_gemini_audio_ms` and `first_gemini_audio_to_playback_ms`.
 
 ### Scenario 2: User Interruption (Barge-In)
+
 1. While the AI examiner is speaking, speak clearly into the microphone.
 2. Note when Gemini triggers interruption and local audio stops.
 3. Observe clear acknowledgment latency in the Diagnostics panel. It measures main-thread request to worklet acknowledgment, not physical speaker latency.
 
 ### Scenario 3: Noisy Environment
+
 1. Introduce background noise (e.g. ambient cafe sound or typing).
 2. Carry out 2-3 conversation turns.
 3. Observe whether noise triggers accidental turn closures or affects `last_input_packet_to_first_gemini_audio_ms`.

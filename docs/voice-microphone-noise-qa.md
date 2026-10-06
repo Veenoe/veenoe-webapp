@@ -6,20 +6,35 @@ For every row, record applied echo cancellation, noise suppression, AGC, track s
 
 Result template: `browser/version | OS | built-in/wired/Bluetooth | applied AEC/NS/AGC | track Hz/channels | Web Audio Hz | approximate RMS/peak dBFS | self-interruption yes/no | usability note`.
 
-| Scenario | Procedure | Result |
-| --- | --- | --- |
-| Quiet room baseline | Speak normally for two turns. | Pending physical QA |
-| Laptop speaker echo | Use normal laptop speakers, not headphones. Let Gemini speak at normal volume with full-duplex capture; then interrupt it intentionally. Check for repeated self-interruption before your speech. Keep barge-in enabled. | Pending physical QA |
-| Fan or AC | Place the normal setup near constant fan/AC noise and converse. | Pending physical QA |
-| Keyboard typing | Type during Gemini speech and your answer. | Pending physical QA |
-| Traffic | Converse near traffic or a representative open window. | Pending physical QA |
-| Cafe-style noise | Converse in a cafe-like environment. | Pending physical QA |
-| Nearby speech | Have another person speak nearby during a turn. | Pending physical QA |
-| Low microphone input | Speak quietly or use a low-input device; inspect RMS and intelligibility. | Pending physical QA |
-| Very loud input | Speak close/loudly; inspect peak and ≥98% sample ratio for near-clipping. | Pending physical QA |
-| Device loss | Unplug or revoke the active microphone; confirm the error, stopped capture, and abandoned session. | Pending physical QA |
+| Scenario             | Procedure                                                                                                                                                                                                                | Result              |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
+| Quiet room baseline  | Speak normally for two turns.                                                                                                                                                                                            | Pending physical QA |
+| Laptop speaker echo  | Use normal laptop speakers, not headphones. Let Gemini speak at normal volume with full-duplex capture; then interrupt it intentionally. Check for repeated self-interruption before your speech. Keep barge-in enabled. | Pending physical QA |
+| Fan or AC            | Place the normal setup near constant fan/AC noise and converse.                                                                                                                                                          | Pending physical QA |
+| Keyboard typing      | Type during Gemini speech and your answer.                                                                                                                                                                               | Pending physical QA |
+| Traffic              | Converse near traffic or a representative open window.                                                                                                                                                                   | Pending physical QA |
+| Cafe-style noise     | Converse in a cafe-like environment.                                                                                                                                                                                     | Pending physical QA |
+| Nearby speech        | Have another person speak nearby during a turn.                                                                                                                                                                          | Pending physical QA |
+| Low microphone input | Speak quietly or use a low-input device; inspect RMS and intelligibility.                                                                                                                                                | Pending physical QA |
+| Very loud input      | Speak close/loudly; inspect peak and ≥98% sample ratio for near-clipping.                                                                                                                                                | Pending physical QA |
+| Device loss          | Unplug or revoke the active microphone; confirm the error, stopped capture, and abandoned session.                                                                                                                       | Pending physical QA |
 
 Repeat the speaker test in the primary supported browsers and note browser/version and OS for each run. Confirm mute, ordinary interruption, and clean session conclusion still work. A browser reporting AEC enabled does not by itself prove effective echo removal; judge the actual interaction.
+
+## Muted stream boundary
+
+Muting after input has been forwarded sends one `audioStreamEnd` on the current
+connection. This flushes cached input because muted capture no longer supplies
+silence for automatic VAD. Unmuting resumes ordinary audio, which reopens the
+stream; no manual `activityStart` or `activityEnd` is sent. Connection retirement
+discards stream ownership so a resumed connection cannot flush its predecessor's
+input. This follows [Gemini's automatic VAD guidance](https://ai.google.dev/gemini-api/docs/live-api/capabilities#automatic-vad).
+
+Physical QA remains pending: answer a question, mute immediately after the answer,
+and verify the reply arrives. Repeat mute/unmute and confirm the next answer is
+heard. Repeat while reconnecting and confirm stale stream-end signals are not
+sent after recovery. This boundary fixes mute behavior; it does not establish a
+cause for delays while the microphone stays unmuted.
 
 ## Denoiser decision
 

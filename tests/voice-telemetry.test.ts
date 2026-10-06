@@ -7,7 +7,54 @@ import {
   calculatePcmDurationMs,
   VoiceTelemetry,
 } from "../lib/telemetry/voice-telemetry";
-import { captureVoiceEvent, initPostHog, sanitizeErrorMessage, posthog } from "../lib/analytics/posthog";
+import {
+  captureVoiceEvent,
+  initPostHog,
+  sanitizeErrorMessage,
+  posthog,
+} from "../lib/analytics/posthog";
+
+test("server-observed response latency is independent of continuous silence packets", () => {
+  const telemetry = new VoiceTelemetry();
+  const originalPerformance = globalThis.performance;
+  let now = 0;
+  Object.defineProperty(globalThis, "performance", {
+    configurable: true,
+    value: { now: () => now },
+  });
+  try {
+    telemetry.onSessionInitStart("test-model");
+    telemetry.onVoiceActivity("start");
+    now = 1000;
+    telemetry.onVoiceActivity("end");
+    now = 3990;
+    telemetry.onMicrophonePacketSent(640);
+    now = 4000;
+    telemetry.onGeminiAudioChunkReceived();
+    now = 4100;
+    telemetry.onPlaybackStarted();
+    telemetry.onTurnComplete();
+    const metrics = telemetry.getSnapshot().lastTurnMetrics!;
+    assert.equal(metrics.serverSpeechEndToFirstGeminiAudioMs, 3000);
+    assert.equal(metrics.serverSpeechEndToFirstPlaybackMs, 3100);
+    assert.equal(metrics.lastInputPacketToFirstGeminiAudioMs, 10);
+    // Server delivery timestamps do not establish the physical end of speech.
+    assert.equal(metrics.speechEndToFirstGeminiAudioMs, null);
+    telemetry.onMicrophonePacketSent(640);
+    telemetry.onGeminiAudioChunkReceived();
+    telemetry.onTurnComplete();
+    assert.equal(
+      telemetry.getSnapshot().lastTurnMetrics!
+        .serverSpeechEndToFirstGeminiAudioMs,
+      null,
+    );
+  } finally {
+    Object.defineProperty(globalThis, "performance", {
+      configurable: true,
+      value: originalPerformance,
+    });
+  }
+});
 
 test("duration calculation with valid timestamps", () => {
   const result = calculateElapsedMs(100.25, 250.75);
@@ -122,7 +169,10 @@ test("intentional disconnect does not increment disconnectCount", () => {
 
   const snap = telemetry.getSnapshot();
   assert.equal(snap.disconnectCount, 0); // Must remain 0 for normal shutdown
-  assert.equal(snap.recentEvents.some((e) => e.name === "gemini_closed"), true);
+  assert.equal(
+    snap.recentEvents.some((e) => e.name === "gemini_closed"),
+    true,
+  );
 
   // Unexpected drop: not intentional
   telemetry.setIntentionalDisconnect(false);
@@ -130,13 +180,16 @@ test("intentional disconnect does not increment disconnectCount", () => {
 
   const snapUnexpected = telemetry.getSnapshot();
   assert.equal(snapUnexpected.disconnectCount, 1);
-  assert.equal(snapUnexpected.recentEvents.some((e) => e.name === "gemini_disconnected"), true);
+  assert.equal(
+    snapUnexpected.recentEvents.some((e) => e.name === "gemini_disconnected"),
+    true,
+  );
 });
 
 test("error sanitization strips credentials, tokens, and URLs", () => {
   // Test with dangerous token URL error message
   const dangerousError = new Error(
-    "WebSocket failed connecting to wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=AIzaSyA123SecretKey&auth_token=auth_tokens/sample_ephemeral_token_xyz"
+    "WebSocket failed connecting to wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=AIzaSyA123SecretKey&auth_token=auth_tokens/sample_ephemeral_token_xyz",
   );
 
   const sanitized = sanitizeErrorMessage(dangerousError);
@@ -168,19 +221,50 @@ test("microphone format and pressure diagnostics reset per session", () => {
   const telemetry = new VoiceTelemetry();
   telemetry.onSessionInitStart();
   telemetry.onMicrophoneFormat({
-    processingSampleRate: 48000, trackSampleRate: null,
-    outputSampleRate: 16000, packetTargetMs: 20, resamplingActive: true
+    processingSampleRate: 48000,
+    trackSampleRate: null,
+    outputSampleRate: 16000,
+    packetTargetMs: 20,
+    resamplingActive: true,
   });
-  telemetry.onMicrophoneDrop('worklet_backpressure', 3, { microphoneState: 'active', playbackState: 'idle' }, 4);
-  telemetry.onMicrophoneDiagnostics({ requested: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }, supported: {}, applied: { echoCancellation: false }, capabilities: null });
-  telemetry.onMicrophoneLevel({ rmsDbfs: -30, peakDbfs: -10, clippedSampleRatio: 0 });
-  telemetry.onMicrophoneError('unavailable');
-  assert.equal(telemetry.getSnapshot().microphoneFormat?.processingSampleRate, 48000);
-  assert.equal(telemetry.getSnapshot().microphoneDiagnostics?.applied.echoCancellation, false);
+  telemetry.onMicrophoneDrop(
+    "worklet_backpressure",
+    3,
+    { microphoneState: "active", playbackState: "idle" },
+    4,
+  );
+  telemetry.onMicrophoneDiagnostics({
+    requested: {
+      channelCount: 1,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    },
+    supported: {},
+    applied: { echoCancellation: false },
+    capabilities: null,
+  });
+  telemetry.onMicrophoneLevel({
+    rmsDbfs: -30,
+    peakDbfs: -10,
+    clippedSampleRatio: 0,
+  });
+  telemetry.onMicrophoneError("unavailable");
+  assert.equal(
+    telemetry.getSnapshot().microphoneFormat?.processingSampleRate,
+    48000,
+  );
+  assert.equal(
+    telemetry.getSnapshot().microphoneDiagnostics?.applied.echoCancellation,
+    false,
+  );
   assert.equal(telemetry.getSnapshot().microphoneLevel?.rmsDbfs, -30);
-  assert.equal(telemetry.getSnapshot().microphoneErrorCode, 'unavailable');
+  assert.equal(telemetry.getSnapshot().microphoneErrorCode, "unavailable");
   assert.equal(telemetry.getSnapshot().connectionErrorCount, 0);
-  assert.doesNotMatch(JSON.stringify(telemetry.getSnapshot()), /deviceId|groupId|raw_audio/);
+  assert.doesNotMatch(
+    JSON.stringify(telemetry.getSnapshot()),
+    /deviceId|groupId|raw_audio/,
+  );
   assert.equal(telemetry.getSnapshot().inputPacketsDropped, 3);
   telemetry.onSessionInitStart();
   assert.equal(telemetry.getSnapshot().microphoneFormat, null);
@@ -188,35 +272,54 @@ test("microphone format and pressure diagnostics reset per session", () => {
   assert.equal(telemetry.getSnapshot().microphoneLevel, null);
   assert.equal(telemetry.getSnapshot().microphoneErrorCode, null);
   assert.equal(telemetry.getSnapshot().inputPacketsDropped, 0);
-  assert.equal(telemetry.getSnapshot().inputContinuity.dropCounts.worklet_backpressure, 0);
-  assert.equal(telemetry.getSnapshot().inputContinuity.recentAnomalies.length, 0);
+  assert.equal(
+    telemetry.getSnapshot().inputContinuity.dropCounts.worklet_backpressure,
+    0,
+  );
+  assert.equal(
+    telemetry.getSnapshot().inputContinuity.recentAnomalies.length,
+    0,
+  );
 });
 
-test('input continuity separates drop reasons, intentional mute, and user markers', () => {
+test("input continuity separates drop reasons, intentional mute, and user markers", () => {
   const telemetry = new VoiceTelemetry();
   telemetry.onSessionInitStart();
-  const context = { microphoneState: 'active', playbackState: 'playing' };
+  const context = { microphoneState: "active", playbackState: "playing" };
   telemetry.onMicrophonePacketObserved({ sequence: 1, captureToMainAgeMs: 5 });
   telemetry.onMicrophonePacketObserved({ sequence: 4, captureToMainAgeMs: 12 });
-  telemetry.onMicrophoneDrop('worklet_backpressure', 2, context, 4);
-  telemetry.onMicrophoneDrop('stale_main', 1, context, 4);
-  telemetry.onMicrophoneDrop('transport_unready', 1, context, 5);
-  telemetry.onMicrophoneForwardingPaused('muted');
-  telemetry.markTurnTakingObservation('replied_too_early', context);
+  telemetry.onMicrophoneDrop("worklet_backpressure", 2, context, 4);
+  telemetry.onMicrophoneDrop("stale_main", 1, context, 4);
+  telemetry.onMicrophoneDrop("transport_unready", 1, context, 5);
+  telemetry.onMicrophoneForwardingPaused("muted");
+  telemetry.markTurnTakingObservation("replied_too_early", context);
   const snapshot = telemetry.getSnapshot();
   assert.equal(snapshot.inputPacketsDropped, 4);
   assert.equal(snapshot.inputContinuity.maxSequenceGap, 2);
   assert.equal(snapshot.inputContinuity.maxWorkletDropBurst, 2);
   assert.equal(snapshot.inputContinuity.maxCaptureToMainAgeMs, 12);
   assert.deepEqual(snapshot.inputContinuity.dropCounts, {
-    worklet_backpressure: 2, stale_main: 1, forwarding_failure: 0,
-    transport_unready: 1, send_failure: 0,
+    worklet_backpressure: 2,
+    stale_main: 1,
+    forwarding_failure: 0,
+    transport_unready: 1,
+    send_failure: 0,
   });
-  assert.equal(snapshot.inputContinuity.recentAnomalies.at(-1)?.reason, 'replied_too_early');
+  assert.equal(
+    snapshot.inputContinuity.recentAnomalies.at(-1)?.reason,
+    "replied_too_early",
+  );
   assert.equal(snapshot.connectionErrorCount, 0);
-  assert.doesNotMatch(JSON.stringify(snapshot), /deviceId|groupId|raw_audio|transcript/);
-  for (let index = 0; index < 30; index++) telemetry.onMicrophoneDrop('send_failure', 1, context, index + 6);
-  assert.equal(telemetry.getSnapshot().inputContinuity.recentAnomalies.length, 24);
+  assert.doesNotMatch(
+    JSON.stringify(snapshot),
+    /deviceId|groupId|raw_audio|transcript/,
+  );
+  for (let index = 0; index < 30; index++)
+    telemetry.onMicrophoneDrop("send_failure", 1, context, index + 6);
+  assert.equal(
+    telemetry.getSnapshot().inputContinuity.recentAnomalies.length,
+    24,
+  );
 });
 
 test("turn isolation and no cross-turn metric leakage", () => {
@@ -261,15 +364,27 @@ test("interrupted turn waits for a correlated clear acknowledgment", () => {
 
   // Gemini sends interruption signal
   telemetry.onInterruptionSignalReceived();
-  telemetry.onPlaybackBufferEvent({ type: "clear_requested", generation: 1, reason: "interruption" });
+  telemetry.onPlaybackBufferEvent({
+    type: "clear_requested",
+    generation: 1,
+    reason: "interruption",
+  });
   telemetry.onInterruptionClearRequested();
 
   const snap = telemetry.getSnapshot();
   assert.equal(snap.lastTurnMetrics?.interrupted, true);
   assert.equal(snap.lastTurnMetrics?.clearRequestToAcknowledgmentMs, null);
   telemetry.onMicrophonePacketSent(256);
-  telemetry.onPlaybackBufferEvent({ type: "cleared", generation: 1, reason: "interruption", clearAcknowledgmentMs: 12 });
-  assert.equal(telemetry.getSnapshot().lastTurnMetrics?.clearRequestToAcknowledgmentMs, 12);
+  telemetry.onPlaybackBufferEvent({
+    type: "cleared",
+    generation: 1,
+    reason: "interruption",
+    clearAcknowledgmentMs: 12,
+  });
+  assert.equal(
+    telemetry.getSnapshot().lastTurnMetrics?.clearRequestToAcknowledgmentMs,
+    12,
+  );
 });
 
 test("first-audio transport turnaround is frozen while the microphone keeps streaming", () => {
@@ -279,8 +394,15 @@ test("first-audio transport turnaround is frozen while the microphone keeps stre
   telemetry.onGeminiAudioChunkReceived();
   telemetry.onMicrophonePacketSent(256);
   telemetry.onTurnComplete();
-  assert.notEqual(telemetry.getSnapshot().lastTurnMetrics?.lastInputPacketToFirstGeminiAudioMs, null);
-  assert.equal(telemetry.getSnapshot().lastTurnMetrics?.speechEndToFirstGeminiAudioMs, null);
+  assert.notEqual(
+    telemetry.getSnapshot().lastTurnMetrics
+      ?.lastInputPacketToFirstGeminiAudioMs,
+    null,
+  );
+  assert.equal(
+    telemetry.getSnapshot().lastTurnMetrics?.speechEndToFirstGeminiAudioMs,
+    null,
+  );
 });
 
 test("interruption without playback leaves playback-stop latency unavailable", () => {
@@ -293,7 +415,12 @@ test("interruption without playback leaves playback-stop latency unavailable", (
   const snap = telemetry.getSnapshot();
   assert.equal(snap.lastTurnMetrics?.interrupted, true);
   assert.equal(snap.lastTurnMetrics?.clearRequestToAcknowledgmentMs, null);
-  assert.equal(snap.recentEvents.some(event => event.name === "playback_stopped_interruption"), false);
+  assert.equal(
+    snap.recentEvents.some(
+      (event) => event.name === "playback_stopped_interruption",
+    ),
+    false,
+  );
 });
 
 test("bounded recent event history does not exceed 20 items", () => {
@@ -315,24 +442,56 @@ test("playback accounting remains local and resets for the next session", () => 
   const telemetry = new VoiceTelemetry();
   telemetry.onSessionInitStart();
   telemetry.onPlaybackBufferEvent({
-    type: 'accepted', generation: 0, chunkId: 1, samples: 2400, queueDepthMs: 100,
-    stats: { receivedSamples: 2400, storedSamples: 2400, playedSamples: 0,
-      clearedSamples: 0, rejectedSamples: 0, waitingSilenceSamples: 0 },
+    type: "accepted",
+    generation: 0,
+    chunkId: 1,
+    samples: 2400,
+    queueDepthMs: 100,
+    stats: {
+      receivedSamples: 2400,
+      storedSamples: 2400,
+      playedSamples: 0,
+      clearedSamples: 0,
+      rejectedSamples: 0,
+      waitingSilenceSamples: 0,
+    },
   });
   const snapshot = telemetry.getSnapshot();
   assert.equal(snapshot.playbackBuffer.stats?.storedSamples, 2400);
   assert.equal(snapshot.playbackBuffer.recentEvents.length, 1);
-  telemetry.onPlaybackBufferEvent({ type: 'transferred', generation: 0,
-    admissionToTransferMs: 18, capacityWaitMs: 4, conversionTransferMs: 2,
-    setupWaitMs: 10, resumeWaitMs: 3 });
-  telemetry.onPlaybackBufferEvent({ type: 'started', generation: 0, admissionToFirstRenderMs: 120 });
-  assert.equal(telemetry.getSnapshot().playbackBuffer.maxAdmissionToTransferMs, 18);
-  assert.equal(telemetry.getSnapshot().playbackBuffer.lastAdmissionToFirstRenderMs, 120);
-  assert.equal(JSON.stringify(snapshot.playbackBuffer).includes('deviceId'), false);
+  telemetry.onPlaybackBufferEvent({
+    type: "transferred",
+    generation: 0,
+    admissionToTransferMs: 18,
+    capacityWaitMs: 4,
+    conversionTransferMs: 2,
+    setupWaitMs: 10,
+    resumeWaitMs: 3,
+  });
+  telemetry.onPlaybackBufferEvent({
+    type: "started",
+    generation: 0,
+    admissionToFirstRenderMs: 120,
+  });
+  assert.equal(
+    telemetry.getSnapshot().playbackBuffer.maxAdmissionToTransferMs,
+    18,
+  );
+  assert.equal(
+    telemetry.getSnapshot().playbackBuffer.lastAdmissionToFirstRenderMs,
+    120,
+  );
+  assert.equal(
+    JSON.stringify(snapshot.playbackBuffer).includes("deviceId"),
+    false,
+  );
   telemetry.onSessionInitStart();
   assert.equal(telemetry.getSnapshot().playbackBuffer.stats, null);
   assert.deepEqual(telemetry.getSnapshot().playbackBuffer.recentEvents, []);
-  assert.equal(telemetry.getSnapshot().playbackBuffer.maxAdmissionToTransferMs, null);
+  assert.equal(
+    telemetry.getSnapshot().playbackBuffer.maxAdmissionToTransferMs,
+    null,
+  );
 });
 
 test("PostHog adapter safely no-ops without credentials", () => {
@@ -368,7 +527,7 @@ test("privacy guarantees: voice analytics events and snapshots never contain PII
   const originalInit = posthog.init;
   const originalCapture = posthog.capture;
   const posthogObj = posthog as unknown as Record<string, unknown>;
-  posthogObj.init = () => { };
+  posthogObj.init = () => {};
   posthogObj.capture = (event: string, properties: Record<string, unknown>) => {
     capturedEvent = event;
     capturedPayload = properties;
@@ -387,7 +546,8 @@ test("privacy guarantees: voice analytics events and snapshots never contain PII
       student_name: "Kaushal Kumar",
       email: "kaushal@example.com",
       // Forbidden error/credential fields:
-      raw_error: "Connection refused to wss://example.com/socket?key=AIzaSySecret",
+      raw_error:
+        "Connection refused to wss://example.com/socket?key=AIzaSySecret",
       safe_error_message: "Redacted message with key=[REDACTED]",
       error_message: "Fatal socket error",
       token: "secret_ephemeral_token_abc",
@@ -443,7 +603,6 @@ test("privacy guarantees: voice analytics events and snapshots never contain PII
   }
 });
 
-
 test("automatic kickoff and initialization-to-first-audio diagnostics are session scoped", () => {
   const telemetry = new VoiceTelemetry();
   telemetry.onSessionInitStart();
@@ -451,14 +610,33 @@ test("automatic kickoff and initialization-to-first-audio diagnostics are sessio
   telemetry.onGeminiAudioChunkReceived();
   telemetry.onGeminiAudioChunkReceived();
   const events = telemetry.getSnapshot().recentEvents;
-  assert.equal(events.filter(event => event.name === "automatic_kickoff_sent").length, 1);
-  assert.equal(events.filter(event => event.name === "session_init_to_first_gemini_audio").length, 1);
+  assert.equal(
+    events.filter((event) => event.name === "automatic_kickoff_sent").length,
+    1,
+  );
+  assert.equal(
+    events.filter(
+      (event) => event.name === "session_init_to_first_gemini_audio",
+    ).length,
+    1,
+  );
   telemetry.onSessionInitStart();
-  assert.equal(telemetry.getSnapshot().recentEvents.some(event => event.name === "session_init_to_first_gemini_audio"), false);
+  assert.equal(
+    telemetry
+      .getSnapshot()
+      .recentEvents.some(
+        (event) => event.name === "session_init_to_first_gemini_audio",
+      ),
+    false,
+  );
   telemetry.onAutomaticKickoff(false);
-  assert.equal(telemetry.getSnapshot().recentEvents.some(event => event.name === "automatic_kickoff_failed"), true);
+  assert.equal(
+    telemetry
+      .getSnapshot()
+      .recentEvents.some((event) => event.name === "automatic_kickoff_failed"),
+    true,
+  );
 });
-
 
 test("production startup analytics record send outcome, received audio and rendered playback once per session", (t) => {
   const globalObj = globalThis as unknown as Record<string, unknown>;
@@ -470,9 +648,13 @@ test("production startup analytics record send outcome, received audio and rende
   t.mock.method(performance, "now", () => now);
   t.mock.method(posthog, "init", () => {});
   const captured: Array<Record<string, unknown>> = [];
-  t.mock.method(posthog, "capture", (event: string, properties: Record<string, unknown>) => {
-    if (event === "voice_startup") captured.push(properties);
-  });
+  t.mock.method(
+    posthog,
+    "capture",
+    (event: string, properties: Record<string, unknown>) => {
+      if (event === "voice_startup") captured.push(properties);
+    },
+  );
 
   try {
     const telemetry = new VoiceTelemetry();
@@ -492,14 +674,30 @@ test("production startup analytics record send outcome, received audio and rende
     telemetry.onGeminiAudioChunkReceived();
     telemetry.onPlaybackStarted();
     assert.deepEqual(captured, [
-      { telemetry_session_id: firstId, model_name: "gemini-3.8-live", vad_profile: "balanced-v1",
-        startup_stage: "kickoff", kickoff_send_accepted: true },
-      { telemetry_session_id: firstId, model_name: "gemini-3.8-live", vad_profile: "balanced-v1",
-        startup_stage: "first_audio", kickoff_send_accepted: true,
-        session_init_to_first_gemini_audio_ms: 50 },
-      { telemetry_session_id: firstId, model_name: "gemini-3.8-live", vad_profile: "balanced-v1",
-        startup_stage: "first_playback", kickoff_send_accepted: true,
-        session_init_to_first_gemini_audio_ms: 50, session_init_to_first_playback_ms: 70 },
+      {
+        telemetry_session_id: firstId,
+        model_name: "gemini-3.8-live",
+        vad_profile: "balanced-v1",
+        startup_stage: "kickoff",
+        kickoff_send_accepted: true,
+      },
+      {
+        telemetry_session_id: firstId,
+        model_name: "gemini-3.8-live",
+        vad_profile: "balanced-v1",
+        startup_stage: "first_audio",
+        kickoff_send_accepted: true,
+        session_init_to_first_gemini_audio_ms: 50,
+      },
+      {
+        telemetry_session_id: firstId,
+        model_name: "gemini-3.8-live",
+        vad_profile: "balanced-v1",
+        startup_stage: "first_playback",
+        kickoff_send_accepted: true,
+        session_init_to_first_gemini_audio_ms: 50,
+        session_init_to_first_playback_ms: 70,
+      },
     ]);
     telemetry.onSessionEnded();
     telemetry.onSessionEnded();
@@ -513,7 +711,9 @@ test("production startup analytics record send outcome, received audio and rende
     telemetry.onAutomaticKickoff(false);
     telemetry.onSessionEnded();
     assert.deepEqual(captured[3], {
-      telemetry_session_id: secondId, startup_stage: "kickoff", kickoff_send_accepted: false,
+      telemetry_session_id: secondId,
+      startup_stage: "kickoff",
+      kickoff_send_accepted: false,
     });
     assert.equal(captured.length, 4);
 
