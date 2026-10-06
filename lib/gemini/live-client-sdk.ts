@@ -97,6 +97,7 @@ export class GeminiLiveClientSDK {
   private retryConfig: RetryConfig;
   private recovery: LiveRecovery;
   private setupReady = false;
+  private audioInputOpen = false;
   private established = false;
   private terminal = false;
   private failAttempt: ((error: Error) => void) | null = null;
@@ -309,6 +310,7 @@ export class GeminiLiveClientSDK {
     this.transportOpen = false;
     this.setupReady = false;
     this.responseQueue = [];
+    this.audioInputOpen = false;
     const session = this.session;
     this.session = null;
     const failAttempt = this.failAttempt;
@@ -459,10 +461,33 @@ export class GeminiLiveClientSDK {
           mimeType: "audio/pcm;rate=16000",
         },
       });
+      this.audioInputOpen = true;
       return true;
     } catch {
       this.transportOpen = false;
       onSynchronousFailure?.();
+      this.transportFailure();
+      return false;
+    }
+  }
+
+  /** Flush a deliberately paused microphone stream without changing server VAD policy. */
+  endAudioStream(): boolean {
+    if (
+      !this.audioInputOpen ||
+      !this.session ||
+      !this.transportOpen ||
+      !this.setupReady
+    )
+      return false;
+    try {
+      // Muting removes even silence packets. Gemini needs this boundary to flush
+      // cached input; sending audio again reopens the stream automatically.
+      this.session.sendRealtimeInput({ audioStreamEnd: true });
+      this.audioInputOpen = false;
+      return true;
+    } catch {
+      this.transportOpen = false;
       this.transportFailure();
       return false;
     }

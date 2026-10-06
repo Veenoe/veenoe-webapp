@@ -23,7 +23,6 @@ export class LiveRecovery {
   private resumable = false;
   private stopped = false;
   private recovering = false;
-  private attempts = 0;
   private rotation: ReturnType<typeof setTimeout> | null = null;
   private cancelDelay: (() => void) | null = null;
 
@@ -59,7 +58,7 @@ export class LiveRecovery {
     if (this.rotation && this.resumable) void this.recover("go_away");
   }
 
-  /** Coalesce failure signals; all attempts share the current recovery deadline. */
+  /** Coalesce failure signals; each incident has its own retry count and deadline. */
   async recover(reason: RecoveryReason): Promise<void> {
     if (this.stopped || this.recovering) return;
     this.clearRotation();
@@ -73,16 +72,17 @@ export class LiveRecovery {
       !this.options.resumptionEnabled ||
       !this.handle ||
       !Number.isFinite(deadline) ||
-      deadline <= started ||
-      this.attempts >= 3
+      deadline <= started
     ) {
       this.fail();
       return;
     }
     this.recovering = true;
     this.deps.onReconnecting(reason);
-    while (!this.stopped && this.attempts < 3 && Date.now() < deadline) {
-      const attempt = ++this.attempts;
+    // A successful recovery must not spend the next incident's three attempts.
+    let attempts = 0;
+    while (!this.stopped && attempts < 3 && Date.now() < deadline) {
+      const attempt = ++attempts;
       this.deps.onAttempt(attempt);
       await this.delay(
         Math.min(

@@ -6,6 +6,42 @@ import { useVivaStore } from "../lib/store/viva-store";
 import { GeminiLiveClientSDK } from "../lib/gemini/live-client-sdk";
 
 // Synthetic SDK-shaped fixtures. They are not captured Live traffic.
+test("voice activity and waiting signals survive alongside response content", () => {
+  assert.deepEqual(
+    processGeminiMessage({
+      voiceActivity: { voiceActivityType: "ACTIVITY_END", audioOffset: "2s" },
+      serverContent: {
+        waitingForInput: true,
+        inputTranscription: { text: "Could you explain?" },
+      },
+    }),
+    [
+      { type: "voice_activity", activity: "end" },
+      { type: "waiting_for_input" },
+      {
+        type: "transcription",
+        source: "input",
+        text: "Could you explain?",
+        finished: undefined,
+      },
+    ],
+  );
+  assert.deepEqual(
+    processGeminiMessage({
+      voiceActivity: { voiceActivityType: "ACTIVITY_START" },
+    }),
+    [{ type: "voice_activity", activity: "start" }],
+  );
+  assert.deepEqual(
+    processGeminiMessage({
+      voiceActivity: { voiceActivityType: "TYPE_UNSPECIFIED" },
+    }),
+    [],
+  );
+  assert.deepEqual(processGeminiMessage({ voiceActivity: "invalid" }), [
+    { type: "protocol_issue", field: "voiceActivity" },
+  ]);
+});
 test("recovery preserves transcripts and starts independent streams after reconnection", () => {
   useVivaStore.getState().resetSession();
   let next = 0;

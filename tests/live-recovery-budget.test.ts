@@ -45,6 +45,34 @@ test("provider failures exhaust exactly three attempts and cannot restart recove
   ]);
 });
 
+for (const failuresPerIncident of [0, 2]) {
+  test(`independent recoveries each receive three attempts after ${failuresPerIncident} failures`, async () => {
+    let calls = 0;
+    const attemptsPerIncident = failuresPerIncident + 1;
+    const { owner, events } = recovery(async () => {
+      const attempt = (calls++ % attemptsPerIncident) + 1;
+      if (attempt <= failuresPerIncident) throw new Error("provider failure");
+    });
+    try {
+      for (let incident = 0; incident < 4; incident++) {
+        const start = events.length;
+        await owner.recover(incident % 2 === 0 ? "transport" : "go_away");
+        assert.deepEqual(events.slice(start), [
+          "started",
+          ...Array.from(
+            { length: attemptsPerIncident },
+            (_, i) => `attempt-${i + 1}`,
+          ),
+          "restored",
+        ]);
+      }
+      assert.equal(calls, 4 * attemptsPerIncident);
+    } finally {
+      owner.stop();
+    }
+  });
+}
+
 test("recovery deadline is capped by session and credential expiry", async () => {
   const now = Date.now();
   let deadline = 0;

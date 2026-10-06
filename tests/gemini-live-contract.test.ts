@@ -67,6 +67,40 @@ test("audio send only counts calls accepted by an open SDK transport", () => {
   assert.equal(internal.transportOpen, false);
 });
 
+test("stream-end send failures use existing transport failure handling", () => {
+  let errors = 0;
+  let calls = 0;
+  const client = new GeminiLiveClientSDK("auth_tokens/test", {
+    onError: () => {
+      errors++;
+    },
+  });
+  const internal = client as unknown as {
+    session: { sendRealtimeInput: (value: unknown) => void };
+    transportOpen: boolean;
+    setupReady: boolean;
+  };
+  internal.session = {
+    sendRealtimeInput: () => {
+      calls++;
+    },
+  };
+  internal.transportOpen = true;
+  internal.setupReady = true;
+  assert.equal(client.sendAudio(new ArrayBuffer(640)), true);
+  internal.setupReady = false;
+  assert.equal(client.endAudioStream(), false);
+  assert.equal(calls, 1);
+  internal.setupReady = true;
+  internal.session.sendRealtimeInput = () => {
+    throw new Error("private transport error");
+  };
+  assert.equal(client.endAudioStream(), false);
+  assert.equal(errors, 1);
+  assert.equal(client.endAudioStream(), false);
+  assert.equal(errors, 1);
+});
+
 test("text send and connection state both require an open transport", () => {
   let errors = 0;
   const client = new GeminiLiveClientSDK("auth_tokens/test", {

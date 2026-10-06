@@ -50,9 +50,7 @@ export interface PlaybackBufferSnapshot {
 export interface InputAnomaly {
   relTimeMs: number;
   reason:
-    | MicrophoneDropReason
-    | "replied_too_early"
-    | "missed_or_delayed_words";
+    MicrophoneDropReason | "replied_too_early" | "missed_or_delayed_words";
   count: number;
   sequence: number | null;
   captureToMainAgeMs: number | null;
@@ -81,6 +79,8 @@ export interface DiagnosticEventItem {
 
 export interface TurnMetricsSnapshot {
   turnNumber: number;
+  serverSpeechEndToFirstGeminiAudioMs: number | null;
+  serverSpeechEndToFirstPlaybackMs: number | null;
   speechEndToFirstGeminiAudioMs: number | null; // Currently unavailable without client speech-end detection
   lastInputPacketToFirstGeminiAudioMs: number | null; // Raw transport turnaround (last packet -> first audio)
   firstGeminiAudioToPlaybackMs: number | null; // Audio received to playback start delay
@@ -193,11 +193,7 @@ export class VoiceTelemetry {
   private sessionId: string;
   private sessionStartTime: number;
   private connectionState:
-    | "idle"
-    | "starting"
-    | "connected"
-    | "disconnected"
-    | "error" = "idle";
+    "idle" | "starting" | "connected" | "disconnected" | "error" = "idle";
   private modelName: string | null = null;
   private vadProfile: string | null = null;
   private microphoneFormat: MicrophoneFormat | null = null;
@@ -272,6 +268,9 @@ export class VoiceTelemetry {
   private turnPacketIntervalCount = 0;
   private turnFirstGeminiAudioTime: number | null = null;
   private turnInputToFirstAudioMs: number | null = null;
+  private pendingServerSpeechEndTime: number | null = null;
+  private responseServerSpeechEndTime: number | null = null;
+  private waitingForInput = false;
   private turnFirstPlaybackScheduledTime: number | null = null;
   private turnFirstPlaybackStartTime: number | null = null;
   private turnOutputChunkCount = 0;
@@ -398,6 +397,8 @@ export class VoiceTelemetry {
     this.lastCompletedTurnMetrics = null;
 
     this.currentTurn = 0;
+    this.pendingServerSpeechEndTime = null;
+    this.waitingForInput = false;
     this.resetTurnState();
     this.recentEvents = [];
 
@@ -706,6 +707,7 @@ export class VoiceTelemetry {
     reason: "go_away" | "transport",
     elapsedMs?: number,
   ): void {
+    if (outcome === "started") this.pendingServerSpeechEndTime = null;
     this.recordDiagnosticEvent(`live_recovery_${outcome}`, reason);
     captureVoiceEvent("voice_live_recovery", {
       telemetry_session_id: this.sessionId,
@@ -795,6 +797,25 @@ export class VoiceTelemetry {
 
   // --- Gemini Response Measurements ---
 
+  /** Timestamp receipt of provider activity signals, not physical speech or server time. */
+  public onVoiceActivity(activity: "start" | "end"): void {
+    this.pendingServerSpeechEndTime =
+      activity === "end"
+        ? typeof performance !== "undefined"
+          ? performance.now()
+          : Date.now()
+        : null;
+    this.waitingForInput = false;
+    this.recordDiagnosticEvent(`server_speech_${activity}`);
+  }
+
+  /** Record one waiting transition until new speech or response audio arrives. */
+  public onWaitingForInput(): void {
+    if (this.waitingForInput) return;
+    this.waitingForInput = true;
+    this.recordDiagnosticEvent("server_waiting_for_input");
+  }
+
   private captureStartup(stage: VoiceEventProperties["startup_stage"]): void {
     captureVoiceEvent("voice_startup", {
       telemetry_session_id: this.sessionId,
@@ -839,6 +860,11 @@ export class VoiceTelemetry {
 
     if (this.turnFirstGeminiAudioTime === null) {
       this.turnFirstGeminiAudioTime = now;
+      // Freeze the boundary for this response; later speech belongs to the next
+      // input even when its packets overlap the current response's playback.
+      this.responseServerSpeechEndTime = this.pendingServerSpeechEndTime;
+      this.pendingServerSpeechEndTime = null;
+      this.waitingForInput = false;
 
       const proxyLatency = calculateElapsedMs(this.turnLastPacketTime, now);
       this.turnInputToFirstAudioMs = proxyLatency;
@@ -981,6 +1007,14 @@ export class VoiceTelemetry {
 
     const metricsSnapshot: TurnMetricsSnapshot = {
       turnNumber: this.currentTurn,
+      serverSpeechEndToFirstGeminiAudioMs: calculateElapsedMs(
+        this.responseServerSpeechEndTime,
+        this.turnFirstGeminiAudioTime,
+      ),
+      serverSpeechEndToFirstPlaybackMs: calculateElapsedMs(
+        this.responseServerSpeechEndTime,
+        this.turnFirstPlaybackStartTime,
+      ),
       speechEndToFirstGeminiAudioMs,
       lastInputPacketToFirstGeminiAudioMs,
       firstGeminiAudioToPlaybackMs,
@@ -1012,6 +1046,8 @@ export class VoiceTelemetry {
         `[VeenoeVoiceTelemetry] turn_${isInterrupted ? "interrupted" : "completed"}`,
         {
           turn: this.currentTurn,
+          serverSpeechEndToFirstAudioMs:
+            metricsSnapshot.serverSpeechEndToFirstGeminiAudioMs,
           lastPacketToFirstAudioMs: lastInputPacketToFirstGeminiAudioMs,
           geminiToPlaybackMs: firstGeminiAudioToPlaybackMs,
           clearAcknowledgmentMs: clearRequestToAcknowledgmentMs,
@@ -1071,6 +1107,7 @@ export class VoiceTelemetry {
     this.turnPacketIntervalCount = 0;
     this.turnFirstGeminiAudioTime = null;
     this.turnInputToFirstAudioMs = null;
+    this.responseServerSpeechEndTime = null;
     this.turnFirstPlaybackScheduledTime = null;
     this.turnFirstPlaybackStartTime = null;
     this.turnOutputChunkCount = 0;

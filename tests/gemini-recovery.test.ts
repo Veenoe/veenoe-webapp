@@ -16,6 +16,7 @@ async function fixture(
     client: GeminiLiveClientSDK;
     calls: LiveConnectParameters[];
     events: string[];
+    inputs: { connection: number; value: unknown }[];
     message: (value: unknown) => void;
     close: () => void;
   }) => Promise<void>,
@@ -24,14 +25,18 @@ async function fixture(
   const original = Live.prototype.connect;
   const calls: LiveConnectParameters[] = [];
   const events: string[] = [];
+  const inputs: { connection: number; value: unknown }[] = [];
   Live.prototype.connect = async (params) => {
     calls.push(params);
+    const connection = calls.length - 1;
     params.callbacks.onopen?.();
     params.callbacks.onmessage({ setupComplete: {} } as LiveServerMessage);
     return {
       close() {},
       sendClientContent() {},
-      sendRealtimeInput() {},
+      sendRealtimeInput(value: unknown) {
+        inputs.push({ connection, value });
+      },
     } as unknown as Session;
   };
   const callbacks = (): LiveCallbacks => calls.at(-1)!.callbacks;
@@ -62,6 +67,7 @@ async function fixture(
       client,
       calls,
       events,
+      inputs,
       message: (value) => callbacks().onmessage(value as never),
       close: () => callbacks().onclose?.({} as CloseEvent),
     });
@@ -70,6 +76,39 @@ async function fixture(
     Live.prototype.connect = original;
   }
 }
+
+test("muting flushes only the current audio stream and resumed input reopens it", async () => {
+  await fixture(async ({ client, inputs, message, close }) => {
+    assert.equal(client.endAudioStream(), false);
+    assert.equal(client.sendAudio(new ArrayBuffer(640)), true);
+    assert.equal(client.endAudioStream(), true);
+    assert.equal(client.endAudioStream(), false);
+    assert.equal(client.sendAudio(new ArrayBuffer(640)), true);
+    assert.equal(client.endAudioStream(), true);
+    // A prior connection's stream must not be flushed into its replacement.
+    assert.equal(client.sendAudio(new ArrayBuffer(640)), true);
+    message({
+      sessionResumptionUpdate: { resumable: true, newHandle: "checkpoint" },
+    });
+    close();
+    for (let i = 0; i < 6; i++) await flush();
+    assert.equal(client.endAudioStream(), false);
+    assert.equal(client.sendAudio(new ArrayBuffer(640)), true);
+    assert.equal(client.endAudioStream(), true);
+    assert.deepEqual(
+      inputs.filter(
+        ({ value }) => (value as { audioStreamEnd?: boolean }).audioStreamEnd,
+      ),
+      [
+        { connection: 0, value: { audioStreamEnd: true } },
+        { connection: 0, value: { audioStreamEnd: true } },
+        { connection: 1, value: { audioStreamEnd: true } },
+      ],
+    );
+    client.disconnect();
+    assert.equal(client.endAudioStream(), false);
+  });
+});
 
 test("resumes same credential/model with latest checkpoint and coalesces error/close", async () => {
   await fixture(async ({ calls, events, message, client }) => {

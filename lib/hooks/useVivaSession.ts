@@ -359,6 +359,14 @@ export function useVivaSession() {
           onEvent: (event) => {
             if (geminiClientRef.current !== client) return;
             switch (event.type) {
+              case "voice_activity":
+                voiceTelemetry.onVoiceActivity(event.activity);
+                audioPipeline.inputActivity(event.activity);
+                break;
+              case "waiting_for_input":
+                voiceTelemetry.onWaitingForInput();
+                audioPipeline.waitForInput();
+                break;
               case "transcription":
                 transcripts.accept(event);
                 break;
@@ -595,6 +603,8 @@ export function useVivaSession() {
   // Toggle mute
   const toggleMute = useCallback(() => {
     store.toggleMute();
+    if (useVivaStore.getState().isMuted)
+      geminiClientRef.current?.endAudioStream();
   }, [store]);
 
   // Cleanup on unmount
