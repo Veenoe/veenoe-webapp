@@ -24,7 +24,8 @@ export function initPostHog(): boolean {
   }
 
   const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-  const apiHost = process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
+  const apiHost =
+    process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
 
   if (!apiKey || apiKey.trim() === "") {
     return false;
@@ -60,6 +61,7 @@ export type VoiceEventName =
   | "voice_interruption"
   | "voice_playback_clear_acknowledged"
   | "voice_connection_error"
+  | "voice_live_recovery"
   | "voice_session_ended"
   | "voice_diagnostics_ping";
 
@@ -71,6 +73,9 @@ export interface VoiceEventProperties {
 
   // Connection
   connection_setup_ms?: number | null;
+  outcome?: "started" | "restored" | "failed";
+  reason?: "go_away" | "transport";
+  elapsed_ms?: number;
 
   // Startup: SDK acceptance is not a network-delivery acknowledgment.
   startup_stage?: "kickoff" | "first_audio" | "first_playback";
@@ -140,11 +145,25 @@ export function sanitizeErrorMessage(error: unknown): SanitizedError {
   // Categorize error
   let category = "general";
   const lower = rawMsg.toLowerCase();
-  if (lower.includes("websocket") || lower.includes("ws") || lower.includes("network") || lower.includes("connection")) {
+  if (
+    lower.includes("websocket") ||
+    lower.includes("ws") ||
+    lower.includes("network") ||
+    lower.includes("connection")
+  ) {
     category = "gemini_connection";
-  } else if (lower.includes("audio") || lower.includes("worklet") || lower.includes("microphone") || lower.includes("media")) {
+  } else if (
+    lower.includes("audio") ||
+    lower.includes("worklet") ||
+    lower.includes("microphone") ||
+    lower.includes("media")
+  ) {
     category = "audio_pipeline";
-  } else if (lower.includes("auth") || lower.includes("token") || lower.includes("credential")) {
+  } else if (
+    lower.includes("auth") ||
+    lower.includes("token") ||
+    lower.includes("credential")
+  ) {
     category = "authentication";
   }
 
@@ -189,7 +208,9 @@ const FORBIDDEN_PROPERTY_KEYS = new Set([
  * Clean payload to strip undefined values, enforce strict anonymity,
  * and prevent any unintended PII or audio data leakage.
  */
-function cleanProperties(properties: Record<string, unknown>): Record<string, unknown> {
+function cleanProperties(
+  properties: Record<string, unknown>,
+): Record<string, unknown> {
   const cleaned: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(properties)) {
@@ -220,7 +241,7 @@ function cleanProperties(properties: Record<string, unknown>): Record<string, un
  */
 export function captureVoiceEvent(
   eventName: VoiceEventName,
-  properties: VoiceEventProperties
+  properties: VoiceEventProperties,
 ): void {
   try {
     if (!isPostHogInitialized) {

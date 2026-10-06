@@ -1,128 +1,172 @@
 /** Coordinates playback completion with conversation state and session conclusion. */
-import { ConversationState, MicrophoneState, PlaybackState } from "@/types/viva";
+import {
+  ConversationState,
+  MicrophoneState,
+  PlaybackState,
+} from "@/types/viva";
 import type { AudioPlayerCallbacks } from "@/lib/gemini/audio-player";
 
 export interface AudioPipelineDependencies {
-    setConversationState: (state: ConversationState) => void;
-    setPlaybackState: (state: PlaybackState) => void;
-    isConclusionPendingRef: React.MutableRefObject<boolean>;
-    isTurnCompleteRef: React.MutableRefObject<boolean>;
-    isAudioPlayingRef: React.MutableRefObject<boolean>;
-    finishConclusion: () => void;
+  setConversationState: (state: ConversationState) => void;
+  setPlaybackState: (state: PlaybackState) => void;
+  isConclusionPendingRef: React.MutableRefObject<boolean>;
+  isTurnCompleteRef: React.MutableRefObject<boolean>;
+  isAudioPlayingRef: React.MutableRefObject<boolean>;
+  finishConclusion: () => void;
 }
 
 export function createAudioPipeline(deps: AudioPipelineDependencies) {
-    const {
-        setConversationState,
-        setPlaybackState,
-        isConclusionPendingRef,
-        isTurnCompleteRef,
-        isAudioPlayingRef,
-        finishConclusion,
-    } = deps;
-    let interruptedResponse = false;
+  const {
+    setConversationState,
+    setPlaybackState,
+    isConclusionPendingRef,
+    isTurnCompleteRef,
+    isAudioPlayingRef,
+    finishConclusion,
+  } = deps;
+  let interruptedResponse = false;
+  let awaitingResponse = false;
 
-    const forwardMicrophoneAudio = (
-        data: ArrayBuffer,
-        microphoneState: MicrophoneState,
-        isMuted: boolean,
-        sendAudio: (data: ArrayBuffer) => boolean,
-        onPacketSent: (byteLength: number) => void,
-        onPacketRejected: () => void,
-        onIntentionalSkip: (reason: 'muted' | 'inactive') => void = () => {}
-    ) => {
-        if (microphoneState !== MicrophoneState.ACTIVE || isMuted) {
-            onIntentionalSkip(isMuted ? 'muted' : 'inactive');
-            return;
-        }
-        if (sendAudio(data)) onPacketSent(data.byteLength);
-        else onPacketRejected();
-    };
+  const inputActivity = (activity: "start" | "end") => {
+    // Silence packets are not speech boundaries. Speech end suggests a reply
+    // may follow; waitingForInput overrides that inference without gating audio.
+    awaitingResponse = activity === "end";
+    if (!isAudioPlayingRef.current && !isConclusionPendingRef.current) {
+      setConversationState(
+        awaitingResponse
+          ? ConversationState.THINKING
+          : ConversationState.LISTENING,
+      );
+    }
+  };
 
-    const receiveGeminiAudio = async (
-        audio: string,
-        playAudio: (audio: string) => Promise<void>,
-        onAudioReceived: () => void
-    ) => {
-        if (interruptedResponse) return;
-        onAudioReceived();
-        isTurnCompleteRef.current = false;
-        setConversationState(ConversationState.SPEAKING);
-        await playAudio(audio);
-    };
+  const waitForInput = () => inputActivity("start");
 
-    const completeTurn = (onTurnComplete: () => void) => {
-        if (!interruptedResponse) onTurnComplete();
-        interruptedResponse = false;
-        isTurnCompleteRef.current = true;
-        if (!isAudioPlayingRef.current && !isConclusionPendingRef.current) {
-            setConversationState(ConversationState.LISTENING);
-        }
-    };
+  const forwardMicrophoneAudio = (
+    data: ArrayBuffer,
+    microphoneState: MicrophoneState,
+    isMuted: boolean,
+    sendAudio: (data: ArrayBuffer) => boolean,
+    onPacketSent: (byteLength: number) => void,
+    onPacketRejected: () => void,
+    onIntentionalSkip: (reason: "muted" | "inactive") => void = () => {},
+  ) => {
+    if (microphoneState !== MicrophoneState.ACTIVE || isMuted) {
+      onIntentionalSkip(isMuted ? "muted" : "inactive");
+      return;
+    }
+    if (sendAudio(data)) onPacketSent(data.byteLength);
+    else onPacketRejected();
+  };
 
-    const reset = () => {
-        interruptedResponse = false;
-        isAudioPlayingRef.current = false;
-        isTurnCompleteRef.current = true;
-    };
+  const receiveGeminiAudio = async (
+    audio: string,
+    playAudio: (audio: string) => Promise<void>,
+    onAudioReceived: () => void,
+  ) => {
+    if (interruptedResponse) return;
+    awaitingResponse = false;
+    onAudioReceived();
+    isTurnCompleteRef.current = false;
+    setConversationState(ConversationState.SPEAKING);
+    await playAudio(audio);
+  };
 
-    const notifyDiagnostic = (callback: (() => void) | undefined) => {
-        try { callback?.(); }
-        catch (error) { console.error('[AudioPipeline] Diagnostic observer failed', error); }
-    };
+  const completeTurn = (onTurnComplete: () => void) => {
+    if (!interruptedResponse) onTurnComplete();
+    interruptedResponse = false;
+    isTurnCompleteRef.current = true;
+    if (!isAudioPlayingRef.current && !isConclusionPendingRef.current) {
+      setConversationState(
+        awaitingResponse
+          ? ConversationState.THINKING
+          : ConversationState.LISTENING,
+      );
+    }
+  };
 
-    const createPlaybackCallbacks = (extraCallbacks?: Partial<AudioPlayerCallbacks>): AudioPlayerCallbacks => ({
-        onPlayStart: () => {
-            isAudioPlayingRef.current = true;
-            setPlaybackState(PlaybackState.PLAYING);
-            setConversationState(ConversationState.SPEAKING);
-            notifyDiagnostic(extraCallbacks?.onPlayStart);
-        },
-        onPlayEnd: () => {
-            isAudioPlayingRef.current = false;
-            setPlaybackState(PlaybackState.IDLE);
-            notifyDiagnostic(extraCallbacks?.onPlayEnd);
-            if (isConclusionPendingRef.current) {
-                finishConclusion();
-            } else if (isTurnCompleteRef.current) {
-                setConversationState(ConversationState.LISTENING);
-            } else {
-                setConversationState(ConversationState.THINKING);
-            }
-        },
-        onAudioScheduled: (queueDurationMs) => {
-            notifyDiagnostic(() => extraCallbacks?.onAudioScheduled?.(queueDurationMs));
-        },
-        onUnderrun: () => notifyDiagnostic(extraCallbacks?.onUnderrun),
-        onPlaybackError: () => extraCallbacks?.onPlaybackError?.(),
-        onBufferEvent: (event) => notifyDiagnostic(() => extraCallbacks?.onBufferEvent?.(event)),
-    });
+  const reset = () => {
+    interruptedResponse = false;
+    awaitingResponse = false;
+    isAudioPlayingRef.current = false;
+    isTurnCompleteRef.current = true;
+  };
 
-    const interruptPlayback = (
-        stop: () => void,
-        signalReceived: () => void,
-        playbackStopped: () => void,
-        noPlaybackToStop: () => void
-    ) => {
-        interruptedResponse = true;
-        const hadPlayback = isAudioPlayingRef.current;
-        signalReceived();
-        stop();
-        if (hadPlayback) playbackStopped();
-        else noPlaybackToStop();
-        isAudioPlayingRef.current = false;
-        isTurnCompleteRef.current = true;
-        setPlaybackState(PlaybackState.IDLE);
-        setConversationState(ConversationState.LISTENING);
-        if (isConclusionPendingRef.current) finishConclusion();
-    };
+  const notifyDiagnostic = (callback: (() => void) | undefined) => {
+    try {
+      callback?.();
+    } catch (error) {
+      console.error("[AudioPipeline] Diagnostic observer failed", error);
+    }
+  };
 
-    return {
-        forwardMicrophoneAudio,
-        receiveGeminiAudio,
-        completeTurn,
-        reset,
-        createPlaybackCallbacks,
-        interruptPlayback,
-    };
+  const createPlaybackCallbacks = (
+    extraCallbacks?: Partial<AudioPlayerCallbacks>,
+  ): AudioPlayerCallbacks => ({
+    onPlayStart: () => {
+      isAudioPlayingRef.current = true;
+      setPlaybackState(PlaybackState.PLAYING);
+      setConversationState(ConversationState.SPEAKING);
+      notifyDiagnostic(extraCallbacks?.onPlayStart);
+    },
+    onPlayEnd: () => {
+      isAudioPlayingRef.current = false;
+      setPlaybackState(PlaybackState.IDLE);
+      notifyDiagnostic(extraCallbacks?.onPlayEnd);
+      if (isConclusionPendingRef.current) {
+        finishConclusion();
+      } else if (isTurnCompleteRef.current) {
+        setConversationState(
+          awaitingResponse
+            ? ConversationState.THINKING
+            : ConversationState.LISTENING,
+        );
+      } else {
+        setConversationState(ConversationState.THINKING);
+      }
+    },
+    onAudioScheduled: (queueDurationMs) => {
+      notifyDiagnostic(() =>
+        extraCallbacks?.onAudioScheduled?.(queueDurationMs),
+      );
+    },
+    onUnderrun: () => notifyDiagnostic(extraCallbacks?.onUnderrun),
+    onPlaybackError: () => extraCallbacks?.onPlaybackError?.(),
+    onBufferEvent: (event) =>
+      notifyDiagnostic(() => extraCallbacks?.onBufferEvent?.(event)),
+  });
+
+  const interruptPlayback = (
+    stop: () => void,
+    signalReceived: () => void,
+    playbackStopped: () => void,
+    noPlaybackToStop: () => void,
+  ) => {
+    interruptedResponse = true;
+    const hadPlayback = isAudioPlayingRef.current;
+    signalReceived();
+    stop();
+    if (hadPlayback) playbackStopped();
+    else noPlaybackToStop();
+    isAudioPlayingRef.current = false;
+    isTurnCompleteRef.current = true;
+    setPlaybackState(PlaybackState.IDLE);
+    setConversationState(
+      awaitingResponse
+        ? ConversationState.THINKING
+        : ConversationState.LISTENING,
+    );
+    if (isConclusionPendingRef.current) finishConclusion();
+  };
+
+  return {
+    forwardMicrophoneAudio,
+    receiveGeminiAudio,
+    completeTurn,
+    reset,
+    createPlaybackCallbacks,
+    interruptPlayback,
+    inputActivity,
+    waitForInput,
+  };
 }

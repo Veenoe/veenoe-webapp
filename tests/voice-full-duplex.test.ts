@@ -1,13 +1,13 @@
-import assert from 'node:assert/strict';
-import test from 'node:test';
-import { createAudioPipeline } from '../lib/hooks/viva/audio-pipeline';
+import assert from "node:assert/strict";
+import test from "node:test";
+import { createAudioPipeline } from "../lib/hooks/viva/audio-pipeline";
 import {
   ConversationState,
   MicrophoneState,
   PlaybackState,
-} from '../types/viva';
-import { processGeminiMessage } from '../lib/gemini/message-processor';
-import { useVivaStore } from '../lib/store/viva-store';
+} from "../types/viva";
+import { processGeminiMessage } from "../lib/gemini/message-processor";
+import { useVivaStore } from "../lib/store/viva-store";
 
 function setup() {
   useVivaStore.getState().resetSession();
@@ -29,7 +29,51 @@ function setup() {
   return { pipeline, playing, turnComplete, concluded: () => concluded };
 }
 
-test('the production forwarding path sends mic packets throughout playback, except while muted', () => {
+test("server speech boundaries distinguish listening from waiting for a response", () => {
+  const { pipeline } = setup();
+  pipeline.inputActivity("start");
+  assert.equal(
+    useVivaStore.getState().conversationState,
+    ConversationState.LISTENING,
+  );
+  pipeline.inputActivity("end");
+  assert.equal(
+    useVivaStore.getState().conversationState,
+    ConversationState.THINKING,
+  );
+  pipeline.waitForInput();
+  assert.equal(
+    useVivaStore.getState().conversationState,
+    ConversationState.LISTENING,
+  );
+  useVivaStore.getState().resetSession();
+});
+
+test("speech ending during playback waits until audio drains to show thinking", () => {
+  const { pipeline } = setup();
+  const playback = pipeline.createPlaybackCallbacks();
+  playback.onPlayStart?.();
+  pipeline.inputActivity("end");
+  assert.equal(
+    useVivaStore.getState().conversationState,
+    ConversationState.SPEAKING,
+  );
+  pipeline.completeTurn(() => {});
+  playback.onPlayEnd?.();
+  assert.equal(
+    useVivaStore.getState().conversationState,
+    ConversationState.THINKING,
+  );
+  pipeline.reset();
+  pipeline.completeTurn(() => {});
+  assert.equal(
+    useVivaStore.getState().conversationState,
+    ConversationState.LISTENING,
+  );
+  useVivaStore.getState().resetSession();
+});
+
+test("the production forwarding path sends mic packets throughout playback, except while muted", () => {
   const { pipeline } = setup();
   const sent: ArrayBuffer[] = [];
   const measured: number[] = [];
@@ -47,7 +91,7 @@ test('the production forwarding path sends mic packets throughout playback, exce
       (bytes) => {
         measured.push(bytes);
       },
-      () => { },
+      () => {},
     );
   };
 
@@ -70,7 +114,7 @@ test('the production forwarding path sends mic packets throughout playback, exce
   useVivaStore.getState().resetSession();
 });
 
-test('transport acceptance and rejection account for active, unmuted packets exactly once', () => {
+test("transport acceptance and rejection account for active, unmuted packets exactly once", () => {
   const { pipeline } = setup();
   let sent = 0;
   let dropped = 0;
@@ -101,7 +145,7 @@ test('transport acceptance and rejection account for active, unmuted packets exa
   useVivaStore.getState().resetSession();
 });
 
-test('playback lifecycle and temporary underrun never gate active microphone forwarding', () => {
+test("playback lifecycle and temporary underrun never gate active microphone forwarding", () => {
   const { pipeline } = setup();
   useVivaStore.getState().setMicrophoneState(MicrophoneState.ACTIVE);
   const playback = pipeline.createPlaybackCallbacks();
@@ -116,22 +160,22 @@ test('playback lifecycle and temporary underrun never gate active microphone for
         sent++;
         return true;
       },
-      () => { },
-      () => assert.fail('active packet rejected'),
+      () => {},
+      () => assert.fail("active packet rejected"),
     );
   };
   playback.onPlayStart?.();
   for (let index = 0; index < 100; index++) forward();
   playback.onUnderrun?.();
   for (let index = 0; index < 100; index++) forward();
-  pipeline.completeTurn(() => { });
+  pipeline.completeTurn(() => {});
   for (let index = 0; index < 100; index++) forward();
   playback.onPlayEnd?.();
   assert.equal(sent, 300);
   useVivaStore.getState().resetSession();
 });
 
-test('mute never turns an idle or failed recorder into an active microphone', () => {
+test("mute never turns an idle or failed recorder into an active microphone", () => {
   useVivaStore.getState().resetSession();
   useVivaStore.getState().toggleMute();
   useVivaStore.getState().toggleMute();
@@ -140,7 +184,7 @@ test('mute never turns an idle or failed recorder into an active microphone', ()
   useVivaStore.getState().resetSession();
 });
 
-test('interruption stops playback immediately, ignores stale audio, then accepts the next response', async () => {
+test("interruption stops playback immediately, ignores stale audio, then accepts the next response", async () => {
   const { pipeline, playing } = setup();
   const events: string[] = [];
   const playback = pipeline.createPlaybackCallbacks();
@@ -148,48 +192,48 @@ test('interruption stops playback immediately, ignores stale audio, then accepts
     events.push(`play:${audio}`);
     playback.onPlayStart?.();
   };
-  const received = () => events.push('received');
+  const received = () => events.push("received");
 
-  await pipeline.receiveGeminiAudio('first', play, received);
+  await pipeline.receiveGeminiAudio("first", play, received);
   assert.equal(playing.current, true);
   pipeline.interruptPlayback(
-    () => events.push('stop'),
-    () => events.push('signal'),
-    () => events.push('playback-stopped'),
-    () => events.push('no-playback'),
+    () => events.push("stop"),
+    () => events.push("signal"),
+    () => events.push("playback-stopped"),
+    () => events.push("no-playback"),
   );
-  assert.deepEqual(events.slice(-3), ['signal', 'stop', 'playback-stopped']);
+  assert.deepEqual(events.slice(-3), ["signal", "stop", "playback-stopped"]);
   assert.equal(
     useVivaStore.getState().conversationState,
     ConversationState.LISTENING,
   );
   assert.equal(useVivaStore.getState().playbackState, PlaybackState.IDLE);
 
-  await pipeline.receiveGeminiAudio('stale', play, received);
-  assert.equal(events.includes('play:stale'), false);
-  pipeline.completeTurn(() => events.push('normal-turn-complete'));
-  assert.equal(events.includes('normal-turn-complete'), false);
-  await pipeline.receiveGeminiAudio('next', play, received);
-  assert.equal(events.at(-1), 'play:next');
+  await pipeline.receiveGeminiAudio("stale", play, received);
+  assert.equal(events.includes("play:stale"), false);
+  pipeline.completeTurn(() => events.push("normal-turn-complete"));
+  assert.equal(events.includes("normal-turn-complete"), false);
+  await pipeline.receiveGeminiAudio("next", play, received);
+  assert.equal(events.at(-1), "play:next");
   assert.equal(useVivaStore.getState().playbackState, PlaybackState.PLAYING);
   pipeline.reset();
   assert.equal(playing.current, false);
   useVivaStore.getState().resetSession();
 });
 
-test('interruption without queued playback does not record a playback stop', () => {
+test("interruption without queued playback does not record a playback stop", () => {
   const { pipeline } = setup();
   const events: string[] = [];
   pipeline.interruptPlayback(
-    () => events.push('stop'),
-    () => events.push('signal'),
-    () => events.push('playback-stopped'),
-    () => events.push('no-playback'),
+    () => events.push("stop"),
+    () => events.push("signal"),
+    () => events.push("playback-stopped"),
+    () => events.push("no-playback"),
   );
-  assert.deepEqual(events, ['signal', 'stop', 'no-playback']);
+  assert.deepEqual(events, ["signal", "stop", "no-playback"]);
 });
 
-test('interruption finishes a saved conclusion waiting on playback', () => {
+test("interruption finishes a saved conclusion waiting on playback", () => {
   useVivaStore.getState().resetSession();
   const pending = { current: true };
   const playing = { current: true };
@@ -207,17 +251,17 @@ test('interruption finishes a saved conclusion waiting on playback', () => {
     },
   });
   conclusionPipeline.interruptPlayback(
-    () => { },
-    () => { },
-    () => { },
-    () => { },
+    () => {},
+    () => {},
+    () => {},
+    () => {},
   );
   assert.equal(finished, 1);
   assert.equal(playing.current, false);
   useVivaStore.getState().resetSession();
 });
 
-test('normal playback ends into listening once turn completes', () => {
+test("normal playback ends into listening once turn completes", () => {
   const { pipeline, turnComplete } = setup();
   const callbacks = pipeline.createPlaybackCallbacks();
   callbacks.onPlayStart?.();
@@ -230,7 +274,7 @@ test('normal playback ends into listening once turn completes', () => {
   assert.equal(useVivaStore.getState().playbackState, PlaybackState.IDLE);
 });
 
-test('playback failure reaches the session error handler', () => {
+test("playback failure reaches the session error handler", () => {
   const { pipeline } = setup();
   let failures = 0;
   pipeline
@@ -244,14 +288,14 @@ test('playback failure reaches the session error handler', () => {
   useVivaStore.getState().resetSession();
 });
 
-test('interrupted Gemini message does not dispatch stale audio from the same response', () => {
+test("interrupted Gemini message does not dispatch stale audio from the same response", () => {
   assert.deepEqual(
     processGeminiMessage({
       serverContent: {
         interrupted: true,
-        modelTurn: { parts: [{ inlineData: { data: 'stale' } }] },
+        modelTurn: { parts: [{ inlineData: { data: "stale" } }] },
       },
     }),
-    [{ type: 'interrupted' }],
+    [{ type: "interrupted" }],
   );
 });
